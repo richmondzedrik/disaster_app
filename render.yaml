@@ -2,17 +2,10 @@ services:
   - type: web
     name: disaster-app
     env: node
-    buildCommand: |
-      cd frontend
-      npm install
-      npm install vite
-      npm run build
-    startCommand: |
-      cd frontend
-      npm install -g serve
-      serve -s dist
+    buildCommand: frontend\build.bat
+    startCommand: cd frontend && npm install -g serve && serve -s dist
     envVars:
       - key: NODE_ENV
         value: production
       - key: VITE_API_URL
-        value: your_api_url
+        value: http://localhost:3000
