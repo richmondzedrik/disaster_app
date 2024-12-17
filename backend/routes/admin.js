@@ -19,9 +19,39 @@ router.use(cors(corsOptions));
 // Pre-flight OPTIONS handling
 router.options('*', cors(corsOptions));
 
-// Apply middleware globally to all admin routes
-router.use(auth.authMiddleware);
-router.use(auth.adminMiddleware);
+// Modify the middleware application
+router.use(async (req, res, next) => {
+  try {
+    // Skip auth check for OPTIONS requests
+    if (req.method === 'OPTIONS') {
+      return next();
+    }
+
+    if (!req.headers.authorization) {
+      return res.status(401).json({
+        success: false,
+        message: 'No authorization token provided'
+      });
+    }
+
+    // Call authMiddleware directly with next
+    auth.authMiddleware(req, res, async () => {
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Admin access required'
+        });
+      }
+      next();
+    });
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    res.status(401).json({
+      success: false,
+      message: 'Authentication failed'
+    });
+  }
+});
 
 // Add catch-all route for admin SPA
 router.get('/', (req, res) => {
@@ -186,21 +216,26 @@ router.get('/dashboard/stats', auth.authMiddleware, async (req, res) => {
   }
 });
 
-// Add these routes before module.exports
+// Get all posts (Admin view)
 router.get('/posts', async (req, res) => {
   try {
-    const [rows] = await db.execute(`
+    const [posts] = await db.execute(`
       SELECT 
         p.*,
-        u.username as author_name
+        u.username as author_username,
+        u.id as author_id,
+        p.created_at
       FROM posts p
-      LEFT JOIN users u ON p.user_id = u.id
+      LEFT JOIN users u ON p.author_id = u.id
       ORDER BY p.created_at DESC
     `);
     
     res.json({ 
       success: true, 
-      data: rows 
+      posts: posts.map(post => ({
+        ...post,
+        created_at: new Date(post.created_at).toISOString()
+      }))
     });
   } catch (error) {
     console.error('Get posts error:', error);

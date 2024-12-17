@@ -59,8 +59,25 @@ export const newsService = {
 
     // Add these new admin-specific methods
     async getAdminPosts() {
-        const response = await api.get('/api/admin/news/posts');
-        return response.data;
+        try {
+            const headers = getHeaders();
+            const response = await axios.get(`${API_URL}/admin/news/posts`, {
+                headers,
+                withCredentials: true
+            });
+            
+            if (response?.data?.success) {
+                return response.data;
+            } else {
+                return {
+                    success: true,
+                    posts: response.data || []
+                };
+            }
+        } catch (error) {
+            console.error('getAdminPosts error:', error);
+            throw error;
+        }
     },
 
     async approvePost(postId) {
