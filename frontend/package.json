@@ -9,6 +9,9 @@
     "preview": "vite preview",
     "start": "serve -s dist"
   },
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "dependencies": {
     "axios": "^1.7.9",
     "leaflet": "^1.9.4",
