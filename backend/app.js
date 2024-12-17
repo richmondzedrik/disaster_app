@@ -12,17 +12,15 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
 
 const corsOptions = {
     origin: process.env.NODE_ENV === 'production'
-      ? ['https://disasterapp-u794h5q0t-richmondzedriks-projects.vercel.app', 'https://disasterapp.vercel.app']
+      ? ['https://disasterapp-26083ph7x-richmondzedriks-projects.vercel.app']
       : ['http://localhost:5173'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
-  };
+};
 
 app.use(cors(corsOptions));
 
@@ -157,16 +155,6 @@ app.use((err, req, res, next) => {
         message: err.message || 'Internal server error'
     });
 });
-
-// WebSocket connection handling
-wss.on('connection', (ws) => {
-    console.log('New WebSocket connection');
-
-    ws.on('error', console.error);
-});
-
-// Export the WebSocket server instance
-app.locals.wss = wss;
 
 // Add this after mounting the route in app.js
 app._router.stack.forEach(function(r){
