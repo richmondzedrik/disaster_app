@@ -12,6 +12,17 @@ export const useAuthStore = defineStore('auth', {
     actions: {
         async login(emailOrData, password) {
             try {
+                // Input validation
+                if (typeof emailOrData === 'object') {
+                    if (!emailOrData.email || !emailOrData.password) {
+                        throw new Error('Email and password are required');
+                    }
+                } else {
+                    if (!emailOrData || !password) {
+                        throw new Error('Email and password are required');
+                    }
+                }
+
                 let response;
                 if (typeof emailOrData === 'object') {
                     // Admin login case
@@ -36,7 +47,8 @@ export const useAuthStore = defineStore('auth', {
                 }
             } catch (error) {
                 const notificationStore = useNotificationStore();
-                notificationStore.error(error.message);
+                const errorMessage = error.response?.data?.message || error.message;
+                notificationStore.error(errorMessage);
                 throw error;
             }
         },

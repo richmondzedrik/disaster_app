@@ -12,7 +12,7 @@ const cors = require('cors');
 const PORT = process.env.PORT || 3000;
 
 if (!process.env.JWT_SECRET) {
-    console.error('JWT_SECRET is not set in environment variables');
+    console.error('Critical Error: JWT_SECRET is not set in environment variables');
     process.exit(1);
 }
 

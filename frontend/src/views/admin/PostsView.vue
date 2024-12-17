@@ -147,23 +147,30 @@ const loadPosts = async () => {
         const response = await newsService.getAdminPosts();
         console.log('API Response:', response);
         
-        if (response?.data?.posts || response?.posts) {
-            const postsData = response.data?.posts || response.posts;
-            
-            posts.value = postsData.map(post => ({
-                id: post.id,
-                title: post.title || 'Untitled',
-                content: post.content || '',
-                status: post.status || 'pending',
-                created_at: post.created_at || post.createdAt || new Date().toISOString(),
-                author_username: post.author || post.author_username || post.author_name || 'Unknown Author'
-            }));
+        // Handle the response data
+        if (Array.isArray(response)) {
+            posts.value = response;
+        } else if (Array.isArray(response.posts)) {
+            posts.value = response.posts;
+        } else if (response.data?.posts) {
+            posts.value = response.data.posts;
         } else {
-            throw new Error('Invalid response format');
+            posts.value = [];
         }
+        
+        // Map the posts data
+        posts.value = posts.value.map(post => ({
+            id: post.id,
+            title: post.title || 'Untitled',
+            content: post.content || '',
+            status: post.status || 'pending',
+            created_at: post.created_at || post.createdAt || new Date().toISOString(),
+            author_username: post.author || post.author_username || post.author_name || 'Unknown Author'
+        }));
+        
     } catch (err) {
         console.error('Error loading posts:', err);
-        error.value = err.message;
+        error.value = err.message || 'Failed to load posts';
         notificationStore.error('Failed to load posts');
     } finally {
         isLoading.value = false;
