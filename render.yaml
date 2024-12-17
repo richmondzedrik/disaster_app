@@ -9,7 +9,10 @@ services:
       npx vite build
       npm run build
       cd ..
-    startCommand: node backend/server.js
+    startCommand: |
+      cd frontend
+      npm install -g serve
+      serve -s dist
     envVars:
       - key: NODE_ENV
         value: production
