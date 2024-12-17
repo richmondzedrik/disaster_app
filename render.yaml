@@ -4,7 +4,7 @@ services:
     env: node # or static, depending on whether you need Node.js at runtime
     buildCommand: |
       cd frontend
-      npm ci
+      npm install
       npm run build
     startCommand: |
       cd frontend
