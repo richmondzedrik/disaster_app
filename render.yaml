@@ -2,17 +2,10 @@ services:
   - type: web
     name: disaster-app
     env: node
-    buildCommand: |
-      cd frontend
-      npm install
-      npm install vite
-      npm run build
-    startCommand: |
-      cd frontend
-      npm install -g serve
-      serve -s dist
+    buildCommand: bash render-build.sh
+    startCommand: cd frontend && npm install -g serve && serve -s dist
     envVars:
       - key: NODE_ENV
         value: production
       - key: VITE_API_URL
-        value: http://localhost:3000
+        value: https://your-render-backend-url.onrender.com
