@@ -6,7 +6,7 @@ services:
       npm install
       cd frontend
       npm install
-      npm install vite --save-dev
+      npx vite build
       npm run build
       cd ..
     startCommand: node backend/server.js
