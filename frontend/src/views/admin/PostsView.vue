@@ -10,26 +10,8 @@
       </button>
     </div>
 
-    <div v-if="error" class="error-message">
-      <i class="fas fa-exclamation-circle"></i>
-      {{ error }}
-      <button @click="loadPosts" class="retry-btn">
-        <i class="fas fa-redo"></i> Retry
-      </button>
-    </div>
-
     <div class="table-container" :class="{ 'loading': isLoading }">
-      <div v-if="isLoading" class="loading-overlay">
-        <i class="fas fa-spinner fa-spin"></i>
-        Loading posts...
-      </div>
-      
-      <div v-else-if="!posts.length" class="no-data">
-        <i class="fas fa-inbox"></i>
-        <p>No posts found</p>
-      </div>
-      
-      <table v-else>
+      <table>
         <thead>
           <tr>
             <th>Title</th>
@@ -124,7 +106,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useNotificationStore } from '@/stores/notification';
 import { newsService } from '@/services/newsService';
 
@@ -145,21 +127,13 @@ const loadPosts = async () => {
         error.value = null;
         
         const response = await newsService.getAdminPosts();
-        console.log('API Response:', response);
-        
-        if (response?.data?.posts || response?.posts) {
-            const postsData = response.data?.posts || response.posts;
-            
-            posts.value = postsData.map(post => ({
-                id: post.id,
-                title: post.title || 'Untitled',
-                content: post.content || '',
-                status: post.status || 'pending',
-                created_at: post.created_at || post.createdAt || new Date().toISOString(),
+        if (response.success) {
+            posts.value = response.posts.map(post => ({
+                ...post,
                 author_username: post.author || post.author_username || post.author_name || 'Unknown Author'
             }));
         } else {
-            throw new Error('Invalid response format');
+            throw new Error('Failed to fetch posts');
         }
     } catch (err) {
         console.error('Error loading posts:', err);
@@ -169,10 +143,6 @@ const loadPosts = async () => {
         isLoading.value = false;
     }
 };
-
-watch(posts, (newPosts) => {
-    console.log('Posts updated:', newPosts);
-}, { deep: true });
 
 onMounted(() => {
     loadPosts();
@@ -240,6 +210,8 @@ const deleteComment = async (post, comment) => {
     notificationStore.error('Failed to delete comment');
   }
 };
+
+onMounted(loadPosts);
 </script>
 
 <style scoped>
@@ -589,44 +561,5 @@ td {
   .action-buttons {
     flex-wrap: wrap;
   }
-}
-
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.9);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  font-size: 1.1rem;
-  color: #4052D6;
-}
-
-.loading-overlay i {
-  font-size: 2rem;
-}
-
-.no-data {
-  padding: 3rem;
-  text-align: center;
-  color: #64748b;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.no-data i {
-  font-size: 3rem;
-  color: #94a3b8;
-}
-
-.no-data p {
-  font-size: 1.1rem;
 }
 </style>

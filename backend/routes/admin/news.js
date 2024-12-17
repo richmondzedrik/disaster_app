@@ -17,8 +17,8 @@ router.get('/posts', async (req, res) => {
                 u.username as author,
                 u.id as authorId,
                 p.created_at as createdAt
-            FROM disaster_prep.posts p
-            JOIN disaster_prep.users u ON p.author_id = u.id
+            FROM posts p
+            JOIN users u ON p.author_id = u.id
             ORDER BY p.created_at DESC
         `);
         
