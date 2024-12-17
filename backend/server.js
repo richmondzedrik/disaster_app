@@ -17,6 +17,19 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Serve static files from the frontend build directory
+if (process.env.NODE_ENV === 'production') {
+  const frontendPath = path.join(__dirname, '../frontend/dist');
+  app.use(express.static(frontendPath));
+  
+  // Handle all other routes by serving index.html
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(frontendPath, 'index.html'));
+    }
+  });
+}
+
 // Environment checks
 if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
     console.error('Critical Error: JWT secrets not set in environment variables');
