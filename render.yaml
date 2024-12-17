@@ -2,8 +2,14 @@ services:
   - type: web
     name: disaster-app
     env: node
-    buildCommand: bash render-build.sh
-    startCommand: cd frontend && npm install -g serve && serve -s dist
+    buildCommand: |
+      cd frontend
+      npm install
+      npx vite build
+    startCommand: |
+      cd frontend
+      npm install -g serve
+      serve -s dist
     envVars:
       - key: NODE_ENV
         value: production
