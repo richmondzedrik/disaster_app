@@ -6,21 +6,25 @@ import { useAuthStore } from './stores/auth'
 import { useNotificationStore } from './stores/notification'
 import './style.css'
 
-const app = createApp(App)
-const pinia = createPinia()
+const initializeApp = async () => {
+  const app = createApp(App)
+  const pinia = createPinia()
 
-app.use(pinia)
-app.use(router)
+  app.use(pinia)
+  app.use(router)
 
-// Initialize auth store
-const authStore = useAuthStore()
-await authStore.initializeAuth()
+  const authStore = useAuthStore()
+  try {
+    await authStore.initializeAuth()
+  } catch (error) {
+    console.error('Failed to initialize auth:', error)
+  }
+  
+  app.mount('#app')
 
-app.mount('#app')
-
-app.config.errorHandler = (err, instance, info) => {
+  app.config.errorHandler = (err, instance, info) => {
     console.error('Vue Error:', err)
-    console.error('Error Info:', info)
-    const notificationStore = useNotificationStore(pinia)
-    notificationStore.error('An error occurred. Please try again.')
+  }
 }
+
+initializeApp().catch(console.error)
