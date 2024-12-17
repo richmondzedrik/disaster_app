@@ -5,7 +5,7 @@ services:
     buildCommand: |
       cd frontend
       npm install
-      npm run build  # Use npm run build here
+      ./node_modules/.bin/vite build
     startCommand: |
       cd frontend
       npm install -g serve
