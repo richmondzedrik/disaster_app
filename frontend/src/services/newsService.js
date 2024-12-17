@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 import api from './api';
+import { onMounted, watch } from 'vue';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -21,37 +22,26 @@ const getHeaders = () => {
 export const newsService = {
     async getPublicPosts() {
         try {
-            const headers = {
-                'Content-Type': 'application/json'
-            };
+            const response = await axios.get(`${API_URL}/news/public`);
             
-            // Add authorization header if user is logged in
-            const authStore = useAuthStore();
-            if (authStore.accessToken) {
-                headers['Authorization'] = `Bearer ${authStore.accessToken}`;
+            if (!response.data?.success) {
+                throw new Error(response.data?.message || 'Failed to fetch posts');
             }
-
-            const response = await axios.get(`${API_URL}/news/public`, { headers });
             
-            if (response.data?.success) {
-                const posts = response.data.posts.map(post => ({
+            return {
+                success: true,
+                posts: response.data.posts.map(post => ({
                     ...post,
-                    comments: post.comments || [],
                     likes: parseInt(post.likes) || 0,
-                    liked: Boolean(post.liked),
-                    saved: post.saved || false
-                }));
-                
-                return {
-                    success: true,
-                    posts
-                };
-            }
-            throw new Error(response.data?.message || 'Failed to fetch posts');
+                    commentCount: parseInt(post.comment_count) || 0,
+                    liked: Boolean(post.liked)
+                }))
+            };
         } catch (error) {
             console.error('Error fetching public news:', error);
             return {
                 success: false,
+                message: error.message || 'Failed to fetch posts',
                 posts: []
             };
         }
@@ -59,8 +49,25 @@ export const newsService = {
 
     // Add these new admin-specific methods
     async getAdminPosts() {
-        const response = await api.get('/api/admin/news/posts');
-        return response.data;
+        try {
+            const headers = getHeaders();
+            const response = await axios.get(`${API_URL}/admin/news/posts`, {
+                headers,
+                withCredentials: true
+            });
+            
+            if (response?.data?.success) {
+                return response.data;
+            } else {
+                return {
+                    success: true,
+                    posts: response.data || []
+                };
+            }
+        } catch (error) {
+            console.error('getAdminPosts error:', error);
+            throw error;
+        }
     },
 
     async approvePost(postId) {
