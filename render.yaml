@@ -3,9 +3,13 @@ services:
     name: disaster-app
     env: node
     buildCommand: |
+      npm install
       cd frontend
       npm install
+<<<<<<< HEAD
       ./node_modules/.bin/vite build
+=======
+>>>>>>> parent of e09936d (Initial commit)
       npx vite build
       npm run build
       cd ..
