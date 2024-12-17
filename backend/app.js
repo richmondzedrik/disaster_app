@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const WebSocket = require('ws');
 const http = require('http');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
@@ -13,17 +12,14 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
 
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+    origin: process.env.NODE_ENV === 'production'
+      ? ['https://disasterapp-26083ph7x-richmondzedriks-projects.vercel.app']
+      : ['http://localhost:5173'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cors(corsOptions));
@@ -53,9 +49,6 @@ app.use((req, res, next) => {
     console.log('Request:', req.method, req.path, req.body);
     next();
 });
-
-// Middleware for static files
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Serve uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
@@ -129,7 +122,10 @@ app.get([
     '/change-password'
 ], (req, res) => {
     res.setHeader('Content-Type', 'text/html');
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+    const frontendPath = process.env.NODE_ENV === 'production' 
+      ? path.join(__dirname, 'dist') 
+      : path.join(__dirname, '../frontend/dist');
+    res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 // 404 handler
@@ -145,7 +141,10 @@ app.use((req, res) => {
     
     // For all other routes, serve the SPA
     res.setHeader('Content-Type', 'text/html');
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+    const frontendPath = process.env.NODE_ENV === 'production' 
+      ? path.join(__dirname, 'dist') 
+      : path.join(__dirname, '../frontend/dist');
+    res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 // Error handler
@@ -156,16 +155,6 @@ app.use((err, req, res, next) => {
         message: err.message || 'Internal server error'
     });
 });
-
-// WebSocket connection handling
-wss.on('connection', (ws) => {
-    console.log('New WebSocket connection');
-
-    ws.on('error', console.error);
-});
-
-// Export the WebSocket server instance
-app.locals.wss = wss;
 
 // Add this after mounting the route in app.js
 app._router.stack.forEach(function(r){

@@ -51,4 +51,7 @@ api.interceptors.response.use(undefined, async (err) => {
   return api(config);
 });
 
+const app = require('../server');
+module.exports = app;
+
 export default api;
