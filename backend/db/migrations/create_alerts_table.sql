@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS alerts (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    priority INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    is_public BOOLEAN DEFAULT false,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    expiry_date TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+); 
