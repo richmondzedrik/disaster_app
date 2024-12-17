@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const WebSocket = require('ws');
 const http = require('http');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
@@ -125,7 +124,10 @@ app.get([
     '/change-password'
 ], (req, res) => {
     res.setHeader('Content-Type', 'text/html');
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+    const frontendPath = process.env.NODE_ENV === 'production' 
+      ? path.join(__dirname, 'dist') 
+      : path.join(__dirname, '../frontend/dist');
+    res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 // 404 handler
@@ -141,7 +143,10 @@ app.use((req, res) => {
     
     // For all other routes, serve the SPA
     res.setHeader('Content-Type', 'text/html');
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+    const frontendPath = process.env.NODE_ENV === 'production' 
+      ? path.join(__dirname, 'dist') 
+      : path.join(__dirname, '../frontend/dist');
+    res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 // Error handler
