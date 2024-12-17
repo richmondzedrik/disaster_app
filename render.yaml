@@ -5,7 +5,7 @@ services:
     buildCommand: |
       cd frontend
       npm install
-      ls -la node_modules/.bin
+      ./node_modules/.bin/vite build
       npx vite build
       npm run build
       cd ..
