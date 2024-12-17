@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = import.meta.env.PROD 
+  ? '/.netlify/functions/api'
+  : 'http://localhost:3000/api';
 
 const api = axios.create({
     baseURL: API_URL,
