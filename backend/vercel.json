@@ -10,13 +10,14 @@
       },
       {
         "src": "backend/server.js",
+        "src": "server.js", 
         "use": "@vercel/node"
       }
     ],
     "routes": [
       {
         "src": "/api/(.*)",
-        "dest": "backend/server.js"
+        "dest": "/server.js" 
       },
       {
         "handle": "filesystem"
@@ -24,6 +25,7 @@
       {
         "src": "/(.*)",
         "dest": "frontend/dist/index.html"
+        "dest": "/server.js"
       }
     ]
   }
