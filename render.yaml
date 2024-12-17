@@ -1,11 +1,11 @@
 services:
   - type: web
     name: disaster-app
-    env: node
+    env: node # or static, depending on whether you need Node.js at runtime
     buildCommand: |
       cd frontend
       npm install
-      npx vite build
+      npm run build  # Use npm run build here
     startCommand: |
       cd frontend
       npm install -g serve
