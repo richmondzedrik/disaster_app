@@ -17,13 +17,11 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
 };
 
 app.use(cors(corsOptions));
