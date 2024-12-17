@@ -111,4 +111,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Start the server
-startServer();
+// startServer();
+
+// Instead, export the app
+module.exports = app;
