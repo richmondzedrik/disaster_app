@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
-export default defineConfig({
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -20,7 +20,7 @@ export default defineConfig({
   optimizeDeps: {
     include: ['axios', 'leaflet', 'leaflet-routing-machine']
   },
-      css: {
+  css: {
     preprocessorOptions: {
       css: {
         additionalData: `@import "leaflet/dist/leaflet.css";`
@@ -31,12 +31,13 @@ export default defineConfig({
   build: {
     sourcemap: true,
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+      },
       output: {
         sourcemapExcludeSources: true,
         manualChunks: undefined
       }
     },
-  
-    target: 'esnext',
   }
 })
