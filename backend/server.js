@@ -7,6 +7,7 @@ const auth = require('./middleware/auth');
 const path = require('path');
 const fs = require('fs');
 const checkBuild = require('./utils/buildCheck');
+const cors = require('cors');
 
 const PORT = process.env.PORT || 3000;
 
@@ -98,6 +99,16 @@ app.use((err, req, res, next) => {
 if (process.env.NODE_ENV === 'production') {
   checkBuild();
 }
+
+// CORS configuration
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://disaster-app.onrender.com'
+    : 'http://localhost:5173',
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 
 // Start the server
 startServer();
