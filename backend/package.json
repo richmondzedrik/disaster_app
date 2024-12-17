@@ -10,7 +10,8 @@
     "start": "node server.js",
     "migrate": "node migrations/index.js",
     "migrate:down": "node -e \"require('./migrations/001_create_activity_logs').down()\"",
-    "build": "echo 'Building backend...'"
+    "build": "echo 'Building backend...'",
+    "vercel-build": "echo 'Vercel build step completed'"
   },
   "keywords": [],
   "author": "",
