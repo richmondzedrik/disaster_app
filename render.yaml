@@ -2,7 +2,7 @@ services:
   - type: web
     name: disaster-app-backend
     env: node
-    buildCommand: npm install
+    buildCommand: npm ci --force && npm run build
     startCommand: node backend/server.js
     envVars:
       - key: NODE_ENV
