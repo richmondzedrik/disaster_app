@@ -84,6 +84,10 @@
                 <div v-if="!post.imageLoaded && !post.imageError" class="image-loading">
                   <i class="fas fa-circle-notch fa-spin"></i>
                 </div>
+                <div v-if="post.imageError" class="image-error-overlay">
+                  <i class="fas fa-exclamation-circle"></i>
+                  <span>Failed to load image</span>
+                </div>
               </div>
             </div>
           </div>
@@ -453,24 +457,17 @@ const getImageUrl = (imageUrl) => {
   // If it's already a full URL
   if (imageUrl.startsWith('http')) return imageUrl;
   
-  // Remove any leading slashes and 'uploads/' from the image URL
-  const cleanImageUrl = imageUrl.replace(/^\/?(uploads\/)?/, '');
+  // Remove any leading slashes
+  const cleanImageUrl = imageUrl.replace(/^\/+/, '');
   
-  // Construct the full URL with the uploads directory
-  return `${API_URL}/uploads/${cleanImageUrl}?t=${Date.now()}`;
+  // Construct the full URL
+  return `${API_URL}/uploads/${cleanImageUrl}`;
 };
 
 const handleImageError = (event, post) => {
   console.error('Failed to load image:', event.target.src);
   post.imageError = true;
   post.imageLoaded = false;
-  
-  // Log additional debugging information
-  console.log('Image details:', {
-    originalUrl: post.image_url,
-    constructedUrl: event.target.src,
-    apiUrl: API_URL
-  });
 };
 
 const handleImageLoad = (event, post) => {
@@ -1085,6 +1082,9 @@ onMounted(() => {
   background: #f8fafc;
   border-radius: 12px;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .news-image {
@@ -1099,32 +1099,53 @@ onMounted(() => {
   opacity: 1;
 }
 
-.image-loading {
+.image-loading, .image-error-overlay {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.image-loading {
   color: #00D1D1;
 }
 
-.image-loading i {
+.image-error-overlay {
+  color: #dc2626;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.image-loading i,
+.image-error-overlay i {
   font-size: 2rem;
 }
 
-.image-container.error::after {
-  content: 'Failed to load image';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #dc2626;
-  font-size: 0.875rem;
-  font-weight: 500;
+.interaction-btn.active i.fa-heart {
+  color: #ff4b4b !important;
+  transform: scale(1.1);
+}
+
+.interaction-btn i.fa-heart {
+  color: #64748b;
+  transition: all 0.3s ease;
+}
+
+.interaction-btn:hover i.fa-heart {
+  color: #ff4b4b;
+  transform: scale(1.1);
+}
+
+.interaction-btn.active .fas.fa-heart {
+  opacity: 1;
+  visibility: visible;
+  color: #ff4b4b !important;
 }
 
 .post-footer {
