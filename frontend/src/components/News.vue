@@ -11,7 +11,11 @@
     <div class="news-content" :class="{ 'blur-content': loading }">
       <div class="news-header">
         <h1>Community News</h1>
-        <button v-if="canPost" @click="showPostModal = true" class="create-post-btn">
+        <button 
+          v-if="isAuthenticated && canPost" 
+          @click="showPostModal = true" 
+          class="create-post-btn"
+        >
           <i class="fas fa-plus"></i>
           Create Post
         </button>
@@ -42,6 +46,17 @@
 
       <!-- News Feed -->
       <div class="news-feed">
+        <div v-if="!isAuthenticated" class="guest-notice">
+          <div class="notice-content">
+            <i class="fas fa-info-circle"></i>
+            <p>Sign in to interact with posts and create your own content</p>
+            <router-link to="/login" class="login-btn">
+              <i class="fas fa-sign-in-alt"></i>
+              Sign In
+            </router-link>
+          </div>
+        </div>
+
         <div v-if="posts.length === 0" class="no-posts">
           <i class="fas fa-newspaper"></i>
           <p>No news posts yet</p>
@@ -93,16 +108,28 @@
           </div>
           
           <div class="post-footer">
-            <button @click="likePost(post)" class="interaction-btn" :class="{ 'active': post.liked }">
-              <i :class="['fa-heart', post.liked ? 'fas' : 'far']"></i>
+            <button 
+              @click="isAuthenticated ? likePost(post) : handleGuestInteraction('like')"
+              class="interaction-btn"
+              :class="{ 'disabled': !isAuthenticated }"
+            >
+              <i class="far fa-heart"></i>
               <span>{{ post.likes || 0 }}</span>
             </button>
-            <button @click="toggleComments(post)" class="interaction-btn" :class="{ 'active': post.showComments }">
+            <button 
+              @click="isAuthenticated ? toggleComments(post) : handleGuestInteraction('comment')"
+              class="interaction-btn"
+              :class="{ 'disabled': !isAuthenticated }"
+            >
               <i class="fas fa-comment"></i>
               <span>{{ post.commentCount || 0 }}</span>
             </button>
-            <button @click="savePost(post)" class="interaction-btn" :class="{ 'active': post.saved }">
-              <i :class="['fas', post.saved ? 'fa-bookmark' : 'fa-bookmark-o']"></i>
+            <button 
+              @click="isAuthenticated ? savePost(post) : handleGuestInteraction('save')"
+              class="interaction-btn"
+              :class="{ 'disabled': !isAuthenticated }"
+            >
+              <i class="fas fa-bookmark"></i>
             </button>
           </div>
 
@@ -238,16 +265,21 @@ const imageLoaded = ref(false);
 
 // Computed
 const user = computed(() => authStore.user);
-const canPost = computed(() => user.value?.email_verified || user.value?.role === 'admin');
+const isAuthenticated = computed(() => authStore.isAuthenticated);
+const canInteract = computed(() => {
+  return isAuthenticated.value && authStore.user?.verified;
+});
+const canPost = computed(() => {
+  return isAuthenticated.value && authStore.user?.verified;
+});
 const isAdmin = computed(() => user.value?.role === 'admin');
 const filteredPosts = computed(() => {
   let filtered = posts.value;
   
-  // For non-admin users, only show approved posts
+  // Always show approved posts for everyone
   if (!isAdmin.value) {
     filtered = filtered.filter(post => post.status === 'approved');
   } else if (postStatus.value !== 'all') {
-    // For admins, respect the status filter
     filtered = filtered.filter(post => post.status === postStatus.value);
   }
   
@@ -258,27 +290,21 @@ const filteredPosts = computed(() => {
 const loadPosts = async () => {
   try {
     loading.value = true;
-    const response = await (isAdmin.value ? 
-      newsService.getPosts() : 
-      newsService.getPublicPosts()
-    );
+    const response = await newsService.getPublicPosts();
     
     if (response.success) {
-      const updatedPosts = response.posts.map(newPost => {
-        const existingPost = posts.value.find(p => p.id === newPost.id);
-        return {
-          ...newPost,
-          imageLoaded: false,
-          imageError: false,
-          showComments: existingPost?.showComments || false,
-          comments: existingPost?.comments || [],
-          newComment: '',
-          liked: Boolean(newPost.liked),
-          saved: Boolean(newPost.saved),
-          commentCount: parseInt(newPost.comment_count || newPost.commentCount || 0),
-          likes: parseInt(newPost.like_count || newPost.likes || 0)
-        };
-      });
+      const updatedPosts = response.posts.map(newPost => ({
+        ...newPost,
+        imageLoaded: false,
+        imageError: false,
+        showComments: false,
+        comments: [],
+        newComment: '',
+        liked: false,
+        saved: false,
+        commentCount: parseInt(newPost.comment_count || newPost.commentCount || 0),
+        likes: parseInt(newPost.like_count || newPost.likes || 0)
+      }));
       posts.value = updatedPosts;
     }
   } catch (error) {
@@ -402,25 +428,29 @@ const deletePost = async (postId) => {
 };
 
 const likePost = async (post) => {
-    try {
-        const currentLiked = post.liked;
-        const currentLikes = post.likes || 0;
-        
-        // Make API call first
-        const response = await newsService.likePost(post.id);
-        
-        if (response.success) {
-            // Only update UI after successful API call
-            post.liked = response.liked;
-            post.likes = response.likes;
-            posts.value = [...posts.value];
-        } else {
-            throw new Error(response.message || 'Failed to update like status');
-        }
-    } catch (error) {
-        console.error('Error liking post:', error);
-        notificationStore.error('Failed to like post');
+  if (!isAuthenticated.value) {
+    notificationStore.info('Please sign in to like posts');
+    return;
+  }
+  try {
+    const currentLiked = post.liked;
+    const currentLikes = post.likes || 0;
+    
+    // Make API call first
+    const response = await newsService.likePost(post.id);
+    
+    if (response.success) {
+      // Only update UI after successful API call
+      post.liked = response.liked;
+      post.likes = response.likes;
+      posts.value = [...posts.value];
+    } else {
+      throw new Error(response.message || 'Failed to update like status');
     }
+  } catch (error) {
+    console.error('Error liking post:', error);
+    notificationStore.error('Failed to like post');
+  }
 };
 
 const approvePost = async (postId) => {
@@ -476,56 +506,61 @@ const handleImageLoad = (event, post) => {
 };
 
 const savePost = async (post) => {
-    try {
-        const response = await newsService.savePost(post.id);
-        if (response.success) {
-            post.saved = response.saved;
-            notificationStore.success(post.saved ? 'Post saved' : 'Post unsaved');
-        }
-    } catch (error) {
-        console.error('Error saving post:', error);
-        notificationStore.error('Failed to save post');
+  if (!isAuthenticated.value) {
+    notificationStore.info('Please sign in to save posts');
+    return;
+  }
+  try {
+    const response = await newsService.savePost(post.id);
+    if (response.success) {
+      post.saved = response.saved;
+      notificationStore.success(post.saved ? 'Post saved' : 'Post unsaved');
     }
+  } catch (error) {
+    console.error('Error saving post:', error);
+    notificationStore.error('Failed to save post');
+  }
 };
 
 const toggleComments = async (post) => {
-    if (!post.comments) {
-        post.comments = [];
-    }
-    post.showComments = !post.showComments;
-    if (post.showComments) {
-        await loadComments(post);
-    }
+  post.showComments = !post.showComments;
+  if (post.showComments) {
+    await loadComments(post);
+  }
 };
 
 const loadComments = async (post) => {
-    try {
-        const response = await newsService.getComments(post.id);
-        if (response.success) {
-            post.comments = response.comments;
-        }
-    } catch (error) {
-        console.error('Error loading comments:', error);
-        notificationStore.error('Failed to load comments');
+  try {
+    const response = await newsService.getComments(post.id);
+    if (response.success) {
+      post.comments = response.comments;
     }
+  } catch (error) {
+    console.error('Error loading comments:', error);
+    notificationStore.error('Failed to load comments');
+  }
 };
 
 const addComment = async (post) => {
-    if (!post.newComment?.trim()) return;
-    
-    try {
-        const response = await newsService.addComment(post.id, post.newComment);
-        if (response.success) {
-            if (!post.comments) post.comments = [];
-            post.comments.unshift(response.comment);
-            post.commentCount = (post.commentCount || 0) + 1;
-            post.newComment = '';
-            notificationStore.success('Comment added successfully');
-        }
-    } catch (error) {
-        console.error('Error adding comment:', error);
-        notificationStore.error('Failed to add comment');
+  if (!isAuthenticated.value) {
+    notificationStore.info('Please sign in to comment');
+    return;
+  }
+  if (!post.newComment?.trim()) return;
+  
+  try {
+    const response = await newsService.addComment(post.id, post.newComment);
+    if (response.success) {
+      if (!post.comments) post.comments = [];
+      post.comments.unshift(response.comment);
+      post.commentCount = (post.commentCount || 0) + 1;
+      post.newComment = '';
+      notificationStore.success('Comment added successfully');
     }
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    notificationStore.error('Failed to add comment');
+  }
 };
 
 const deleteComment = async (post, comment) => {
@@ -552,6 +587,17 @@ const deleteComment = async (post, comment) => {
         console.error('Failed to delete comment:', error);
         notificationStore.error(error.message || 'Failed to delete comment');
     }
+};
+
+const handleGuestInteraction = (type) => {
+  if (!isAuthenticated.value) {
+    notificationStore.info('Please sign in to ' + type + ' posts');
+    router.push({
+      path: '/login',
+      query: { redirect: '/news', action: type }
+    });
+    return;
+  }
 };
 
 onMounted(() => {
@@ -1360,6 +1406,113 @@ onMounted(() => {
     opacity: 1;
     visibility: visible;
     color: #ff4b4b !important;
+}
+
+.guest-prompt {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 92, 92, 0.06);
+  text-align: center;
+}
+
+.prompt-content {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.prompt-content i {
+  font-size: 2.5rem;
+  color: #00D1D1;
+  margin-bottom: 1rem;
+}
+
+.prompt-content h2 {
+  color: #005C5C;
+  margin-bottom: 0.5rem;
+}
+
+.prompt-content p {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+
+.prompt-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.login-btn, .register-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.login-btn {
+  background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
+  color: white;
+}
+
+.register-btn {
+  background: rgba(0, 209, 209, 0.1);
+  color: #00D1D1;
+  border: 1px solid rgba(0, 209, 209, 0.2);
+}
+
+.login-btn:hover, .register-btn:hover {
+  transform: translateY(-2px);
+}
+
+.guest-notice {
+  background: linear-gradient(135deg, rgba(0, 209, 209, 0.1) 0%, rgba(64, 82, 214, 0.1) 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(0, 173, 173, 0.2);
+}
+
+.notice-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: #005C5C;
+}
+
+.notice-content i {
+  font-size: 1.5rem;
+  color: #00D1D1;
+}
+
+.login-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: auto;
+  transition: all 0.3s ease;
+}
+
+.login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 209, 209, 0.2);
+}
+
+.interaction-btn.disabled {
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.interaction-btn.disabled:hover {
+  background: rgba(0, 173, 173, 0.05);
 }
 
 </style>

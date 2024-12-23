@@ -986,13 +986,16 @@ const calculateSecurityScore = () => {
 };
 
 // Format date utility
-const formatDate = (date) => {
-    if (!date) return 'Never';
+const formatDate = (dateString) => {
     try {
-        return new Date(date).toLocaleDateString('en-US', {
+        if (!dateString) return 'No date';
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Invalid date';
+        
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
             month: 'short',
             day: 'numeric',
-            year: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
         });

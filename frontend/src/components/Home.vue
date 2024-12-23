@@ -32,7 +32,7 @@
               <i class="fas fa-user-circle"></i>
               {{ post.author }}
             </span>
-            <span class="date">{{ new Date(post.createdAt).toLocaleDateString() }}</span>
+            <span class="date">{{ formatDate(post.createdAt) }}</span>
           </div>
           <h3>{{ post.title }}</h3>
           <p>{{ post.content.substring(0, 150) }}...</p>
@@ -133,6 +133,23 @@ const isLoggedIn = computed(() => authStore.isAuthenticated);
 const alerts = ref([]);
 const recentNews = ref([]);
 
+const formatDate = (dateString) => {
+  try {
+    if (!dateString) return 'No date';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid date';
+    
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error('Date formatting error:', error);
+    return 'Invalid date';
+  }
+};
+
 const viewDashboard = () => {
   router.push('/dashboard');
 };
@@ -160,7 +177,11 @@ const loadRecentNews = async () => {
     if (response.success) {
       recentNews.value = response.posts
         .filter(post => post.status === 'approved')
-        .slice(0, 1);
+        .slice(0, 1)
+        .map(post => ({
+          ...post,
+          createdAt: post.created_at || post.createdAt || new Date().toISOString()
+        }));
     }
   } catch (error) {
     console.error('Error loading recent news:', error);
