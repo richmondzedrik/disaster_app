@@ -1,14 +1,11 @@
 {
-  "name": "disaster-app",
+  "name": "frontend",
   "private": true,
-  "workspaces": [
-    "frontend",
-    "backend"
-  ],
+  "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run build --workspace=frontend",
-    "vercel-build": "npm run build",
+    "build": "vite build",
     "preview": "vite preview",
     "start": "serve -s dist"
   },

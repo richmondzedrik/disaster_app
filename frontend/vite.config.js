@@ -36,8 +36,5 @@ export default defineConfig({
     rollupOptions: {
       input: path.resolve(__dirname, 'index.html')
     }
-  },
-  define: {
-    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL)
   }
 })

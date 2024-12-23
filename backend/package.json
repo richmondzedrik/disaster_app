@@ -2,16 +2,11 @@
   "name": "backend",
   "version": "1.0.0",
   "main": "server.js",
-  "engines": {
-    "node": ">=16.0.0"
-  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
     "migrate": "node migrations/index.js",
-    "migrate:down": "node -e \"require('./migrations/001_create_activity_logs').down()\"",
-    "build": "echo 'Building backend...'",
-    "vercel-build": "echo 'Vercel build step completed'"
+    "migrate:down": "node -e \"require('./migrations/001_create_activity_logs').down()\""
   },
   "keywords": [],
   "author": "",

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://disaster-app-backend.vercel.app/api'
+const API_URL = import.meta.env.PROD 
+  ? '/.netlify/functions/api'
   : 'http://localhost:3000/api';
 
 const api = axios.create({
