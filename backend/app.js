@@ -16,14 +16,13 @@ const app = express();
 // CORS configuration
 const corsOptions = {
     origin: process.env.NODE_ENV === 'production' 
-        ? ['https://disasterapp.netlify.app']
+        ? [process.env.FRONTEND_URL, 'https://disasterapp.netlify.app']
         : ['http://localhost:5173', 'http://127.0.0.1:5173'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     exposedHeaders: ['Content-Range', 'X-Content-Range'],
-    preflightContinue: false,
-    optionsSuccessStatus: 204
+    maxAge: 600
 };
 
 app.set('trust proxy', true);
@@ -110,6 +109,24 @@ app.use((err, req, res, next) => {
         message: err.message || 'Internal server error',
         ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
     });
+});
+
+// Add after your existing middleware
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        console.log({
+            timestamp: new Date().toISOString(),
+            method: req.method,
+            path: req.path,
+            status: res.statusCode,
+            duration: `${duration}ms`,
+            userAgent: req.get('user-agent'),
+            ip: req.ip
+        });
+    });
+    next();
 });
 
 module.exports = app;

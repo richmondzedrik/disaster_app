@@ -165,6 +165,22 @@ async function testDbConnection() {
     }
 }
 
+async function checkDatabaseTables() {
+    try {
+        const [tables] = await db.execute(`
+            SELECT TABLE_NAME 
+            FROM information_schema.TABLES 
+            WHERE TABLE_SCHEMA = ?
+        `, [config.database]);
+        
+        console.log('Available tables:', tables.map(t => t.TABLE_NAME));
+        return true;
+    } catch (error) {
+        console.error('Database table check failed:', error);
+        return false;
+    }
+}
+
 // Start server
 async function startServer() {
     try {
@@ -198,6 +214,13 @@ async function startServer() {
             }
         });
         
+        // Add to your startServer function
+        const tablesExist = await checkDatabaseTables();
+        if (!tablesExist) {
+            console.error('Required database tables are missing');
+            process.exit(1);
+        }
+
         // Start the server
         server.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);

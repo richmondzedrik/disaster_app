@@ -3,11 +3,16 @@ const mysql = require('mysql2/promise');
 const config = require('../config/database');
 
 const pool = mysql.createPool({
-  ...config,
-  ssl: process.env.NODE_ENV === 'production' ? {
-    rejectUnauthorized: false,
-    minVersion: 'TLSv1.2'
-  } : false
+    ...config,
+    ssl: process.env.NODE_ENV === 'production' ? {
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2'
+    } : false,
+    connectionLimit: 10,
+    waitForConnections: true,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0
 });
 
 async function testConnection() {
