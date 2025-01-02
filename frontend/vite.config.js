@@ -32,16 +32,12 @@ export default defineConfig({
     target: 'esnext',
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
-      input: path.resolve(__dirname, 'index.html'),
       output: {
         manualChunks: {
           'vendor-leaflet': ['leaflet', 'leaflet-routing-machine'],
           'vendor-core': ['vue', 'vue-router', 'pinia'],
           'vendor-utils': ['axios']
-        },
-        chunkFileNames: 'assets/[name]-[hash].js',
-        entryFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash][extname]'
+        }
       }
     },
     minify: 'terser',
