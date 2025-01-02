@@ -16,7 +16,7 @@ const app = express();
 // CORS configuration
 const corsOptions = {
     origin: process.env.NODE_ENV === 'production' 
-        ? 'https://disaster-app.onrender.com'
+        ? ['https://disasterapp.netlify.app', 'https://disaster-app.onrender.com']
         : ['http://localhost:5173', 'http://127.0.0.1:5173'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -42,10 +42,6 @@ if (process.env.NODE_ENV !== 'production') {
         next();
     });
 }
-
-// Static file serving
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
-app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // Health check route
 app.get('/health', (req, res) => {
@@ -81,41 +77,12 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
-// SPA routes handler
-const spaRoutes = [
-    '/',
-    '/login',
-    '/register',
-    '/admin*',
-    '/dashboard',
-    '/profile',
-    '/alerts',
-    '/hazard-map',
-    '/checklist',
-    '/about',
-    '/contact',
-    '/news',
-    '/verify-code',
-    '/forgot-password',
-    '/reset-password',
-    '/verify-email',
-    '/change-password'
-];
-
-app.get(spaRoutes, (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-});
-
 // 404 handler
 app.use((req, res) => {
-    if (req.path.startsWith('/api')) {
-        return res.status(404).json({
-            success: false,
-            message: `API route not found: ${req.method} ${req.url}`
-        });
-    }
-    // For non-API routes, serve the SPA
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+    res.status(404).json({
+        success: false,
+        message: `API route not found: ${req.method} ${req.url}`
+    });
 });
 
 // Error handler

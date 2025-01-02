@@ -2,17 +2,8 @@ services:
   - type: web
     name: disaster-app
     env: node
-    buildCommand: |
-      cd frontend
-      npm install
-      ./node_modules/.bin/vite build
-      npx vite build
-      npm run build
-      cd ..
-    startCommand: |
-      cd frontend
-      npm install -g serve
-      serve -s dist
+    buildCommand: npm install
+    startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -22,5 +13,3 @@ services:
         sync: false
       - key: JWT_REFRESH_SECRET
         sync: false
-      - key: VITE_API_URL
-        value: https://disaster-app.onrender.com
