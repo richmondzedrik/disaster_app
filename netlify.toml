@@ -1,7 +1,11 @@
 [build]
   base = "frontend"
   publish = "dist"
-  command = "npm ci && npm run build"
+  command = """
+    npm install -g vite
+    npm ci
+    npm run build
+  """
 
 [[redirects]]
   from = "/*"

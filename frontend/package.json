@@ -17,11 +17,11 @@
     "pinia": "^2.3.0",
     "vue": "^3.3.0",
     "vue-router": "^4.5.0",
-    "serve": "^14.0.0"
+    "serve": "^14.0.0",
+    "vite": "^4.0.0",
+    "@vitejs/plugin-vue": "^4.0.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^4.0.0",
-    "vite": "^4.0.0",
     "terser": "^5.4.0"
   },
   "engines": {
