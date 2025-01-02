@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const express = require('express');
 const runMigrations = require('./migrations/runMigrations');
+const config = require('./config/database');
 
 const PORT = process.env.PORT || 3000;
 
@@ -115,33 +116,35 @@ exports.sendVerificationEmail = async (email, code) => {
 // Database query logging
 const originalExecute = db.execute;
 
-db.execute = async function(...args) {
-    console.log({
-        timestamp: new Date().toISOString(),
-        type: 'DB Query',
-        query: args[0],
-        params: args[1]
-    });
-    
+async function checkDatabaseTables() {
     try {
-        const result = await originalExecute.apply(this, args);
-        console.log({
-            timestamp: new Date().toISOString(),
-            type: 'DB Success',
-            query: args[0]
-        });
-        return result;
+        const [tables] = await db.execute(`
+            SELECT TABLE_NAME 
+            FROM information_schema.TABLES 
+            WHERE TABLE_SCHEMA = ?
+        `, [config.database]);
+        
+        const tableNames = tables.map(t => t.TABLE_NAME);
+        console.log('Available tables:', tableNames);
+        
+        // Check for required tables
+        const requiredTables = ['users', 'posts', 'alerts', 'comments', 'likes'];
+        const missingTables = requiredTables.filter(table => !tableNames.includes(table));
+        
+        if (missingTables.length > 0) {
+            console.error('Missing required tables:', missingTables);
+            return false;
+        }
+        
+        return true;
     } catch (error) {
-        console.error({
-            timestamp: new Date().toISOString(),
-            type: 'DB Error',
-            query: args[0],
-            error: {
-                message: error.message,
-                code: error.code
-            }
+        console.error('Database table check failed:', error);
+        console.error('Database config:', {
+            host: config.host,
+            database: config.database,
+            port: config.port
         });
-        throw error;
+        return false;
     }
 };
 
@@ -191,7 +194,7 @@ async function startServer() {
             process.exit(1);
         }
 
-        // Run migrations
+        // Run migrations before checking tables
         console.log('Running database migrations...');
         const migrationsSuccessful = await runMigrations();
         if (!migrationsSuccessful) {
@@ -200,35 +203,18 @@ async function startServer() {
         }
         console.log('Migrations completed successfully');
 
-        // Log registered routes
-        console.log('\nRegistered Routes:');
-        app._router.stack.forEach(middleware => {
-            if (middleware.route) {
-                console.log(`${Object.keys(middleware.route.methods).join(', ').toUpperCase()} ${middleware.route.path}`);
-            } else if (middleware.name === 'router') {
-                middleware.handle.stack.forEach(handler => {
-                    if (handler.route) {
-                        console.log(`${Object.keys(handler.route.methods).join(', ').toUpperCase()} ${handler.route.path}`);
-                    }
-                });
-            }
-        });
-        
-        // Add to your startServer function
+        // Check tables after migrations
         const tablesExist = await checkDatabaseTables();
         if (!tablesExist) {
-            console.error('Required database tables are missing');
+            console.error('Required database tables are missing after migrations');
             process.exit(1);
         }
 
         // Start the server
         server.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
-            if (process.env.NODE_ENV === 'production') {
-                console.log('Running in production mode');
-            } else {
-                console.log(`Development server at http://localhost:${PORT}`);
-            }
+            console.log(`Environment: ${process.env.NODE_ENV}`);
+            console.log(`Database: ${config.database}`);
         });
     } catch (error) {
         console.error('Failed to start server:', error);
