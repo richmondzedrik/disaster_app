@@ -41,9 +41,9 @@ async function testDbConnection() {
         await db.execute('SELECT 1');
         console.log('Database connection successful');
         console.log('Connected to:', {
-            host: process.env.RAILWAY_DB_HOST || process.env.DB_HOST,
-            database: process.env.RAILWAY_DB_NAME || process.env.DB_NAME,
-            port: process.env.RAILWAY_DB_PORT || process.env.DB_PORT
+            host: process.env.MYSQL_ADDON_HOST || process.env.DB_HOST,
+            database: process.env.MYSQL_ADDON_DB || process.env.DB_NAME,
+            port: process.env.MYSQL_ADDON_PORT || process.env.DB_PORT
         });
         return true;
     } catch (error) {

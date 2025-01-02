@@ -2,7 +2,10 @@ const mysql = require('mysql2/promise');
 const config = require('../config/database');
 
 async function up() {
-    const connection = await mysql.createConnection(config);
+    const connection = await mysql.createConnection({
+        ...config,
+        ssl: false // Disable SSL for initial database creation
+    });
     try {
         await connection.beginTransaction();
 
