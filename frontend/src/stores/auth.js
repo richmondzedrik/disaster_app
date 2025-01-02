@@ -241,6 +241,27 @@ export const useAuthStore = defineStore('auth', () => {
         }
     };
 
+    const handleAdminAuth = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return false;
+
+            const response = await api.get('/api/auth/verify', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            if (response.data.user?.role === 'admin') {
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Admin auth error:', error);
+            return false;
+        }
+    };
+
     return {
         user,
         accessToken,
@@ -256,5 +277,6 @@ export const useAuthStore = defineStore('auth', () => {
         verifyEmail,
         checkUsername,
         checkEmail,
+        handleAdminAuth,
     }
 }) 
