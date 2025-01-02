@@ -2,11 +2,8 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-  ],
+  plugins: [vue()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
@@ -31,10 +28,30 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: true,
+    sourcemap: false, // Disable sourcemaps in production to reduce memory usage
     target: 'esnext',
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
-      input: path.resolve(__dirname, 'index.html')
+      input: path.resolve(__dirname, 'index.html'),
+      output: {
+        manualChunks: {
+          'vendor-leaflet': ['leaflet', 'leaflet-routing-machine'],
+          'vendor-core': ['vue', 'vue-router', 'pinia'],
+          'vendor-utils': ['axios']
+        },
+        // Optimize chunk size
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]'
+      }
+    },
+    // Enable minification optimizations
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
     }
   },
   define: {
