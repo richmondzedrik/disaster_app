@@ -16,7 +16,7 @@ const app = express();
 // CORS configuration
 const corsOptions = {
     origin: process.env.NODE_ENV === 'production' 
-        ? ['https://disasterapp.netlify.app', 'https://disaster-app.onrender.com']
+        ? ['https://disasterapp.netlify.app']
         : ['http://localhost:5173', 'http://127.0.0.1:5173'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -27,8 +27,14 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 
+app.get('/api/test', (req, res) => {
+    res.json({
+        success: true,
+        message: 'Backend connection successful',
+        timestamp: new Date().toISOString()
+    });
+});
 // Basic middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -79,10 +85,19 @@ if (process.env.NODE_ENV !== 'production') {
 
 // 404 handler
 app.use((req, res) => {
-    res.status(404).json({
-        success: false,
-        message: `API route not found: ${req.method} ${req.url}`
-    });
+    // Only handle API routes
+    if (req.path.startsWith('/api/')) {
+        res.status(404).json({
+            success: false,
+            message: `API route not found: ${req.method} ${req.url}`
+        });
+    } else {
+        // For non-API routes, return a simple 404
+        res.status(404).json({
+            success: false,
+            message: 'Not found'
+        });
+    }
 });
 
 // Error handler

@@ -12,9 +12,7 @@ const api = axios.create({
     },
     withCredentials: true
 });
-
-// Request interceptor
-// Update the request interceptor to handle auth routes correctly
+/// Request interceptor
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -23,8 +21,9 @@ api.interceptors.request.use(
             config.headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
         }
 
-        // Don't modify auth routes
+        // Handle auth routes
         if (config.url.startsWith('/auth/')) {
+            config.url = `/api${config.url}`;
             return config;
         }
 
@@ -32,6 +31,9 @@ api.interceptors.request.use(
         if (!config.url.startsWith('/api/')) {
             config.url = `/api${config.url}`;
         }
+
+        // Remove any duplicate /api prefixes
+        config.url = config.url.replace(/\/api\/api/, '/api');
 
         return config;
     },

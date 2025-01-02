@@ -17,6 +17,7 @@ import Contact from '../components/Contact.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import DashboardView from '@/views/admin/DashboardView.vue'
 import PostsView from '@/views/admin/PostsView.vue'
+import TestConnection from '../components/TestConnection.vue'
 
 const requireAuth = (to, from, next) => {
   const authStore = useAuthStore()
@@ -230,6 +231,11 @@ const routes = [
     name: 'EvacuationRoutes',
     component: () => import('@/components/EvacuationRoutes.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/test',
+    name: 'test',
+    component: TestConnection
   },
   {
     path: '/:pathMatch(.*)*',
