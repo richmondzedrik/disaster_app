@@ -28,7 +28,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: false, // Disable sourcemaps in production to reduce memory usage
+    sourcemap: false,
     target: 'esnext',
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
@@ -39,13 +39,11 @@ export default defineConfig({
           'vendor-core': ['vue', 'vue-router', 'pinia'],
           'vendor-utils': ['axios']
         },
-        // Optimize chunk size
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash][extname]'
       }
     },
-    // Enable minification optimizations
     minify: 'terser',
     terserOptions: {
       compress: {
@@ -55,6 +53,6 @@ export default defineConfig({
     }
   },
   define: {
-    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL)
+    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com')
   }
 })
