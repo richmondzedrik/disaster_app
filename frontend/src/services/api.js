@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_URL = import.meta.env.PROD 
-  ? import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com'
+  ? 'https://disaster-app-backend.onrender.com'
   : 'http://localhost:3000';
 
 const api = axios.create({
