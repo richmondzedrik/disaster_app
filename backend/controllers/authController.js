@@ -7,6 +7,11 @@ const RefreshToken = require('../models/RefreshToken');
 const rateLimit = require('express-rate-limit');
 const db = require('../db/connection');
 const bcrypt = require('bcryptjs');
+const express = require('express');
+const app = express();
+
+// Add this before defining routes
+app.set('trust proxy', 1);
 
 // Create a limiter for registration attempts - make it more lenient
 const registerLimiter = rateLimit({
