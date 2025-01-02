@@ -26,6 +26,8 @@ const corsOptions = {
     optionsSuccessStatus: 204
 };
 
+app.set('trust proxy', true);
+
 app.use(cors(corsOptions));
 
 app.get('/api/test', (req, res) => {
