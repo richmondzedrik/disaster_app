@@ -5,6 +5,7 @@ const WebSocket = require('ws');
 const db = require('./db/connection');
 const path = require('path');
 const fs = require('fs');
+const express = require('express');
 
 const PORT = process.env.PORT || 3000;
 
@@ -34,6 +35,114 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
     console.error('Critical Error: JWT secrets not set in environment variables');
     process.exit(1);
 }
+
+// Global error logger
+const logError = (error, context) => {
+    console.error({
+        timestamp: new Date().toISOString(),
+        context,
+        error: {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        }
+    });
+};
+
+// Global success logger
+const logSuccess = (message, data) => {
+    console.log({
+        timestamp: new Date().toISOString(),
+        message,
+        data
+    });
+};
+
+// Make loggers global
+global.logError = logError;
+global.logSuccess = logSuccess;
+
+// Authentication event logging middleware
+app.use((req, res, next) => {
+    if (req.path.startsWith('/auth')) {
+        console.log({
+            timestamp: new Date().toISOString(),
+            type: 'Auth Request',
+            method: req.method,
+            path: req.path,
+            body: req.path.includes('password') ? '***' : req.body
+        });
+    }
+    next();
+});
+
+// Email service logging
+const originalSendEmail = require('./utils/email').sendVerificationEmail;
+const { sendVerificationEmail } = require('./utils/email');
+
+// Wrap the email sending function to add logging
+exports.sendVerificationEmail = async (email, code) => {
+    console.log({
+        timestamp: new Date().toISOString(),
+        type: 'Email Attempt',
+        email,
+        code: '******' // Don't log actual code
+    });
+    
+    try {
+        const result = await originalSendEmail(email, code);
+        console.log({
+            timestamp: new Date().toISOString(),
+            type: 'Email Success',
+            email
+        });
+        return result;
+    } catch (error) {
+        console.error({
+            timestamp: new Date().toISOString(),
+            type: 'Email Error',
+            email,
+            error: {
+                message: error.message,
+                stack: error.stack
+            }
+        });
+        throw error;
+    }
+};
+
+// Database query logging
+const originalExecute = db.execute;
+
+db.execute = async function(...args) {
+    console.log({
+        timestamp: new Date().toISOString(),
+        type: 'DB Query',
+        query: args[0],
+        params: args[1]
+    });
+    
+    try {
+        const result = await originalExecute.apply(this, args);
+        console.log({
+            timestamp: new Date().toISOString(),
+            type: 'DB Success',
+            query: args[0]
+        });
+        return result;
+    } catch (error) {
+        console.error({
+            timestamp: new Date().toISOString(),
+            type: 'DB Error',
+            query: args[0],
+            error: {
+                message: error.message,
+                code: error.code
+            }
+        });
+        throw error;
+    }
+};
 
 // Test database connection
 async function testDbConnection() {
