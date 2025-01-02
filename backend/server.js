@@ -6,6 +6,7 @@ const db = require('./db/connection');
 const path = require('path');
 const fs = require('fs');
 const express = require('express');
+const runMigrations = require('./migrations/runMigrations');
 
 const PORT = process.env.PORT || 3000;
 
@@ -166,33 +167,50 @@ async function testDbConnection() {
 
 // Start server
 async function startServer() {
-    const dbConnected = await testDbConnection();
-    if (!dbConnected) {
+    try {
+        // Test database connection first
+        const dbConnected = await testDbConnection();
+        if (!dbConnected) {
+            console.error('Database connection failed');
+            process.exit(1);
+        }
+
+        // Run migrations
+        console.log('Running database migrations...');
+        const migrationsSuccessful = await runMigrations();
+        if (!migrationsSuccessful) {
+            console.error('Failed to run migrations');
+            process.exit(1);
+        }
+        console.log('Migrations completed successfully');
+
+        // Log registered routes
+        console.log('\nRegistered Routes:');
+        app._router.stack.forEach(middleware => {
+            if (middleware.route) {
+                console.log(`${Object.keys(middleware.route.methods).join(', ').toUpperCase()} ${middleware.route.path}`);
+            } else if (middleware.name === 'router') {
+                middleware.handle.stack.forEach(handler => {
+                    if (handler.route) {
+                        console.log(`${Object.keys(handler.route.methods).join(', ').toUpperCase()} ${handler.route.path}`);
+                    }
+                });
+            }
+        });
+        
+        // Start the server
+        server.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+            if (process.env.NODE_ENV === 'production') {
+                console.log('Running in production mode');
+            } else {
+                console.log(`Development server at http://localhost:${PORT}`);
+            }
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error);
         process.exit(1);
     }
-
-    // Log registered routes
-    console.log('\nRegistered Routes:');
-    app._router.stack.forEach(middleware => {
-        if (middleware.route) {
-            console.log(`${Object.keys(middleware.route.methods).join(', ').toUpperCase()} ${middleware.route.path}`);
-        } else if (middleware.name === 'router') {
-            middleware.handle.stack.forEach(handler => {
-                if (handler.route) {
-                    console.log(`${Object.keys(handler.route.methods).join(', ').toUpperCase()} ${handler.route.path}`);
-                }
-            });
-        }
-    });
-    
-    server.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-        if (process.env.NODE_ENV === 'production') {
-            console.log('Running in production mode');
-        } else {
-            console.log(`Development server at http://localhost:${PORT}`);
-        }
-    });
 }
 
 // Handle server errors
