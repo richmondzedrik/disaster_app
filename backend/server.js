@@ -40,6 +40,11 @@ async function testDbConnection() {
     try {
         await db.execute('SELECT 1');
         console.log('Database connection successful');
+        console.log('Connected to:', {
+            host: process.env.RAILWAY_DB_HOST || process.env.DB_HOST,
+            database: process.env.RAILWAY_DB_NAME || process.env.DB_NAME,
+            port: process.env.RAILWAY_DB_PORT || process.env.DB_PORT
+        });
         return true;
     } catch (error) {
         console.error('Database connection failed:', error);
