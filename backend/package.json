@@ -4,6 +4,7 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "cd frontend && npm install && npm run build",
     "start": "node server.js",
     "migrate": "node migrations/index.js",
     "migrate:down": "node -e \"require('./migrations/001_create_activity_logs').down()\""
