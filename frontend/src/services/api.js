@@ -7,44 +7,35 @@ const API_URL = import.meta.env.PROD
 const api = axios.create({
     baseURL: API_URL,
     headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
     },
     withCredentials: true
 });
 
 // Request interceptor
+// Update the request interceptor to handle auth routes correctly
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
         
         if (token) {
-            const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-            config.headers.Authorization = formattedToken;
+            config.headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
         }
 
-        // Log the request URL and method
-        console.log(`🚀 Request: ${config.method?.toUpperCase()} ${config.url}`);
+        // Don't modify auth routes
+        if (config.url.startsWith('/auth/')) {
+            return config;
+        }
 
-        // Remove any duplicate /api prefixes
-        config.url = config.url.replace(/\/api\/api/, '/api');
-        
-        // Ensure single /api prefix for non-auth and non-admin routes
-        if (!config.url.startsWith('/api/') && !config.url.startsWith('/auth/') && !config.url.startsWith('/admin/')) {
+        // For other routes, ensure they have /api prefix
+        if (!config.url.startsWith('/api/')) {
             config.url = `/api${config.url}`;
         }
 
-        // Log the final URL after modifications
-        console.log(`📝 Final URL: ${config.url}`);
-
-        // Add CORS headers to every request
-        config.headers['X-Requested-With'] = 'XMLHttpRequest';
-
         return config;
     },
-    (error) => {
-        console.error('Request error:', error);
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 // Response interceptor
