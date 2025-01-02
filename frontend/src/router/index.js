@@ -192,7 +192,10 @@ const routes = [
     path: '/news',
     name: 'News',
     component: () => import('../components/News.vue'),
-    meta: { requiresAuth: true }
+    meta: { 
+      requiresAuth: false,
+      allowGuest: true 
+    }
   },
   {
     path: '/admin/news',
@@ -245,31 +248,32 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   const notificationStore = useNotificationStore()
   
-  // Skip for public routes
-  if (!to.meta.requiresAuth) {
+  // Allow guest access for routes with allowGuest meta
+  if (to.meta.allowGuest) {
     return next()
   }
 
+  // Initialize authentication
   authStore.initializeAuth()
     .then(() => {
-      // Check admin routes
-      if (to.meta.requiresAdmin) {
+      // Check if route requires authentication
+      if (to.meta.requiresAuth) {
         if (!authStore.isAuthenticated) {
-          notificationStore.error('Please login to access admin panel')
-          return next('/login')
+          notificationStore.error('Please login to continue')
+          return next({
+            path: '/login',
+            query: { redirect: to.fullPath }
+          })
         }
-        if (!authStore.isAdmin) {
+
+        // Check if route requires admin access
+        if (to.meta.requiresAdmin && !authStore.isAdmin) {
           notificationStore.error('Admin access required')
           return next('/')
         }
       }
 
-      // Handle regular authenticated routes
-      if (!authStore.isAuthenticated) {
-        notificationStore.error('Please login to continue')
-        return next('/login')
-      }
-
+      // Allow access to non-auth routes even when authenticated
       next()
     })
     .catch(() => {
