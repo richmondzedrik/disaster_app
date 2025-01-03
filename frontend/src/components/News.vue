@@ -317,12 +317,11 @@ const loadPosts = async () => {
         imageLoaded: false,
         imageError: false,
         showComments: false,
-        comments: [],
+        comments: post.comments || [],
         newComment: '',
-        liked: Boolean(post.liked || post.is_liked),
-        saved: Boolean(post.saved),
-        commentCount: parseInt(post.comment_count || post.commentCount || 0),
-        likes: parseInt(post.like_count || post.likes || 0)
+        liked: post.is_liked === true || post.liked === true,
+        likes: parseInt(post.like_count || post.likes || 0),
+        commentCount: parseInt(post.comment_count || post.comments?.length || 0)
       }));
     }
   } catch (error) {
@@ -554,7 +553,7 @@ const savePost = async (post) => {
 
 const toggleComments = async (post) => {
   post.showComments = !post.showComments;
-  if (post.showComments) {
+  if (post.showComments && (!post.comments || post.comments.length === 0)) {
     await loadComments(post);
   }
 };

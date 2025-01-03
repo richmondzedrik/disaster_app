@@ -482,15 +482,21 @@ router.get('/public', async (req, res) => {
 
 // In your getPublicPosts or similar route
 const [posts] = await db.execute(`
-    SELECT p.*,
-           COUNT(DISTINCT l.id) as like_count,
-           EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = ?) as is_liked
+    SELECT 
+        p.*,
+        u.username as author,
+        COUNT(DISTINCT l.id) as like_count,
+        COUNT(DISTINCT c.id) as comment_count,
+        IF(l2.user_id IS NOT NULL, 1, 0) as is_liked
     FROM posts p
+    LEFT JOIN users u ON p.author_id = u.id
     LEFT JOIN likes l ON p.id = l.post_id
+    LEFT JOIN comments c ON p.id = c.id
+    LEFT JOIN likes l2 ON p.id = l2.post_id AND l2.user_id = ?
     WHERE p.status = 'approved'
     GROUP BY p.id
     ORDER BY p.created_at DESC
-`, [req.user?.userId || null]);
+`, [userId || null]);
         
         return res.json({
             success: true,
