@@ -32,4 +32,27 @@ router.get('/test', (req, res) => {
   });
 });
 
+// Add this route with your other auth routes
+router.post('/verify-code', async (req, res) => {
+    try {
+        const { email, code } = req.body;
+        
+        if (!email || !code) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Email and verification code are required' 
+            });
+        }
+
+        const result = await User.verifyCode(email, code);
+        return res.json(result);
+    } catch (error) {
+        console.error('Verification error:', error);
+        return res.status(500).json({ 
+            success: false,
+            message: 'Verification failed. Please try again.' 
+        });
+    }
+});
+
 module.exports = router; 
