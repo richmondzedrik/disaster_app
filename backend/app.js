@@ -36,6 +36,26 @@ app.get('/api/test', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+
+// Add the new database test route
+app.get('/api/db-test', async (req, res) => {
+    try {
+        const db = require('./db/connection');
+        await db.execute('SELECT 1');
+        res.json({ 
+            success: true, 
+            message: 'Database connected successfully' 
+        });
+    } catch (error) {
+        console.error('Database connection test failed:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Database connection failed',
+            error: error.message 
+        });
+    }
+});
+
 // Basic middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
