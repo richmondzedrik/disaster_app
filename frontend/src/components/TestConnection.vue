@@ -56,9 +56,21 @@ const hasResults = computed(() =>
 const testEndpoint = async (endpoint, options = {}) => {
   try {
     const response = await api.get(endpoint, options);
+    
+    // Test both connection and content
+    const contentCheck = {
+      '/api/alerts/test': () => Array.isArray(response.data.alerts),
+      '/api/news/test': () => Array.isArray(response.data.posts),
+      '/api/checklist/test': () => Array.isArray(response.data.items)
+    }[endpoint];
+
+    const hasValidContent = contentCheck ? contentCheck() : true;
+
     return {
-      success: true,
-      message: response.data.message || 'Connected successfully'
+      success: response.data.success && hasValidContent,
+      message: hasValidContent 
+        ? response.data.message || 'Connected successfully'
+        : 'Connected but invalid content format'
     };
   } catch (error) {
     return {
@@ -77,10 +89,30 @@ const testAllSystems = async () => {
     status.value.backend = await testEndpoint('/api/test');
     status.value.database = await testEndpoint('/api/db-test');
 
-    // Test API services
-    status.value.alerts = await testEndpoint('/api/alerts/test');
-    status.value.news = await testEndpoint('/api/news/test');
-    status.value.checklist = await testEndpoint('/api/checklist/test');
+    // Test API services with content validation
+    const alertsTest = await testEndpoint('/api/alerts/test');
+    status.value.alerts = {
+      ...alertsTest,
+      message: alertsTest.success 
+        ? 'Connected and content validated'
+        : alertsTest.message
+    };
+
+    const newsTest = await testEndpoint('/api/news/test');
+    status.value.news = {
+      ...newsTest,
+      message: newsTest.success 
+        ? 'Connected and content validated'
+        : newsTest.message
+    };
+
+    const checklistTest = await testEndpoint('/api/checklist/test');
+    status.value.checklist = {
+      ...checklistTest,
+      message: checklistTest.success 
+        ? 'Connected and content validated'
+        : checklistTest.message
+    };
 
     // Test auth services
     status.value.auth = await testEndpoint('/api/auth/test');
