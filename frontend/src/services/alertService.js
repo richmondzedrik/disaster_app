@@ -17,11 +17,11 @@ const getHeaders = () => {
   };
 };
 
-export const alertService = {
+const alertService = {
   async getAdminAlerts() {
     try {
       const headers = getHeaders();
-      const response = await axios.get(`${API_URL}/alerts/admin`, { 
+      const response = await axios.get(`${API_URL}/admin/alerts`, { 
         headers,
         withCredentials: true 
       });
@@ -46,26 +46,27 @@ export const alertService = {
   async getActiveAlerts() {
     try {
       const headers = getHeaders();
-      const response = await axios.get(`${API_URL}/alerts/active`, { 
+      const response = await axios.get(`${API_URL}/alerts/active`, {
         headers,
         withCredentials: true
       });
-      
-      if (response.data?.success) {
-        return {
-          success: true,
-          alerts: (response.data.alerts || [])
-            .filter(alert => alert.is_active)
-            .sort((a, b) => (b.priority || 0) - (a.priority || 0))
-        };
-      }
-      throw new Error(response.data?.message || 'Failed to fetch active alerts');
+      return response.data;
     } catch (error) {
       console.error('Error fetching active alerts:', error);
-      if (error.response?.status === 401) {
-        const authStore = useAuthStore();
-        authStore.handleAuthError();
-      }
+      throw error;
+    }
+  },
+
+  async getAlertCount() {
+    try {
+      const headers = getHeaders();
+      const response = await axios.get(`${API_URL}/alerts/count`, {
+        headers,
+        withCredentials: true
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching alert count:', error);
       throw error;
     }
   },
@@ -182,4 +183,6 @@ export const alertService = {
       throw new Error(error.response?.data?.message || 'Failed to delete alert');
     }
   }
-}; 
+};
+
+export { alertService };

@@ -11,7 +11,7 @@
         </button>
       </div>
   
-      <div class="table-container" :class="{ 'loading': isLoading }">
+      <div class="table-container" :class="{ 'loading': loading }">
         <table>
           <thead>
             <tr>

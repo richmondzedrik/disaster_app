@@ -11,32 +11,45 @@ router.get('/test', (req, res) => {
 });
 
 // Get active alerts
-router.get('/active', async (req, res) => {
+router.get('/active', auth.authMiddleware, async (req, res) => {
     try {
-        const [alerts] = await db.execute(`
-            SELECT 
-                a.*,
-                u.username as created_by_username
-            FROM disaster_prep.alerts a
-            LEFT JOIN disaster_prep.users u ON a.user_id = u.id
-            WHERE a.is_active = true 
-            AND (a.expiry_date IS NULL OR a.expiry_date > NOW())
-            ORDER BY a.priority DESC, a.created_at DESC
+        const [rows] = await db.execute(`
+            SELECT * FROM alerts 
+            WHERE is_active = true 
+            ORDER BY priority DESC, created_at DESC
         `);
         
         res.json({
             success: true,
-            alerts: alerts.map(alert => ({
-                ...alert,
-                is_active: Boolean(alert.is_active),
-                is_public: Boolean(alert.is_public)
-            }))
+            alerts: rows
         });
     } catch (error) {
         console.error('Error fetching active alerts:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch alerts'
+            message: 'Failed to fetch active alerts'
+        });
+    }
+});
+
+// Get alert count
+router.get('/count', auth.authMiddleware, async (req, res) => {
+    try {
+        const [rows] = await db.execute(`
+            SELECT COUNT(*) as count 
+            FROM alerts 
+            WHERE is_active = true
+        `);
+        
+        res.json({
+            success: true,
+            count: rows[0].count
+        });
+    } catch (error) {
+        console.error('Error fetching alert count:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch alert count'
         });
     }
 });
@@ -84,7 +97,7 @@ router.post('/', auth.authMiddleware, async (req, res) => {
       });
     }
 
-    const { message, type, priority, expiryDate, isPublic, sendEmail } = req.body;
+    const { message, type, priority, expiryDate, isPublic } = req.body;
     
     if (!message?.trim()) {
       return res.status(400).json({
@@ -93,21 +106,11 @@ router.post('/', auth.authMiddleware, async (req, res) => {
       });
     }
 
-    const alertData = {
-      message: message.trim(),
-      type: type || 'info',
-      priority: priority === undefined ? 0 : parseInt(priority),
-      expiry_date: expiryDate || null,
-      is_public: isPublic === undefined ? false : Boolean(isPublic),
-      user_id: req.user.userId,
-      is_active: true
-    };
-
     const [result] = await db.execute(
       `INSERT INTO alerts (message, type, priority, expiry_date, is_public, user_id, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [alertData.message, alertData.type, alertData.priority, alertData.expiry_date,
-       alertData.is_public, alertData.user_id, alertData.is_active]
+       VALUES (?, ?, ?, ?, ?, ?, true)`,
+      [message.trim(), type || 'info', priority || 0, expiryDate || null, 
+       isPublic || false, req.user.userId]
     );
 
     const [newAlert] = await db.execute(
@@ -115,32 +118,14 @@ router.post('/', auth.authMiddleware, async (req, res) => {
       [result.insertId]
     );
 
-    // Send email notifications if sendEmail is true
-    let emailSent = false;
-    if (sendEmail) {
-      try {
-        const verifiedEmails = await Alert.getVerifiedUserEmails();
-        if (verifiedEmails.length > 0) {
-          await Promise.all(verifiedEmails.map(email => 
-            exports.sendAlertEmail(email, newAlert[0])
-          ));
-          emailSent = true;
-        }
-      } catch (emailError) {
-        console.error('Error sending alert emails:', emailError);
-        // Don't fail the request if emails fail
-      }
-    }
-
-    res.json({
+    return res.status(201).json({
       success: true,
       message: 'Alert created successfully',
-      alert: newAlert[0],
-      emailSent
+      alert: newAlert[0]
     });
   } catch (error) {
     console.error('Create alert error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to create alert'
     });

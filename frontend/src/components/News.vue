@@ -101,7 +101,7 @@
                 </div>
                 <div v-if="post.imageError" class="image-error-overlay">
                   <i class="fas fa-exclamation-circle"></i>
-                  <span>Failed to load image</span>
+                  <span>Image unavailable</span>
                 </div>
               </div>
             </div>
@@ -319,9 +319,9 @@ const loadPosts = async () => {
     loading.value = true;
     const response = await newsService.getPublicPosts();
     
-    if (response?.success) {
-      const updatedPosts = (response.posts || []).map(newPost => ({
-        ...newPost,
+    if (response.success) {
+      posts.value = response.posts.map(post => ({
+        ...post,
         imageLoaded: false,
         imageError: false,
         showComments: false,
@@ -329,17 +329,13 @@ const loadPosts = async () => {
         newComment: '',
         liked: false,
         saved: false,
-        commentCount: parseInt(newPost.comment_count || newPost.commentCount || 0),
-        likes: parseInt(newPost.like_count || newPost.likes || 0)
+        commentCount: parseInt(post.comment_count || post.commentCount || 0),
+        likes: parseInt(post.like_count || post.likes || 0)
       }));
-      posts.value = updatedPosts;
-    } else {
-      throw new Error(response?.message || 'Failed to load posts');
     }
   } catch (error) {
     console.error('Error loading posts:', error);
     notificationStore.error('Failed to load posts');
-    posts.value = [];
   } finally {
     loading.value = false;
   }
@@ -516,23 +512,37 @@ const rejectPost = async (postId) => {
 const getImageUrl = (imageUrl) => {
   if (!imageUrl) return '';
   
-  // If it's already a full URL
-  if (imageUrl.startsWith('http')) return imageUrl;
-  
-  // Remove any leading slashes
-  const cleanImageUrl = imageUrl.replace(/^\/+/, '');
-  
-  // Construct the full URL
-  return `${API_URL}/uploads/${cleanImageUrl}`;
+  try {
+    // If it's already a full URL, return it
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    // Remove any leading slashes and construct the full URL
+    const cleanImageUrl = imageUrl.replace(/^\/+/, '');
+    const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:3000';
+    return `${baseUrl}/uploads/${cleanImageUrl}`;
+  } catch (error) {
+    console.error('Error constructing image URL:', error);
+    return '';
+  }
 };
 
 const handleImageError = (event, post) => {
-  console.error('Failed to load image:', event.target.src);
+  if (!post) return;
+  
   post.imageError = true;
   post.imageLoaded = false;
+  
+  // Log the error with more context
+  console.warn(`Failed to load image for post ${post.id}:`, {
+    imageUrl: post.image_url,
+    constructedUrl: getImageUrl(post.image_url),
+    error: event
+  });
 };
 
 const handleImageLoad = (event, post) => {
+  if (!post) return;
+  
   post.imageLoaded = true;
   post.imageError = false;
 };

@@ -127,6 +127,7 @@ import { useNotificationStore } from './stores/notification';
 import NotificationsContainer from './components/NotificationsContainer.vue';
 import { alertService } from './services/alertService';
 
+
 // Store and router setup
 const router = useRouter();
 const authStore = useAuthStore();
