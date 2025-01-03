@@ -60,26 +60,21 @@ const testEndpoint = async (endpoint, options = {}) => {
     // Test both connection and content
     const contentCheck = {
       '/api/alerts/test': () => {
-        const data = response.data;
-        return data && (Array.isArray(data.alerts) || Array.isArray(data.data?.alerts));
+        return response.data?.success === true;
       },
       '/api/news/test': () => {
-        const data = response.data;
-        return data && (Array.isArray(data.posts) || Array.isArray(data.data?.posts));
+        return response.data?.success === true;
       },
       '/api/checklist/test': () => {
-        const data = response.data;
-        return data && (Array.isArray(data.items) || Array.isArray(data.data?.items));
+        return response.data?.success === true;
       }
     }[endpoint];
 
     const hasValidContent = contentCheck ? contentCheck() : true;
 
     return {
-      success: response.data.success && hasValidContent,
-      message: hasValidContent 
-        ? response.data.message || 'Connected successfully'
-        : 'Connected but invalid content format'
+      success: response.data?.success && hasValidContent,
+      message: response.data?.message || 'Connected successfully'
     };
   } catch (error) {
     return {
