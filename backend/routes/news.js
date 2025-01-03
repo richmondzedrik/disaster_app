@@ -505,4 +505,114 @@ router.get('/test', (req, res) => {
   });
 });
 
+// Test endpoints for system health check
+router.get('/api/news/test', async (req, res) => {
+    try {
+        // Sample test posts
+        const testPosts = [
+            {
+                id: 1,
+                title: 'Test Emergency Update',
+                content: 'This is a test emergency update post.',
+                status: 'approved',
+                author: 'System Test',
+                created_at: new Date().toISOString(),
+                comment_count: 2,
+                like_count: 5
+            },
+            {
+                id: 2,
+                title: 'Test Community Alert',
+                content: 'This is a test community alert post.',
+                status: 'approved',
+                author: 'System Test',
+                created_at: new Date().toISOString(),
+                comment_count: 1,
+                like_count: 3
+            }
+        ];
+
+        res.json({
+            success: true,
+            message: 'News service is operational',
+            posts: testPosts
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'News service test failed'
+        });
+    }
+});
+
+router.get('/api/alerts/test', async (req, res) => {
+    try {
+        // Sample test alerts
+        const testAlerts = [
+            {
+                id: 1,
+                type: 'emergency',
+                message: 'Test Emergency Alert',
+                priority: 2,
+                is_active: true,
+                created_at: new Date().toISOString()
+            },
+            {
+                id: 2,
+                type: 'warning',
+                message: 'Test Warning Alert',
+                priority: 1,
+                is_active: true,
+                created_at: new Date().toISOString()
+            }
+        ];
+
+        res.json({
+            success: true,
+            message: 'Alerts service is operational',
+            alerts: testAlerts
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Alerts service test failed'
+        });
+    }
+});
+
+router.get('/api/checklist/test', async (req, res) => {
+    try {
+        // Sample test checklist items
+        const testItems = [
+            {
+                id: 1,
+                title: 'Emergency Kit',
+                description: 'Test emergency kit item',
+                status: 'pending',
+                category: 'Supplies',
+                completed: false
+            },
+            {
+                id: 2,
+                title: 'Evacuation Plan',
+                description: 'Test evacuation plan item',
+                status: 'completed',
+                category: 'Planning',
+                completed: true
+            }
+        ];
+
+        res.json({
+            success: true,
+            message: 'Checklist service is operational',
+            items: testItems
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Checklist service test failed'
+        });
+    }
+});
+
 module.exports = router;

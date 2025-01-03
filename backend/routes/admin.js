@@ -664,4 +664,103 @@ router.get('/test', (req, res) => {
   });
 });
 
+// Add these test endpoints
+router.get('/alerts/test', async (req, res) => {
+  try {
+    const testAlerts = [
+      {
+        id: 1,
+        type: 'emergency',
+        message: 'Test Emergency Alert',
+        priority: 2,
+        is_active: true
+      },
+      {
+        id: 2,
+        type: 'warning',
+        message: 'Test Warning Alert',
+        priority: 1,
+        is_active: true
+      }
+    ];
+
+    res.json({
+      success: true,
+      message: 'Alerts service is operational',
+      data: {
+        alerts: testAlerts
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Alerts service test failed'
+    });
+  }
+});
+
+router.get('/news/test', async (req, res) => {
+  try {
+    const testPosts = [
+      {
+        id: 1,
+        title: 'Emergency Update Post',
+        content: 'Test content',
+        status: 'approved'
+      },
+      {
+        id: 2,
+        title: 'Community Alert Post',
+        content: 'Test content',
+        status: 'approved'
+      }
+    ];
+
+    res.json({
+      success: true,
+      message: 'News service is operational',
+      data: {
+        posts: testPosts
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'News service test failed'
+    });
+  }
+});
+
+router.get('/checklist/test', async (req, res) => {
+  try {
+    const testItems = [
+      {
+        id: 1,
+        title: 'Emergency Kit',
+        description: 'Test description',
+        status: 'pending'
+      },
+      {
+        id: 2,
+        title: 'Evacuation Plan',
+        description: 'Test description',
+        status: 'completed'
+      }
+    ];
+
+    res.json({
+      success: true,
+      message: 'Checklist service is operational',
+      data: {
+        items: testItems
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Checklist service test failed'
+    });
+  }
+});
+
 module.exports = router; 

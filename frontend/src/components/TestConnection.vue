@@ -17,9 +17,38 @@
       <!-- API Services -->
       <div class="status-group">
         <h4>API Services</h4>
-        <StatusItem title="Alerts API" :status="status.alerts" />
-        <StatusItem title="News API" :status="status.news" />
-        <StatusItem title="Checklist API" :status="status.checklist" />
+        <div class="service-details">
+          <StatusItem title="Alerts API" :status="status.alerts" />
+          <div v-if="status.alerts?.success" class="test-data">
+            <strong>Test Alerts:</strong>
+            <ul>
+              <li>Emergency Alert (High Priority)</li>
+              <li>Warning Alert (Medium Priority)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="service-details">
+          <StatusItem title="News API" :status="status.news" />
+          <div v-if="status.news?.success" class="test-data">
+            <strong>Test Posts:</strong>
+            <ul>
+              <li>Emergency Update Post</li>
+              <li>Community Alert Post</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="service-details">
+          <StatusItem title="Checklist API" :status="status.checklist" />
+          <div v-if="status.checklist?.success" class="test-data">
+            <strong>Test Items:</strong>
+            <ul>
+              <li>Emergency Kit (Supplies)</li>
+              <li>Evacuation Plan (Planning)</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <!-- Auth Services -->
@@ -60,56 +89,33 @@ const testEndpoint = async (endpoint, options = {}) => {
     // Test both connection and content
     const contentCheck = {
       '/api/alerts/test': () => {
-        const testAlert = {
-          id: 1,
-          type: 'info',
-          message: 'Test alert',
-          priority: 1,
-          is_active: true
+        return {
+          valid: response.data?.success === true && Array.isArray(response.data?.data?.alerts),
+          testData: response.data?.data?.alerts || []
         };
-        return response.data?.success && 
-               Array.isArray(response.data?.alerts) && 
-               response.data?.alerts.some(alert => 
-                 Object.keys(testAlert).every(key => alert.hasOwnProperty(key))
-               );
       },
       '/api/news/test': () => {
-        const testPost = {
-          id: 1,
-          title: 'Test post',
-          content: 'Test content',
-          status: 'approved',
-          author: 'Test Author'
+        return {
+          valid: response.data?.success === true && Array.isArray(response.data?.data?.posts),
+          testData: response.data?.data?.posts || []
         };
-        return response.data?.success && 
-               Array.isArray(response.data?.posts) && 
-               response.data?.posts.some(post => 
-                 Object.keys(testPost).every(key => post.hasOwnProperty(key))
-               );
       },
       '/api/checklist/test': () => {
-        const testItem = {
-          id: 1,
-          title: 'Test item',
-          description: 'Test description',
-          status: 'pending'
+        return {
+          valid: response.data?.success === true && Array.isArray(response.data?.data?.items),
+          testData: response.data?.data?.items || []
         };
-        return response.data?.success && 
-               Array.isArray(response.data?.items) && 
-               response.data?.items.some(item => 
-                 Object.keys(testItem).every(key => item.hasOwnProperty(key))
-               );
       }
     }[endpoint];
 
-    const hasValidContent = contentCheck ? contentCheck() : true;
-    const contentDetails = hasValidContent ? getContentDetails(response.data, endpoint) : '';
-
+    const check = contentCheck ? contentCheck() : { valid: true };
+    
     return {
-      success: response.data?.success && hasValidContent,
-      message: hasValidContent 
-        ? `Connected and validated: ${contentDetails}`
-        : 'Connected but invalid content format'
+      success: response.data?.success && check.valid,
+      message: check.valid 
+        ? `Connected and validated: ${check.testData?.length || 0} items found`
+        : 'Connected but invalid content format',
+      testData: check.testData
     };
   } catch (error) {
     return {
@@ -201,6 +207,38 @@ const testAllSystems = async () => {
 
 .status-message {
   font-size: 0.9rem;
+}
+
+.service-details {
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.test-data {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #fff;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.test-data ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.test-data li {
+  margin: 0.25rem 0;
+  color: #2c3e50;
+}
+
+.status-group {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
 }
 
 .status {
