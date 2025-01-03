@@ -9,11 +9,29 @@ const pool = mysql.createPool({
     database: process.env.MYSQL_ADDON_DB || process.env.DB_NAME,
     port: process.env.MYSQL_ADDON_PORT || process.env.DB_PORT,
     waitForConnections: true,
-    connectionLimit: 3,  // Reduce from default 10 to 3
+    connectionLimit: 3,  // Reduced from default 10 to 3
     queueLimit: 0,
     enableKeepAlive: true,
-    keepAliveInitialDelay: 0
+    keepAliveInitialDelay: 0,
+    connectTimeout: 10000, // 10 seconds
+    acquireTimeout: 10000, // 10 seconds
+    timeout: 10000, // 10 seconds
+    idleTimeout: 60000, // 1 minute
 });
+
+const getConnection = async () => {
+    try {
+        const connection = await pool.getConnection();
+        return connection;
+    } catch (error) {
+        if (error.code === 'ER_USER_LIMIT_REACHED') {
+            // Wait for 1 second before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return getConnection(); // Retry
+        }
+        throw error;
+    }
+};
 
 async function testConnection() {
   try {
@@ -46,3 +64,4 @@ async function testConnection() {
 
 module.exports = pool;
 module.exports.testConnection = testConnection;
+module.exports.getConnection = getConnection;
