@@ -33,8 +33,9 @@
 </template>
 
 <script setup>
-import { ref, computed, defineProps } from 'vue';
+import { ref, computed } from 'vue';
 import api from '../services/api';
+import StatusItem from './StatusItem.vue';
 
 // Main component logic
 const loading = ref(false);
@@ -91,12 +92,6 @@ const testAllSystems = async () => {
     loading.value = false;
   }
 };
-
-// StatusItem component props
-defineProps({
-  title: String,
-  status: Object
-});
 </script>
 
 <style scoped>
