@@ -290,10 +290,10 @@ const filteredPosts = computed(() => {
 const loadPosts = async () => {
   try {
     loading.value = true;
-    const response = await newsService.getPublicPosts();
+    const { data } = await newsService.getPublicPosts();
     
-    if (response.success) {
-      const updatedPosts = response.posts.map(newPost => ({
+    if (data?.success) {
+      const updatedPosts = (data.posts || []).map(newPost => ({
         ...newPost,
         imageLoaded: false,
         imageError: false,
@@ -306,10 +306,13 @@ const loadPosts = async () => {
         likes: parseInt(newPost.like_count || newPost.likes || 0)
       }));
       posts.value = updatedPosts;
+    } else {
+      throw new Error(data?.message || 'Failed to load posts');
     }
   } catch (error) {
     console.error('Error loading posts:', error);
     notificationStore.error('Failed to load posts');
+    posts.value = [];
   } finally {
     loading.value = false;
   }

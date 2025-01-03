@@ -56,17 +56,18 @@ const loadAlerts = async () => {
     loading.value = true;
     error.value = '';
     
-    const response = await alertService.getActiveAlerts();
+    const { data } = await alertService.getActiveAlerts();
     
-    if (response.success) {
-      alerts.value = response.alerts;
+    if (data?.success) {
+      alerts.value = data.alerts || [];
     } else {
-      throw new Error(response.message || 'Failed to load alerts');
+      throw new Error(data?.message || 'Failed to load alerts');
     }
   } catch (err) {
     console.error('Error loading alerts:', err);
     error.value = 'Failed to load alerts. Please try again.';
     notificationStore.error('Failed to load alerts');
+    alerts.value = [];
   } finally {
     loading.value = false;
   }
