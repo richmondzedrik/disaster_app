@@ -151,7 +151,9 @@ async function checkDatabaseTables() {
 // Test database connection
 async function testDbConnection() {
     try {
-        await db.execute('SELECT 1');
+        const connection = await db.getConnection();
+        await connection.execute('SELECT 1');
+        connection.release(); // Important: Release the connection back to the pool
         console.log('Database connection successful');
         console.log('Connected to:', {
             host: process.env.MYSQL_ADDON_HOST || process.env.DB_HOST,
@@ -169,18 +171,33 @@ async function testDbConnection() {
 }
 
 async function checkDatabaseTables() {
+    let connection;
     try {
-        const [tables] = await db.execute(`
+        connection = await db.getConnection();
+        const [tables] = await connection.execute(`
             SELECT TABLE_NAME 
             FROM information_schema.TABLES 
             WHERE TABLE_SCHEMA = ?
         `, [config.database]);
         
-        console.log('Available tables:', tables.map(t => t.TABLE_NAME));
+        const tableNames = tables.map(t => t.TABLE_NAME);
+        console.log('Available tables:', tableNames);
+        
+        // Check for required tables
+        const requiredTables = ['users', 'posts', 'alerts', 'comments', 'likes'];
+        const missingTables = requiredTables.filter(table => !tableNames.includes(table));
+        
+        if (missingTables.length > 0) {
+            console.error('Missing required tables:', missingTables);
+            return false;
+        }
+        
         return true;
     } catch (error) {
         console.error('Database table check failed:', error);
         return false;
+    } finally {
+        if (connection) connection.release(); // Always release the connection
     }
 }
 

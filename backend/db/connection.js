@@ -3,13 +3,13 @@ const mysql = require('mysql2/promise');
 const config = require('../config/database');
 
 const pool = mysql.createPool({
-    ...config,
-    ssl: process.env.NODE_ENV === 'production' ? {
-        rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
-    } : false,
-    connectionLimit: 10,
+    host: process.env.MYSQL_ADDON_HOST || process.env.DB_HOST,
+    user: process.env.MYSQL_ADDON_USER || process.env.DB_USER,
+    password: process.env.MYSQL_ADDON_PASSWORD || process.env.DB_PASSWORD,
+    database: process.env.MYSQL_ADDON_DB || process.env.DB_NAME,
+    port: process.env.MYSQL_ADDON_PORT || process.env.DB_PORT,
     waitForConnections: true,
+    connectionLimit: 3,  // Reduce from default 10 to 3
     queueLimit: 0,
     enableKeepAlive: true,
     keepAliveInitialDelay: 0

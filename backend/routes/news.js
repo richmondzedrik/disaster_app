@@ -485,30 +485,18 @@ router.get('/public', async (req, res) => {
             SELECT 
                 p.*,
                 u.username as author,
-                (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) as like_count,
-                (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND deleted_by IS NULL) as comment_count,
-                EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = ?) as is_liked
+                (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) as like_count,
+                (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.deleted_by IS NULL) as comment_count,
+                (SELECT COUNT(*) > 0 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = ?) as is_liked
             FROM posts p
-            LEFT JOIN users u ON p.author_id = u.id
+            JOIN users u ON p.author_id = u.id
             WHERE p.status = 'approved'
             ORDER BY p.created_at DESC
         `, [userId || null]);
         
-        // Get comment counts for each post
-        const postsWithCounts = await Promise.all(posts.map(async (post) => {
-            const [commentResult] = await db.execute(
-                'SELECT COUNT(*) as count FROM comments WHERE post_id = ? AND deleted_by IS NULL',
-                [post.id]
-            );
-            return {
-                ...post,
-                comment_count: commentResult[0].count
-            };
-        }));
-        
         return res.json({
             success: true,
-            posts: postsWithCounts.map(post => ({
+            posts: posts.map(post => ({
                 ...post,
                 likes: parseInt(post.like_count) || 0,
                 comment_count: parseInt(post.comment_count) || 0,
