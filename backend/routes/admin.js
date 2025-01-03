@@ -507,10 +507,12 @@ router.delete('/alerts/:id', async (req, res) => {
 // Add these routes after the existing /posts route
 
 // Approve a post
-router.put('/posts/:id/approve', async (req, res) => {
+// Approve a post
+router.put('/news/posts/:id/approve', async (req, res) => {
   try {
     const postId = req.params.id;
     
+    // Check if post exists and update status
     const [result] = await db.execute(
       'UPDATE posts SET status = "approved", approved_at = NOW(), approved_by = ? WHERE id = ?',
       [req.user.userId, postId]

@@ -15,10 +15,10 @@ router.get('/posts', async (req, res) => {
             SELECT 
                 p.*,
                 u.username as author,
-                u.id as authorId,
-                p.created_at as createdAt
-            FROM disaster_prep.posts p
-            JOIN disaster_prep.users u ON p.author_id = u.id
+                u.id as author_id,
+                p.created_at
+            FROM posts p
+            LEFT JOIN users u ON p.author_id = u.id
             ORDER BY p.created_at DESC
         `);
         
@@ -26,7 +26,8 @@ router.get('/posts', async (req, res) => {
             success: true,
             posts: posts.map(post => ({
                 ...post,
-                createdAt: new Date(post.created_at).toISOString()
+                created_at: new Date(post.created_at).toISOString(),
+                author_username: post.author || 'Unknown Author'
             }))
         });
     } catch (error) {

@@ -80,13 +80,33 @@ export const newsService = {
     },
 
     async approvePost(postId) {
-        const response = await api.put(`/admin/news/posts/${postId}/approve`);
-        return response.data;
-    },
-
+        try {
+            const headers = getHeaders();
+            const response = await axios.put(`${API_URL}/api/admin/news/posts/${postId}/approve`, {}, {
+                headers,
+                withCredentials: true,
+                timeout: 15000
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error approving post:', error);
+            throw new Error(error.response?.data?.message || 'Failed to approve post');
+        }
+    }
+    
     async deletePost(postId) {
-        const response = await api.delete(`/admin/news/posts/${postId}`);
-        return response.data;
+        try {
+            const headers = getHeaders();
+            const response = await axios.delete(`${API_URL}/api/admin/news/posts/${postId}`, {
+                headers,
+                withCredentials: true,
+                timeout: 15000
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            throw new Error(error.response?.data?.message || 'Failed to delete post');
+        }
     },
 
     async createPost(postData) {
