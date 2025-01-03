@@ -59,9 +59,18 @@ const testEndpoint = async (endpoint, options = {}) => {
     
     // Test both connection and content
     const contentCheck = {
-      '/api/alerts/test': () => Array.isArray(response.data.alerts),
-      '/api/news/test': () => Array.isArray(response.data.posts),
-      '/api/checklist/test': () => Array.isArray(response.data.items)
+      '/api/alerts/test': () => {
+        const data = response.data;
+        return data && (Array.isArray(data.alerts) || Array.isArray(data.data?.alerts));
+      },
+      '/api/news/test': () => {
+        const data = response.data;
+        return data && (Array.isArray(data.posts) || Array.isArray(data.data?.posts));
+      },
+      '/api/checklist/test': () => {
+        const data = response.data;
+        return data && (Array.isArray(data.items) || Array.isArray(data.data?.items));
+      }
     }[endpoint];
 
     const hasValidContent = contentCheck ? contentCheck() : true;
