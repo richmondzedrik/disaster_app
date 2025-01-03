@@ -59,33 +59,37 @@ router.get('/', (req, res) => {
 });
 
 // Get all users
-router.get('/users', async (req, res) => {
+router.get('/users', auth.authMiddleware, async (req, res) => {
   try {
-    const [rows] = await db.execute(`
-      SELECT 
-        id,
-        username,
-        email,
-        role,
-        created_at,
-        email_verified
-      FROM users
-      ORDER BY created_at DESC
-    `);
-    
-    res.json({ 
-      success: true, 
-      data: rows.map(user => ({
-        ...user,
-        email_verified: Boolean(user.email_verified)
-      }))
-    });
+      // Set CORS headers explicitly for this route
+      res.header('Access-Control-Allow-Origin', req.headers.origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      
+      const [rows] = await db.execute(`
+          SELECT 
+              id,
+              username,
+              email,
+              role,
+              created_at,
+              email_verified
+          FROM users
+          ORDER BY created_at DESC
+      `);
+      
+      res.json({ 
+          success: true, 
+          data: rows.map(user => ({
+              ...user,
+              email_verified: Boolean(user.email_verified)
+          }))
+      });
   } catch (error) {
-    console.error('Get users error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch users' 
-    });
+      console.error('Get users error:', error);
+      res.status(500).json({ 
+          success: false, 
+          message: 'Failed to fetch users' 
+      });
   }
 });
 

@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
+const API_URL = import.meta.env.PROD 
+  ? 'https://disaster-app-backend.onrender.com/api'
+  : 'http://localhost:3000/api';
+  
 const getHeaders = () => {
   const authStore = useAuthStore();
   const token = authStore.accessToken || localStorage.getItem('token');
@@ -21,36 +23,26 @@ const adminService = {
   async getUsers() {
     try {
         const headers = getHeaders();
-        console.log('Fetching users with headers:', headers);
-        
         const response = await axios.get(`${API_URL}/admin/users`, {
             headers,
             withCredentials: true,
-            timeout: 5000 // Add timeout
+            timeout: 5000
         });
         
-        // Log full response for debugging
-        console.log('Raw API Response:', response);
-        
-        // Handle both response formats (direct data or nested data)
-        const userData = response.data?.data || response.data;
-        
-        if (!userData) {
-            throw new Error('No user data received');
+        if (response.data?.success) {
+            return {
+                success: true,
+                data: response.data.data || []
+            };
         }
-
-        return {
-            success: true,
-            data: Array.isArray(userData) ? userData : []
-        };
+        throw new Error(response.data?.message || 'Failed to fetch users');
     } catch (error) {
-        if (error.code === 'ECONNABORTED') {
-            throw new Error('Request timeout - please try again');
-        }
+        console.error('Error fetching users:', error);
         if (error.response?.status === 401) {
-            throw new Error('Authentication failed - please login again');
+            const authStore = useAuthStore();
+            authStore.handleAuthError();
         }
-        throw new Error(error.response?.data?.message || 'Failed to fetch users');
+        throw new Error('Failed to fetch users');
     }
 },
 
@@ -142,7 +134,8 @@ const adminService = {
         const headers = getHeaders();
         const response = await axios.get(`${API_URL}/admin/dashboard/stats`, { 
           headers,
-          withCredentials: true 
+          withCredentials: true,
+          timeout: 10000 // Add timeout of 10 seconds
         });
   
         // Validate response structure
@@ -175,11 +168,13 @@ const adminService = {
             : []
         };
       } catch (error) {
+        if (error.code === 'ECONNABORTED') {
+          throw new Error('Request timeout - please try again');
+        }
         if (error.response?.status === 401) {
           const authStore = useAuthStore();
           authStore.handleAuthError();
         }
-        console.error('Error fetching dashboard stats:', error);
         throw error;
       }
     };
@@ -189,10 +184,16 @@ const adminService = {
         return await attemptFetch();
       } catch (error) {
         retryCount++;
-        if (retryCount === maxRetries) throw error;
+        if (retryCount === maxRetries) {
+          // Return fallback data on final retry
+          return {
+            success: false,
+            stats: { users: 0, posts: 0, alerts: 0 },
+            recentActivity: []
+          };
+        }
         
         const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
-        console.log(`Retrying getDashboardStats (${retryCount}/${maxRetries}) after ${delay}ms`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
