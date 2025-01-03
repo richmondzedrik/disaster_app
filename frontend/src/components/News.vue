@@ -90,14 +90,17 @@
             <div v-if="post.image_url" class="post-image">
               <div class="image-container" :class="{ 'error': post.imageError }">
                 <img 
-                  :src="getImageUrl(post.image_url)"
+                  v-if="getImageUrl(post.image_url).url"
+                  :src="getImageUrl(post.image_url).url"
                   :alt="post.title"
+                  crossorigin="anonymous"
                   @error="handleImageError($event, post)"
                   @load="handleImageLoad($event, post)"
                   :class="['news-image', { 'visible': post.imageLoaded }]"
                 />
                 <div v-if="!post.imageLoaded && !post.imageError" class="image-loading">
                   <i class="fas fa-circle-notch fa-spin"></i>
+                  <span>Loading image...</span>
                 </div>
                 <div v-if="post.imageError" class="image-error-overlay">
                   <i class="fas fa-exclamation-circle"></i>
@@ -388,7 +391,9 @@ const submitPost = async () => {
     formData.append('content', postForm.value.content.trim());
     
     if (imageFile.value) {
-      formData.append('image', imageFile.value);
+      // Ensure proper file naming and type checking
+      const fileName = `${Date.now()}_${imageFile.value.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      formData.append('image', imageFile.value, fileName);
     }
 
     const response = await newsService.createPost(formData);
@@ -396,23 +401,7 @@ const submitPost = async () => {
     if (response.success) {
       notificationStore.success('Post created successfully and pending approval');
       closeModal();
-      
-      if (response.post) {
-        const newPost = {
-          ...response.post,
-          imageLoaded: false,
-          imageError: false,
-          image_url: response.post.image_url,
-          author: user.value?.username || 'Anonymous',
-          createdAt: new Date().toISOString(),
-          status: 'pending',
-          likes: 0,
-          commentCount: 0,
-          comments: []
-        };
-        posts.value = [newPost, ...posts.value];
-        await loadPosts();
-      }
+      await loadPosts();
     } else {
       throw new Error(response.message || 'Failed to create post');
     }
@@ -510,19 +499,28 @@ const rejectPost = async (postId) => {
 };
 
 const getImageUrl = (imageUrl) => {
-  if (!imageUrl) return '';
+  if (!imageUrl) return { url: '', crossorigin: 'anonymous' };
   
   try {
-    // If it's already a full URL, return it
-    if (imageUrl.startsWith('http')) return imageUrl;
+    // If it's already a full URL
+    if (imageUrl.startsWith('http')) {
+      return {
+        url: imageUrl,
+        crossorigin: 'anonymous'
+      };
+    }
     
-    // Remove any leading slashes and construct the full URL
-    const cleanImageUrl = imageUrl.replace(/^\/+/, '');
-    const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:3000';
-    return `${baseUrl}/uploads/${cleanImageUrl}`;
+    // Clean the image URL and ensure proper path construction
+    const cleanImageUrl = imageUrl.replace(/^\/+/, '').replace(/\\/g, '/');
+    const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
+    
+    return {
+      url: `${baseUrl}/uploads/${cleanImageUrl}`,
+      crossorigin: 'anonymous'
+    };
   } catch (error) {
     console.error('Error constructing image URL:', error);
-    return '';
+    return { url: '', crossorigin: 'anonymous' };
   }
 };
 
@@ -532,12 +530,18 @@ const handleImageError = (event, post) => {
   post.imageError = true;
   post.imageLoaded = false;
   
-  // Log the error with more context
+  // Log the error with more context for debugging
   console.warn(`Failed to load image for post ${post.id}:`, {
     imageUrl: post.image_url,
-    constructedUrl: getImageUrl(post.image_url),
-    error: event
+    constructedUrl: getImageUrl(post.image_url).url,
+    error: event?.target?.error || event
   });
+  
+  // Attempt to reload the image once with a cache-busting parameter
+  if (!event.target.dataset.retried) {
+    event.target.dataset.retried = 'true';
+    event.target.src = `${getImageUrl(post.image_url).url}?t=${Date.now()}`;
+  }
 };
 
 const handleImageLoad = (event, post) => {
