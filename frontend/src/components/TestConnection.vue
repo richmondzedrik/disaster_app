@@ -1,142 +1,143 @@
 <template>
   <div class="test-connection">
-    <h3>System Connection Test</h3>
-    <button @click="testConnections" :disabled="loading">
+    <h3>System Health Check</h3>
+    <button @click="testAllSystems" :disabled="loading">
       <i class="fas fa-sync" :class="{ 'fa-spin': loading }"></i>
-      {{ loading ? 'Testing...' : 'Test Connections' }}
+      {{ loading ? 'Testing...' : 'Test All Systems' }}
     </button>
     
-    <div class="status-container" v-if="status.backend || status.database">
-      <!-- Backend Status -->
-      <div v-if="status.backend" :class="['status', status.backend.success ? 'success' : 'error']">
-        <i :class="['fas', status.backend.success ? 'fa-check-circle' : 'fa-times-circle']"></i>
-        <span>Backend: {{ status.backend.message }}</span>
+    <div class="status-container" v-if="hasResults">
+      <!-- Core Systems -->
+      <div class="status-group">
+        <h4>Core Systems</h4>
+        <StatusItem title="Backend" :status="status.backend" />
+        <StatusItem title="Database" :status="status.database" />
       </div>
-      
-      <!-- Database Status -->
-      <div v-if="status.database" :class="['status', status.database.success ? 'success' : 'error']">
-        <i :class="['fas', status.database.success ? 'fa-check-circle' : 'fa-times-circle']"></i>
-        <span>Database: {{ status.database.message }}</span>
+
+      <!-- API Services -->
+      <div class="status-group">
+        <h4>API Services</h4>
+        <StatusItem title="Alerts API" :status="status.alerts" />
+        <StatusItem title="News API" :status="status.news" />
+        <StatusItem title="Checklist API" :status="status.checklist" />
+      </div>
+
+      <!-- Auth Services -->
+      <div class="status-group">
+        <h4>Auth Services</h4>
+        <StatusItem title="Auth API" :status="status.auth" />
+        <StatusItem title="Admin API" :status="status.admin" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import api from '../services/api';
 
 const loading = ref(false);
 const status = ref({
   backend: null,
-  database: null
+  database: null,
+  alerts: null,
+  news: null,
+  checklist: null,
+  auth: null,
+  admin: null
 });
 
-const testConnections = async () => {
+const hasResults = computed(() => 
+  Object.values(status.value).some(val => val !== null)
+);
+
+const testEndpoint = async (endpoint, options = {}) => {
+  try {
+    const response = await api.get(endpoint, options);
+    return {
+      success: true,
+      message: response.data.message || 'Connected successfully'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message
+    };
+  }
+};
+
+const testAllSystems = async () => {
   loading.value = true;
-  status.value = { backend: null, database: null };
+  // Reset all statuses
+  Object.keys(status.value).forEach(key => status.value[key] = null);
 
   try {
-    // Test backend connection
-    const backendResponse = await api.get('/test');
-    status.value.backend = {
-      success: true,
-      message: `Connected successfully! Server time: ${backendResponse.data.timestamp}`
-    };
+    // Test core systems
+    status.value.backend = await testEndpoint('/test');
+    status.value.database = await testEndpoint('/db-test');
 
-    // Test database connection
-    const dbResponse = await api.get('/db-test');
-    status.value.database = {
-      success: dbResponse.data.success,
-      message: dbResponse.data.message
-    };
+    // Test API services
+    status.value.alerts = await testEndpoint('/alerts/test');
+    status.value.news = await testEndpoint('/news/test');
+    status.value.checklist = await testEndpoint('/checklist/test');
+
+    // Test auth services
+    status.value.auth = await testEndpoint('/auth/test');
+    status.value.admin = await testEndpoint('/admin/test');
 
   } catch (error) {
-    console.error('Connection test error:', error);
-    
-    // Set appropriate error messages based on which connection failed
-    if (!status.value.backend) {
-      status.value.backend = {
-        success: false,
-        message: 'Backend connection failed: ' + error.message
-      };
-    }
-    
-    if (!status.value.database) {
-      status.value.database = {
-        success: false,
-        message: 'Database connection failed: ' + (error.response?.data?.message || error.message)
-      };
-    }
+    console.error('System test error:', error);
   } finally {
     loading.value = false;
   }
 };
 </script>
 
+<!-- Create a new StatusItem component -->
+<script setup name="StatusItem">
+const props = defineProps({
+  title: String,
+  status: Object
+});
+</script>
+
+<template>
+  <div v-if="status" :class="['status', status.success ? 'success' : 'error']">
+    <i :class="['fas', status.success ? 'fa-check-circle' : 'fa-times-circle']"></i>
+    <div class="status-content">
+      <span class="status-title">{{ title }}:</span>
+      <span class="status-message">{{ status.message }}</span>
+    </div>
+  </div>
+</template>
+
 <style scoped>
-.test-connection {
-  padding: 1.5rem;
-  text-align: center;
-  background: white;
+/* Existing styles remain the same */
+
+.status-group {
+  background: #f8f9fa;
+  padding: 1rem;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
 }
 
-button {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 4px;
-  background: #42b983;
-  color: white;
-  cursor: pointer;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.3s ease;
+.status-group h4 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
 }
 
-button:hover:not(:disabled) {
-  background: #3aa876;
-}
-
-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.status-container {
-  margin-top: 1.5rem;
+.status-content {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.25rem;
 }
 
-.status {
-  padding: 0.75rem;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.status-title {
+  font-weight: 600;
 }
 
-.success {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.error {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-.fa-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.status-message {
+  font-size: 0.9rem;
 }
 </style>
