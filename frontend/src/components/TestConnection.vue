@@ -33,9 +33,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, defineProps } from 'vue';
 import api from '../services/api';
 
+// Main component logic
 const loading = ref(false);
 const status = ref({
   backend: null,
@@ -68,7 +69,6 @@ const testEndpoint = async (endpoint, options = {}) => {
 
 const testAllSystems = async () => {
   loading.value = true;
-  // Reset all statuses
   Object.keys(status.value).forEach(key => status.value[key] = null);
 
   try {
@@ -91,29 +91,15 @@ const testAllSystems = async () => {
     loading.value = false;
   }
 };
-</script>
 
-<!-- Create a new StatusItem component -->
-<script setup name="StatusItem">
-const props = defineProps({
+// StatusItem component props
+defineProps({
   title: String,
   status: Object
 });
 </script>
 
-<template>
-  <div v-if="status" :class="['status', status.success ? 'success' : 'error']">
-    <i :class="['fas', status.success ? 'fa-check-circle' : 'fa-times-circle']"></i>
-    <div class="status-content">
-      <span class="status-title">{{ title }}:</span>
-      <span class="status-message">{{ status.message }}</span>
-    </div>
-  </div>
-</template>
-
 <style scoped>
-/* Existing styles remain the same */
-
 .status-group {
   background: #f8f9fa;
   padding: 1rem;
@@ -139,5 +125,32 @@ const props = defineProps({
 
 .status-message {
   font-size: 0.9rem;
+}
+
+.status {
+  padding: 0.75rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.fa-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>
