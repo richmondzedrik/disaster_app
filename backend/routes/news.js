@@ -5,6 +5,7 @@ const upload = require('../middleware/upload');
 const db = require('../db/connection');
 const fs = require('fs');
 const path = require('path');
+const cloudinary = require('../config/cloudinary');
 
 // Configure upload directory
 const uploadDir = path.join(__dirname, '../public/uploads');
@@ -255,12 +256,25 @@ router.post('/posts', auth.authMiddleware, upload.single('image'), async (req, r
             });
         }
 
-        // Store only the filename
-        const imagePath = req.file ? req.file.filename : null;
+        let imageUrl = null;
+        
+        if (req.file) {
+            // Convert buffer to base64
+            const b64 = Buffer.from(req.file.buffer).toString('base64');
+            const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+            
+            // Upload to Cloudinary
+            const cloudinaryResponse = await cloudinary.uploader.upload(dataURI, {
+                resource_type: 'auto',
+                folder: 'disaster-app/news'
+            });
+            
+            imageUrl = cloudinaryResponse.secure_url;
+        }
         
         const [result] = await db.execute(
             'INSERT INTO posts (title, content, author_id, status, image_url) VALUES (?, ?, ?, ?, ?)',
-            [title, content, req.user.userId, 'pending', imagePath]
+            [title, content, req.user.userId, 'pending', imageUrl]
         );
 
         if (!result.insertId) {
@@ -612,6 +626,41 @@ router.get('/api/checklist/test', async (req, res) => {
             message: 'Checklist service test failed'
         });
     }
+});
+
+// Add this route after your existing routes
+router.post('/test-upload', auth.authMiddleware, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image provided'
+      });
+    }
+
+    // Convert buffer to base64
+    const b64 = Buffer.from(req.file.buffer).toString('base64');
+    const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+    
+    // Test upload to Cloudinary
+    const cloudinaryResponse = await cloudinary.uploader.upload(dataURI, {
+      resource_type: 'auto',
+      folder: 'disaster-app/test'
+    });
+    
+    res.json({
+      success: true,
+      url: cloudinaryResponse.secure_url,
+      details: cloudinaryResponse
+    });
+  } catch (error) {
+    console.error('Test upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Upload test failed',
+      error: error
+    });
+  }
 });
 
 module.exports = router;

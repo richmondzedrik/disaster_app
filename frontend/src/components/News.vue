@@ -502,7 +502,7 @@ const getImageUrl = (imageUrl) => {
   if (!imageUrl) return { url: '', crossorigin: 'anonymous' };
   
   try {
-    // If it's already a full URL
+    // If it's a Cloudinary URL or any other full URL, return as is
     if (imageUrl.startsWith('http')) {
       return {
         url: imageUrl,
@@ -510,7 +510,7 @@ const getImageUrl = (imageUrl) => {
       };
     }
     
-    // Clean the image URL and ensure proper path construction
+    // Fallback for any legacy images
     const cleanImageUrl = imageUrl.replace(/^\/+/, '').replace(/\\/g, '/');
     const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
     

@@ -49,6 +49,17 @@
             </ul>
           </div>
         </div>
+
+        <div class="service-details">
+          <StatusItem title="Image Upload" :status="status.imageUpload" />
+          <div v-if="status.imageUpload?.success" class="test-data">
+            <strong>Test Image Upload:</strong>
+            <ul>
+              <li>Upload Service: Cloudinary</li>
+              <li>Test Image URL: {{ status.imageUpload?.testData?.url || 'N/A' }}</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <!-- Auth Services -->
@@ -75,7 +86,8 @@ const status = ref({
   news: null,
   checklist: null,
   auth: null,
-  admin: null
+  admin: null,
+  imageUpload: null
 });
 
 const hasResults = computed(() => 
@@ -135,6 +147,44 @@ const getContentDetails = (data, endpoint) => {
   return details ? details() : '';
 };
 
+// Test image upload service
+const testImageUpload = async () => {
+  try {
+    // Create a small test image using canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 100;
+    canvas.height = 100;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#00ADA9';
+    ctx.fillRect(0, 0, 100, 100);
+    
+    // Convert canvas to blob
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    const formData = new FormData();
+    formData.append('image', blob, 'test-image.png');
+
+    const response = await api.post('/news/test-upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return {
+      success: response.data?.success,
+      message: response.data?.success ? 'Image upload service operational' : 'Upload test failed',
+      testData: {
+        url: response.data?.url
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Image upload test failed',
+      error: error.message
+    };
+  }
+};
+
 const testAllSystems = async () => {
   loading.value = true;
   Object.keys(status.value).forEach(key => status.value[key] = null);
@@ -172,6 +222,15 @@ const testAllSystems = async () => {
     // Test auth services
     status.value.auth = await testEndpoint('/api/auth/test');
     status.value.admin = await testEndpoint('/api/admin/test');
+
+    // Test image upload service
+    const imageUploadTest = await testImageUpload();
+    status.value.imageUpload = {
+      ...imageUploadTest,
+      message: imageUploadTest.success 
+        ? 'Image upload service operational'
+        : imageUploadTest.message
+    };
 
   } catch (error) {
     console.error('System test error:', error);
