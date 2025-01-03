@@ -312,17 +312,45 @@ const loadPosts = async () => {
     const response = await newsService.getPublicPosts();
     
     if (response.success) {
-      posts.value = response.posts.map(post => ({
-        ...post,
-        imageLoaded: false,
-        imageError: false,
-        showComments: false,
-        comments: post.comments || [],
-        newComment: '',
-        liked: post.is_liked === true || post.liked === true,
-        likes: parseInt(post.like_count || post.likes || 0),
-        commentCount: parseInt(post.comment_count || post.comments?.length || 0)
+      posts.value = response.posts.map(post => {
+  let comments = [];
+  if (post.comments) {
+    try {
+      comments = post.comments.split(',').map(comment => {
+        return JSON.parse(comment);
+      }).filter(Boolean);
+    } catch (e) {
+      console.error('Error parsing comments:', e);
+    }
+  }
+
+  return {
+    ...post,
+    imageLoaded: false,
+    imageError: false,
+    showComments: false,
+    comments: comments,
+    newComment: '',
+    liked: Boolean(post.is_liked),
+    likes: parseInt(post.like_count || 0),
+    commentCount: parseInt(post.comment_count || 0)
+  };
+});
+
+      // Pre-load comment counts for all posts
+      await Promise.all(posts.value.map(async (post) => {
+        try {
+          const commentsResponse = await newsService.getComments(post.id);
+          if (commentsResponse.success) {
+            post.commentCount = commentsResponse.comments.length;
+          }
+        } catch (error) {
+          console.error(`Error loading comments for post ${post.id}:`, error);
+        }
       }));
+
+      // Force reactivity update
+      posts.value = [...posts.value];
     }
   } catch (error) {
     console.error('Error loading posts:', error);
@@ -435,17 +463,14 @@ const likePost = async (post) => {
     notificationStore.info('Please sign in to like posts');
     return;
   }
+  
   try {
     const response = await newsService.likePost(post.id);
-    
     if (response.success) {
-      // Update the post's like status and count
       post.liked = response.liked;
       post.likes = response.likes;
       // Force reactivity update
       posts.value = [...posts.value];
-    } else {
-      throw new Error(response.message || 'Failed to update like status');
     }
   } catch (error) {
     console.error('Error liking post:', error);
@@ -563,6 +588,10 @@ const loadComments = async (post) => {
     const response = await newsService.getComments(post.id);
     if (response.success) {
       post.comments = response.comments;
+      // Update the comment count to match actual comments
+      post.commentCount = response.comments.length;
+      // Force reactivity update
+      posts.value = [...posts.value];
     }
   } catch (error) {
     console.error('Error loading comments:', error);
@@ -582,8 +611,10 @@ const addComment = async (post) => {
     if (response.success) {
       if (!post.comments) post.comments = [];
       post.comments.unshift(response.comment);
-      post.commentCount = (post.commentCount || 0) + 1;
+      post.commentCount = post.comments.length;
       post.newComment = '';
+      // Force reactivity update
+      posts.value = [...posts.value];
       notificationStore.success('Comment added successfully');
     }
   } catch (error) {

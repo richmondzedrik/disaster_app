@@ -480,31 +480,39 @@ router.get('/public', async (req, res) => {
             (await auth.getUserFromToken(req.headers.authorization))?.userId : 
             null;
 
-// In your getPublicPosts or similar route
-const [posts] = await db.execute(`
-    SELECT 
-        p.*,
-        u.username as author,
-        COUNT(DISTINCT l.id) as like_count,
-        COUNT(DISTINCT c.id) as comment_count,
-        IF(l2.user_id IS NOT NULL, 1, 0) as is_liked
-    FROM posts p
-    LEFT JOIN users u ON p.author_id = u.id
-    LEFT JOIN likes l ON p.id = l.post_id
-    LEFT JOIN comments c ON p.id = c.id
-    LEFT JOIN likes l2 ON p.id = l2.post_id AND l2.user_id = ?
-    WHERE p.status = 'approved'
-    GROUP BY p.id
-    ORDER BY p.created_at DESC
-`, [userId || null]);
+        // First get all posts with their basic info
+        const [posts] = await db.execute(`
+            SELECT 
+                p.*,
+                u.username as author,
+                (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) as like_count,
+                (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND deleted_by IS NULL) as comment_count,
+                EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = ?) as is_liked
+            FROM posts p
+            LEFT JOIN users u ON p.author_id = u.id
+            WHERE p.status = 'approved'
+            ORDER BY p.created_at DESC
+        `, [userId || null]);
+        
+        // Get comment counts for each post
+        const postsWithCounts = await Promise.all(posts.map(async (post) => {
+            const [commentResult] = await db.execute(
+                'SELECT COUNT(*) as count FROM comments WHERE post_id = ? AND deleted_by IS NULL',
+                [post.id]
+            );
+            return {
+                ...post,
+                comment_count: commentResult[0].count
+            };
+        }));
         
         return res.json({
             success: true,
-            posts: posts.map(post => ({
+            posts: postsWithCounts.map(post => ({
                 ...post,
-                likes: parseInt(post.likes) || 0,
+                likes: parseInt(post.like_count) || 0,
                 comment_count: parseInt(post.comment_count) || 0,
-                liked: Boolean(post.liked)
+                liked: post.is_liked === 1
             }))
         });
     } catch (error) {
