@@ -11,14 +11,14 @@ router.get('/test', (req, res) => {
 });
 
 // Get active alerts (for authenticated users)
-router.get('/active', async (req, res) => {
+router.get('/api/alerts/active', async (req, res) => {
   try {
     const [alerts] = await db.execute(`
       SELECT 
         a.*,
         u.username as created_by_username
-      FROM alerts a
-      LEFT JOIN users u ON a.user_id = u.id
+      FROM disaster_prep.alerts a
+      LEFT JOIN disaster_prep.users u ON a.user_id = u.id
       WHERE a.is_active = true 
       AND (a.expiry_date IS NULL OR a.expiry_date > NOW())
       ORDER BY a.priority DESC, a.created_at DESC

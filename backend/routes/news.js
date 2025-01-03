@@ -460,7 +460,8 @@ router.delete('/posts/:postId/comments/:commentId', auth.authMiddleware, adminMi
 });
 
 // Get public posts (no auth required)
-router.get('/public', async (req, res) => {
+// Get public posts (no auth required)
+router.get('/api/news/public', async (req, res) => {
     try {
         const userId = req.headers.authorization ? 
             (await auth.getUserFromToken(req.headers.authorization))?.userId : 
@@ -470,11 +471,11 @@ router.get('/public', async (req, res) => {
             SELECT 
                 p.*,
                 u.username as author,
-                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
-                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
-                ${userId ? `(SELECT COUNT(*) > 0 FROM likes WHERE post_id = p.id AND user_id = ?) as liked` : 'FALSE as liked'}
-            FROM posts p
-            LEFT JOIN users u ON p.author_id = u.id
+                (SELECT COUNT(*) FROM disaster_prep.likes WHERE post_id = p.id) as likes,
+                (SELECT COUNT(*) FROM disaster_prep.comments WHERE post_id = p.id) as comment_count,
+                ${userId ? `(SELECT COUNT(*) > 0 FROM disaster_prep.likes WHERE post_id = p.id AND user_id = ?) as liked` : 'FALSE as liked'}
+            FROM disaster_prep.posts p
+            LEFT JOIN disaster_prep.users u ON p.author_id = u.id
             WHERE p.status = 'approved'
             ORDER BY p.created_at DESC
         `, userId ? [userId] : []);
