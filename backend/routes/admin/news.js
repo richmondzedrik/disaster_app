@@ -43,7 +43,7 @@ router.get('/posts', async (req, res) => {
 router.put('/posts/:id/approve', async (req, res) => {
     try {
         const [result] = await db.execute(
-            'UPDATE disaster_prep.posts SET status = "approved" WHERE id = ?',
+            'UPDATE posts SET status = "approved" WHERE id = ?',
             [req.params.id]
         );
 
@@ -71,7 +71,7 @@ router.put('/posts/:id/approve', async (req, res) => {
 router.delete('/posts/:id', async (req, res) => {
     try {
         const [result] = await db.execute(
-            'DELETE FROM disaster_prep.posts WHERE id = ?',
+            'DELETE FROM posts WHERE id = ?',
             [req.params.id]
         );
 

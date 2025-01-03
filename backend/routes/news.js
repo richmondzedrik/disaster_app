@@ -74,7 +74,7 @@ router.put('/posts/:id', auth.authMiddleware, async (req, res) => {
         const { title, content } = req.body;
         
         const [result] = await db.execute(
-            'UPDATE disaster_prep.posts SET title = ?, content = ? WHERE id = ? AND author_id = ?',
+            'UPDATE posts SET title = ?, content = ? WHERE id = ? AND author_id = ?',
             [title, content, id, req.user.userId]
         );
 
@@ -105,7 +105,7 @@ router.delete('/posts/:id', auth.authMiddleware, async (req, res) => {
         
         // Check if user is admin or post author
         const [posts] = await db.execute(
-            'SELECT author_id FROM disaster_prep.posts WHERE id = ?',
+            'SELECT author_id FROM posts WHERE id = ?',
             [id]
         );
 
@@ -127,7 +127,7 @@ router.delete('/posts/:id', auth.authMiddleware, async (req, res) => {
         }
 
         const [result] = await db.execute(
-            'DELETE FROM disaster_prep.posts WHERE id = ?',
+            'DELETE FROM posts WHERE id = ?',
             [id]
         );
 
@@ -152,7 +152,7 @@ router.post('/posts/:id/like', auth.authMiddleware, async (req, res) => {
 
         // First check if the post exists
         const [posts] = await db.execute(
-            'SELECT id FROM disaster_prep.posts WHERE id = ?',
+            'SELECT id FROM posts WHERE id = ?',
             [id]
         );
 
@@ -165,7 +165,7 @@ router.post('/posts/:id/like', auth.authMiddleware, async (req, res) => {
 
         // Check if user already liked the post
         const [existingLike] = await db.execute(
-            'SELECT id FROM disaster_prep.likes WHERE post_id = ? AND user_id = ?',
+            'SELECT id FROM likes WHERE post_id = ? AND user_id = ?',
             [id, userId]
         );
 
@@ -173,13 +173,13 @@ router.post('/posts/:id/like', auth.authMiddleware, async (req, res) => {
         if (existingLike.length > 0) {
             // Unlike the post
             await db.execute(
-                'DELETE FROM disaster_prep.likes WHERE post_id = ? AND user_id = ?',
+                'DELETE FROM likes WHERE post_id = ? AND user_id = ?',
                 [id, userId]
             );
         } else {
             // Like the post
             await db.execute(
-                'INSERT INTO disaster_prep.likes (post_id, user_id) VALUES (?, ?)',
+                'INSERT INTO likes (post_id, user_id) VALUES (?, ?)',
                 [id, userId]
             );
             liked = true;
@@ -188,7 +188,7 @@ router.post('/posts/:id/like', auth.authMiddleware, async (req, res) => {
         // Get updated like count
         const [result] = await db.execute(`
             SELECT COUNT(*) as likes
-            FROM disaster_prep.likes
+            FROM likes
             WHERE post_id = ?
         `, [id]);
 
@@ -259,7 +259,7 @@ router.post('/posts', auth.authMiddleware, upload.single('image'), async (req, r
         const imagePath = req.file ? req.file.filename : null;
         
         const [result] = await db.execute(
-            'INSERT INTO disaster_prep.posts (title, content, author_id, status, image_url) VALUES (?, ?, ?, ?, ?)',
+            'INSERT INTO posts (title, content, author_id, status, image_url) VALUES (?, ?, ?, ?, ?)',
             [title, content, req.user.userId, 'pending', imagePath]
         );
 
@@ -271,8 +271,8 @@ router.post('/posts', auth.authMiddleware, upload.single('image'), async (req, r
             SELECT 
                 p.*,
                 u.username as author
-            FROM disaster_prep.posts p
-            JOIN disaster_prep.users u ON p.author_id = u.id
+            FROM posts p
+            JOIN users u ON p.author_id = u.id
             WHERE p.id = ?
         `, [result.insertId]);
 
@@ -298,22 +298,22 @@ router.post('/posts/:postId/comments', auth.authMiddleware, async (req, res) => 
         const userId = req.user.userId;
 
         const [result] = await db.execute(
-            'INSERT INTO disaster_prep.comments (post_id, user_id, content) VALUES (?, ?, ?)',
+            'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)',
             [postId, userId, content]
         );
 
         if (result.insertId) {
             const [comments] = await db.execute(
                 `SELECT c.*, u.username 
-                 FROM disaster_prep.comments c 
-                 JOIN disaster_prep.users u ON c.user_id = u.id 
+                 FROM comments c 
+                 JOIN users u ON c.user_id = u.id 
                  WHERE c.id = ?`,
                 [result.insertId]
             );
 
             // Get updated comment count
             const [countResult] = await db.execute(
-                'SELECT COUNT(*) as count FROM disaster_prep.comments WHERE post_id = ?',
+                'SELECT COUNT(*) as count FROM comments WHERE post_id = ?',
                 [postId]
             );
 
@@ -351,9 +351,9 @@ router.get('/posts/:postId/comments', auth.authMiddleware, async (req, res) => {
                 c.deleted_at,
                 u.username,
                 du.username as deleted_by_username
-            FROM disaster_prep.comments c
-            LEFT JOIN disaster_prep.users u ON c.user_id = u.id
-            LEFT JOIN disaster_prep.users du ON c.deleted_by = du.id
+            FROM comments c
+            LEFT JOIN users u ON c.user_id = u.id
+            LEFT JOIN users du ON c.deleted_by = du.id
             WHERE c.post_id = ?
             ORDER BY c.created_at DESC
         `, [postId]);
@@ -390,7 +390,7 @@ router.delete('/comments/:commentId', auth.authMiddleware, async (req, res) => {
 
         // Update the comment instead of deleting it
         const [result] = await db.execute(`
-            UPDATE disaster_prep.comments 
+            UPDATE comments 
             SET 
                 content = '[Deleted by Admin]',
                 deletion_reason = ?,
@@ -429,7 +429,7 @@ router.delete('/posts/:postId/comments/:commentId', auth.authMiddleware, adminMi
 
         // Update the comment instead of deleting it
         const [result] = await db.execute(`
-            UPDATE disaster_prep.comments 
+            UPDATE comments 
             SET 
                 content = '[Deleted by Admin]',
                 deletion_reason = ?,
