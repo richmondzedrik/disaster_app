@@ -31,35 +31,35 @@ const adminMiddleware = async (req, res, next) => {
 };
 
 // Get all posts
-router.get('/posts', auth.authMiddleware, async (req, res) => {
+router.get('/api/admin/news/posts', auth.authMiddleware, async (req, res) => {
     try {
-        const userId = req.user.userId;
+        if (!req.user || req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Admin access required'
+            });
+        }
+
         const [posts] = await db.execute(`
             SELECT 
                 p.*,
-                u.username as author,
-                u.id as authorId,
-                p.created_at as createdAt,
-                (SELECT COUNT(*) FROM disaster_prep.likes WHERE post_id = p.id) as likes,
-                (SELECT COUNT(*) FROM disaster_prep.comments WHERE post_id = p.id) as commentCount,
-                EXISTS(SELECT 1 FROM disaster_prep.likes WHERE post_id = p.id AND user_id = ?) as liked
-            FROM disaster_prep.posts p
-            JOIN disaster_prep.users u ON p.author_id = u.id
-            WHERE p.status = 'approved'
+                u.username as author_username,
+                u.id as author_id,
+                p.created_at
+            FROM posts p
+            LEFT JOIN users u ON p.author_id = u.id
             ORDER BY p.created_at DESC
-        `, [userId]);
+        `);
         
         res.json({
             success: true,
             posts: posts.map(post => ({
                 ...post,
-                likes: parseInt(post.likes) || 0,
-                commentCount: parseInt(post.commentCount) || 0,
-                liked: Boolean(post.liked)
+                created_at: new Date(post.created_at).toISOString()
             }))
         });
     } catch (error) {
-        console.error('Error fetching posts:', error);
+        console.error('Error fetching admin posts:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch posts'

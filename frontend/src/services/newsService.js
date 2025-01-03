@@ -53,20 +53,28 @@ export const newsService = {
             const headers = getHeaders();
             const response = await axios.get(`${API_URL}/api/admin/news/posts`, {
                 headers,
-                withCredentials: true
+                withCredentials: true,
+                timeout: 15000
             });
             
             if (response?.data?.success) {
-                return response.data;
-            } else {
-                throw new Error('Invalid response format');
+                return {
+                    success: true,
+                    posts: response.data.posts || []
+                };
             }
+            
+            return {
+                success: false,
+                posts: [],
+                message: response.data?.message || 'Failed to fetch posts'
+            };
         } catch (error) {
             console.error('getAdminPosts error:', error);
             return {
                 success: false,
                 posts: [],
-                message: error.message
+                message: error.response?.data?.message || 'Failed to fetch posts'
             };
         }
     },
