@@ -23,7 +23,7 @@ router.get('/db-test', async (req, res) => {
 });
 
 // Add these test endpoints
-router.get('/api/auth/test', async (req, res) => {
+router.get('/auth/test', async (req, res) => {
     try {
       res.json({ 
         success: true, 
@@ -37,7 +37,7 @@ router.get('/api/auth/test', async (req, res) => {
     }
   });
   
-  router.get('/api/admin/test', async (req, res) => {
+  router.get('/admin/test', async (req, res) => {
     try {
       res.json({ 
         success: true, 

@@ -73,17 +73,17 @@ const testAllSystems = async () => {
 
   try {
     // Test core systems
-    status.value.backend = await testEndpoint('/test');
-    status.value.database = await testEndpoint('/db-test');
+    status.value.backend = await testEndpoint('/api/test');
+    status.value.database = await testEndpoint('/api/db-test');
 
     // Test API services
-    status.value.alerts = await testEndpoint('/alerts/test');
-    status.value.news = await testEndpoint('/news/test');
-    status.value.checklist = await testEndpoint('/checklist/test');
+    status.value.alerts = await testEndpoint('/api/alerts/test');
+    status.value.news = await testEndpoint('/api/news/test');
+    status.value.checklist = await testEndpoint('/api/checklist/test');
 
     // Test auth services
-    status.value.auth = await testEndpoint('/auth/test');
-    status.value.admin = await testEndpoint('/admin/test');
+    status.value.auth = await testEndpoint('/api/auth/test');
+    status.value.admin = await testEndpoint('/api/admin/test');
 
   } catch (error) {
     console.error('System test error:', error);
