@@ -11,53 +11,32 @@ router.get('/test', (req, res) => {
 });
 
 // Get active alerts (for authenticated users)
-router.get('/active', auth.authMiddleware, async (req, res) => {
+router.get('/active', async (req, res) => {
   try {
-    const query = `
+    const [alerts] = await db.execute(`
       SELECT 
-        a.id,
-        a.message,
-        a.type,
-        COALESCE(a.priority, 0) as priority,
-        a.is_active,
-        a.is_public,
-        a.created_at,
-        a.updated_at,
-        a.expiry_date,
-        COALESCE(a.user_id, 0) as user_id
+        a.*,
+        u.username as created_by_username
       FROM alerts a
-      WHERE a.is_active = true
+      LEFT JOIN users u ON a.user_id = u.id
+      WHERE a.is_active = true 
       AND (a.expiry_date IS NULL OR a.expiry_date > NOW())
-      ORDER BY 
-        a.priority DESC,
-        a.created_at DESC
-    `;
-
-    const [alerts] = await db.execute(query);
-
-    // Transform the data with default values to prevent undefined
-    const formattedAlerts = alerts.map(alert => ({
-      id: alert.id,
-      message: alert.message || '',
-      type: alert.type || '',
-      priority: alert.priority || 0,
-      is_active: Boolean(alert.is_active),
-      is_public: Boolean(alert.is_public),
-      created_at: alert.created_at,
-      updated_at: alert.updated_at,
-      expiry_date: alert.expiry_date,
-      user_id: alert.user_id || 0
-    }));
-
+      ORDER BY a.priority DESC, a.created_at DESC
+    `);
+    
     res.json({
       success: true,
-      alerts: formattedAlerts
+      alerts: alerts.map(alert => ({
+        ...alert,
+        is_active: Boolean(alert.is_active),
+        is_public: Boolean(alert.is_public)
+      }))
     });
   } catch (error) {
-    console.error('Get active alerts error:', error);
+    console.error('Error fetching active alerts:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch active alerts'
+      message: 'Failed to fetch alerts'
     });
   }
 });

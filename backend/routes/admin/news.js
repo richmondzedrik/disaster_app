@@ -17,8 +17,8 @@ router.get('/posts', async (req, res) => {
                 u.username as author,
                 u.id as author_id,
                 p.created_at
-            FROM posts p
-            LEFT JOIN users u ON p.author_id = u.id
+            FROM disaster_prep.posts p
+            LEFT JOIN disaster_prep.users u ON p.author_id = u.id
             ORDER BY p.created_at DESC
         `);
         
@@ -43,7 +43,7 @@ router.get('/posts', async (req, res) => {
 router.put('/posts/:id/approve', async (req, res) => {
     try {
         const [result] = await db.execute(
-            'UPDATE posts SET status = "approved" WHERE id = ?',
+            'UPDATE disaster_prep.posts SET status = "approved" WHERE id = ?',
             [req.params.id]
         );
 
@@ -71,7 +71,7 @@ router.put('/posts/:id/approve', async (req, res) => {
 router.delete('/posts/:id', async (req, res) => {
     try {
         const [result] = await db.execute(
-            'DELETE FROM posts WHERE id = ?',
+            'DELETE FROM disaster_prep.posts WHERE id = ?',
             [req.params.id]
         );
 

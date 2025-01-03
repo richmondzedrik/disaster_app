@@ -92,7 +92,7 @@ export const newsService = {
             console.error('Error approving post:', error);
             throw new Error(error.response?.data?.message || 'Failed to approve post');
         }
-    }
+    },
     
     async deletePost(postId) {
         try {
