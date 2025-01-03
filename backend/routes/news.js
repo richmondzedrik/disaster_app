@@ -497,4 +497,12 @@ router.get('/public', async (req, res) => {
         });
     }
 });
+
+router.get('/test', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'News service is operational' 
+  });
+});
+
 module.exports = router;

@@ -22,6 +22,35 @@ router.get('/db-test', async (req, res) => {
     }
 });
 
+// Add these test endpoints
+router.get('/api/auth/test', async (req, res) => {
+    try {
+      res.json({ 
+        success: true, 
+        message: 'Auth service is operational' 
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        message: 'Auth service check failed' 
+      });
+    }
+  });
+  
+  router.get('/api/admin/test', async (req, res) => {
+    try {
+      res.json({ 
+        success: true, 
+        message: 'Admin service is operational' 
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        message: 'Admin service check failed' 
+      });
+    }
+  });
+
 // Register all routes
 router.use('/auth', authRoutes);
 router.use('/news', newsRoutes);

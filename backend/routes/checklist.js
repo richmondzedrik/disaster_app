@@ -85,4 +85,11 @@ router.post('/custom', auth.authMiddleware, async (req, res) => {
   }
 });
 
+router.get('/test', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Checklist service is operational' 
+  });
+});
+
 module.exports = router;
