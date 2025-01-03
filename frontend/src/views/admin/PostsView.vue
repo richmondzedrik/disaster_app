@@ -145,28 +145,19 @@ const loadPosts = async () => {
         error.value = null;
         
         const response = await newsService.getAdminPosts();
-        console.log('API Response:', response);
         
-        // Handle the response data
-        if (Array.isArray(response)) {
-            posts.value = response;
-        } else if (Array.isArray(response.posts)) {
-            posts.value = response.posts;
-        } else if (response.data?.posts) {
-            posts.value = response.data.posts;
+        if (response.success) {
+            posts.value = response.posts.map(post => ({
+                id: post.id,
+                title: post.title || 'Untitled',
+                content: post.content || '',
+                status: post.status || 'pending',
+                created_at: post.created_at || post.createdAt || new Date().toISOString(),
+                author_username: post.author || post.author_username || post.author_name || 'Unknown Author'
+            }));
         } else {
-            posts.value = [];
+            throw new Error(response.message || 'Failed to load posts');
         }
-        
-        // Map the posts data
-        posts.value = posts.value.map(post => ({
-            id: post.id,
-            title: post.title || 'Untitled',
-            content: post.content || '',
-            status: post.status || 'pending',
-            created_at: post.created_at || post.createdAt || new Date().toISOString(),
-            author_username: post.author || post.author_username || post.author_name || 'Unknown Author'
-        }));
         
     } catch (err) {
         console.error('Error loading posts:', err);

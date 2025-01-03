@@ -51,7 +51,7 @@ export const newsService = {
     async getAdminPosts() {
         try {
             const headers = getHeaders();
-            const response = await axios.get(`${API_URL}/admin/news/posts`, {
+            const response = await axios.get(`${API_URL}/api/admin/news/posts`, {
                 headers,
                 withCredentials: true
             });
@@ -59,14 +59,15 @@ export const newsService = {
             if (response?.data?.success) {
                 return response.data;
             } else {
-                return {
-                    success: true,
-                    posts: response.data || []
-                };
+                throw new Error('Invalid response format');
             }
         } catch (error) {
             console.error('getAdminPosts error:', error);
-            throw error;
+            return {
+                success: false,
+                posts: [],
+                message: error.message
+            };
         }
     },
 
