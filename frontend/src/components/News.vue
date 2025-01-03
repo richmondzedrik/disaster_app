@@ -292,8 +292,8 @@ const loadPosts = async () => {
     loading.value = true;
     const response = await newsService.getPublicPosts();
     
-    if (response?.data?.success) {
-      const updatedPosts = (response.data.posts || []).map(newPost => ({
+    if (response?.success) {
+      const updatedPosts = (response.posts || []).map(newPost => ({
         ...newPost,
         imageLoaded: false,
         imageError: false,
@@ -307,7 +307,7 @@ const loadPosts = async () => {
       }));
       posts.value = updatedPosts;
     } else {
-      throw new Error(response?.data?.message || 'Failed to load posts');
+      throw new Error(response?.message || 'Failed to load posts');
     }
   } catch (error) {
     console.error('Error loading posts:', error);
