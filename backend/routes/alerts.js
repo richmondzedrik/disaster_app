@@ -10,35 +10,40 @@ router.get('/test', (req, res) => {
   res.json({ message: 'Alerts route working' });
 });
 
-// Get active alerts (for authenticated users)
-router.get('/api/alerts/active', async (req, res) => {
-  try {
-    const [alerts] = await db.execute(`
-      SELECT 
-        a.*,
-        u.username as created_by_username
-      FROM disaster_prep.alerts a
-      LEFT JOIN disaster_prep.users u ON a.user_id = u.id
-      WHERE a.is_active = true 
-      AND (a.expiry_date IS NULL OR a.expiry_date > NOW())
-      ORDER BY a.priority DESC, a.created_at DESC
-    `);
-    
-    res.json({
-      success: true,
-      alerts: alerts.map(alert => ({
-        ...alert,
-        is_active: Boolean(alert.is_active),
-        is_public: Boolean(alert.is_public)
-      }))
-    });
-  } catch (error) {
-    console.error('Error fetching active alerts:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch alerts'
-    });
-  }
+// Get active alerts
+router.get('/active', async (req, res) => {
+    try {
+        const [alerts] = await db.execute(`
+            SELECT 
+                a.*,
+                u.username as created_by_username
+            FROM disaster_prep.alerts a
+            LEFT JOIN disaster_prep.users u ON a.user_id = u.id
+            WHERE a.is_active = true 
+            AND (a.expiry_date IS NULL OR a.expiry_date > NOW())
+            ORDER BY a.priority DESC, a.created_at DESC
+        `);
+        
+        res.json({
+            success: true,
+            alerts: alerts.map(alert => ({
+                ...alert,
+                is_active: Boolean(alert.is_active),
+                is_public: Boolean(alert.is_public)
+            }))
+        });
+    } catch (error) {
+        console.error('Error fetching active alerts:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch alerts'
+        });
+    }
+});
+
+// Remove duplicate route
+router.get('/api/alerts/active', (req, res) => {
+    res.redirect('/api/alerts/active');
 });
 
 // Get all alerts (admin only)

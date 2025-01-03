@@ -22,27 +22,17 @@ const getHeaders = () => {
 export const newsService = {
     async getPublicPosts() {
         try {
-            const response = await axios.get(`${API_URL}/news/public`);
-            
-            if (!response.data?.success) {
-                throw new Error(response.data?.message || 'Failed to fetch posts');
-            }
-            
-            return {
-                success: true,
-                posts: response.data.posts.map(post => ({
-                    ...post,
-                    likes: parseInt(post.likes) || 0,
-                    commentCount: parseInt(post.comment_count) || 0,
-                    liked: Boolean(post.liked)
-                }))
-            };
+            const response = await axios.get(`${API_URL}/api/news/public`, {
+                withCredentials: true,
+                timeout: 15000
+            });
+            return response.data;
         } catch (error) {
-            console.error('Error fetching public news:', error);
+            console.error('getPublicPosts error:', error);
             return {
                 success: false,
-                message: error.message || 'Failed to fetch posts',
-                posts: []
+                posts: [],
+                message: error.response?.data?.message || 'Failed to fetch posts'
             };
         }
     },

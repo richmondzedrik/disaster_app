@@ -83,6 +83,7 @@ app.use('/api/checklist', checklistRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/admin/news', adminNewsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/news', newsRoutes);
 
 // Route debugging endpoint in development
 if (process.env.NODE_ENV !== 'production') {
