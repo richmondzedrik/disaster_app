@@ -88,25 +88,14 @@
             <h2>{{ post.title }}</h2>
             <p>{{ post.content }}</p>
             <div v-if="post.image_url" class="post-image">
-              <div class="image-container" :class="{ 'error': post.imageError }">
-                <img 
-                  v-if="getImageUrl(post.image_url).url"
-                  :src="getImageUrl(post.image_url).url"
-                  :alt="post.title"
-                  crossorigin="anonymous"
-                  @error="handleImageError($event, post)"
-                  @load="handleImageLoad($event, post)"
-                  :class="['news-image', { 'visible': post.imageLoaded }]"
-                />
-                <div v-if="!post.imageLoaded && !post.imageError" class="image-loading">
-                  <i class="fas fa-circle-notch fa-spin"></i>
-                  <span>Loading image...</span>
-                </div>
-                <div v-if="post.imageError" class="image-error-overlay">
-                  <i class="fas fa-exclamation-circle"></i>
-                  <span>Image unavailable</span>
-                </div>
-              </div>
+              <img
+                :src="getImageUrl(post.image_url).url"
+                :crossorigin="getImageUrl(post.image_url).crossorigin"
+                @error="handleImageError($event, post)"
+                @load="handleImageLoad($event, post)"
+                alt="Post image"
+                class="post-img"
+              />
             </div>
           </div>
           
@@ -391,9 +380,7 @@ const submitPost = async () => {
     formData.append('content', postForm.value.content.trim());
     
     if (imageFile.value) {
-      // Ensure proper file naming and type checking
-      const fileName = `${Date.now()}_${imageFile.value.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-      formData.append('image', imageFile.value, fileName);
+      formData.append('image', imageFile.value);
     }
 
     const response = await newsService.createPost(formData);
