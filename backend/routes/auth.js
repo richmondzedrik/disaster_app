@@ -24,4 +24,12 @@ router.post('/logout', authController.logout);
 // Check username availability (public route)
 router.get('/check-username/:username', authController.checkUsername);
 
+// Add test endpoint
+router.get('/test', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Auth service is operational' 
+  });
+});
+
 module.exports = router; 

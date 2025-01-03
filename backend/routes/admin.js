@@ -652,4 +652,12 @@ router.put('/posts/:id/status', async (req, res) => {
   }
 });
 
+// Add test endpoint
+router.get('/test', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Admin service is operational' 
+  });
+});
+
 module.exports = router; 
