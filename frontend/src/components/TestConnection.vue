@@ -60,21 +60,56 @@ const testEndpoint = async (endpoint, options = {}) => {
     // Test both connection and content
     const contentCheck = {
       '/api/alerts/test': () => {
-        return response.data?.success === true;
+        const testAlert = {
+          id: 1,
+          type: 'info',
+          message: 'Test alert',
+          priority: 1,
+          is_active: true
+        };
+        return response.data?.success && 
+               Array.isArray(response.data?.alerts) && 
+               response.data?.alerts.some(alert => 
+                 Object.keys(testAlert).every(key => alert.hasOwnProperty(key))
+               );
       },
       '/api/news/test': () => {
-        return response.data?.success === true;
+        const testPost = {
+          id: 1,
+          title: 'Test post',
+          content: 'Test content',
+          status: 'approved',
+          author: 'Test Author'
+        };
+        return response.data?.success && 
+               Array.isArray(response.data?.posts) && 
+               response.data?.posts.some(post => 
+                 Object.keys(testPost).every(key => post.hasOwnProperty(key))
+               );
       },
       '/api/checklist/test': () => {
-        return response.data?.success === true;
+        const testItem = {
+          id: 1,
+          title: 'Test item',
+          description: 'Test description',
+          status: 'pending'
+        };
+        return response.data?.success && 
+               Array.isArray(response.data?.items) && 
+               response.data?.items.some(item => 
+                 Object.keys(testItem).every(key => item.hasOwnProperty(key))
+               );
       }
     }[endpoint];
 
     const hasValidContent = contentCheck ? contentCheck() : true;
+    const contentDetails = hasValidContent ? getContentDetails(response.data, endpoint) : '';
 
     return {
       success: response.data?.success && hasValidContent,
-      message: response.data?.message || 'Connected successfully'
+      message: hasValidContent 
+        ? `Connected and validated: ${contentDetails}`
+        : 'Connected but invalid content format'
     };
   } catch (error) {
     return {
@@ -82,6 +117,16 @@ const testEndpoint = async (endpoint, options = {}) => {
       message: error.response?.data?.message || error.message
     };
   }
+};
+
+const getContentDetails = (data, endpoint) => {
+  const details = {
+    '/api/alerts/test': () => `${data.alerts?.length || 0} alerts found`,
+    '/api/news/test': () => `${data.posts?.length || 0} posts found`,
+    '/api/checklist/test': () => `${data.items?.length || 0} items found`
+  }[endpoint];
+
+  return details ? details() : '';
 };
 
 const testAllSystems = async () => {
