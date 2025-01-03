@@ -55,7 +55,7 @@ app.get('/api/db-test', async (req, res) => {
         });
     }
 });
-
+app.use('/api/auth', authRoutes); 
 // Basic middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

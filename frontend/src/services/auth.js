@@ -54,7 +54,10 @@ export const authService = {
             return response.data;
         } catch (error) {
             console.error('Verify code error:', error);
-            throw error.response?.data || error;
+            if (error.response?.data) {
+                throw error.response.data;
+            }
+            throw error;
         }
     }
 };

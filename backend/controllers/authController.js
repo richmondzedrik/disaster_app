@@ -29,7 +29,8 @@ const registerLimiter = rateLimit({
             message: 'Too many registration attempts. Please try again in 15 minutes.',
             retryAfter: Math.ceil(req.rateLimit.resetTime / 1000 - Date.now() / 1000)
         });
-    }
+    },
+    trustProxy: true
 });
 
 // Add a store to track failed attempts
@@ -382,10 +383,10 @@ exports.verifyCode = async (req, res) => {
 
         const result = await User.verifyCode(email, code);
         
-        // Return only the success status, let frontend handle the notification
         return res.json({ 
             success: result.success,
-            verified: result.success // Add explicit verified flag
+            verified: result.success,
+            message: result.message
         });
 
     } catch (error) {

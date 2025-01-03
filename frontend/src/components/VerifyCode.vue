@@ -105,35 +105,33 @@ onMounted(() => {
 });
 
 const handleSubmit = async () => {
-  if (!validateForm()) return;
-  if (!email.value) {
-    notificationStore.error('Email address is required');
-    return;
-  }
-
-  loading.value = true;
-  error.value = '';
-  
-  try {
-    const response = await authService.verifyCode(email.value, code.value);
-    
-    if (response.success && response.verified) {
-      localStorage.removeItem('pendingVerificationEmail');
-      
-      // Remove the success notification from here
-      // Just redirect to login with query params
-      router.push({
-        path: '/login',
-        query: { verified: 'true', email: email.value }
-      });
+    if (!email.value || !code.value) {
+        error.value = 'Both email and code are required';
+        return;
     }
-  } catch (err) {
-    console.error('Verification error:', err);
-    error.value = err.message;
-    notificationStore.error(err.message);
-  } finally {
-    loading.value = false;
-  }
+
+    loading.value = true;
+    error.value = '';
+
+    try {
+        const response = await authService.verifyCode(email.value, code.value);
+        
+        if (response.success) {
+            localStorage.removeItem('pendingVerificationEmail');
+            router.push({
+                path: '/login',
+                query: { verified: 'true', email: email.value }
+            });
+        } else {
+            throw new Error(response.message || 'Verification failed');
+        }
+    } catch (err) {
+        console.error('Verification error:', err);
+        error.value = err.message || 'Verification failed. Please try again.';
+        notificationStore.error(error.value);
+    } finally {
+        loading.value = false;
+    }
 };
 
 const resendCode = async () => {
