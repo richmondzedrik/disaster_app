@@ -155,23 +155,14 @@ export const newsService = {
                 withCredentials: true
             });
             
-            if (response.data?.success) {
-                return {
-                    success: true,
-                    likes: parseInt(response.data.likes),
-                    liked: Boolean(response.data.liked)
-                };
-            }
             return {
-                success: false,
-                message: response.data?.message || 'Failed to like post'
+                success: true,
+                likes: parseInt(response.data.likes),
+                liked: Boolean(response.data.liked)
             };
         } catch (error) {
             console.error('Error liking post:', error);
-            return {
-                success: false,
-                message: 'Failed to like post'
-            };
+            throw new Error(error.response?.data?.message || 'Failed to like post');
         }
     },
 

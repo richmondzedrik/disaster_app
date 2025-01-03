@@ -485,14 +485,14 @@ router.get('/public', async (req, res) => {
             SELECT 
                 p.*,
                 u.username as author,
-                (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) as like_count,
+                (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) as like_count,
                 (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.deleted_by IS NULL) as comment_count,
-                (SELECT COUNT(*) > 0 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = ?) as is_liked
+                IF(? IS NOT NULL, EXISTS(SELECT 1 FROM likes l WHERE l.post_id = p.id AND l.user_id = ?), FALSE) as is_liked
             FROM posts p
             JOIN users u ON p.author_id = u.id
             WHERE p.status = 'approved'
             ORDER BY p.created_at DESC
-        `, [userId || null]);
+        `, [userId || null, userId || null]);
         
         return res.json({
             success: true,
@@ -500,7 +500,7 @@ router.get('/public', async (req, res) => {
                 ...post,
                 likes: parseInt(post.like_count) || 0,
                 comment_count: parseInt(post.comment_count) || 0,
-                liked: post.is_liked === 1
+                liked: Boolean(post.is_liked)
             }))
         });
     } catch (error) {

@@ -307,57 +307,29 @@ const createPost = async (postData) => {
 
 // Methods
 const loadPosts = async () => {
-  try {
-    loading.value = true;
-    const response = await newsService.getPublicPosts();
-    
-    if (response.success) {
-      posts.value = response.posts.map(post => {
-  let comments = [];
-  if (post.comments) {
     try {
-      comments = post.comments.split(',').map(comment => {
-        return JSON.parse(comment);
-      }).filter(Boolean);
-    } catch (e) {
-      console.error('Error parsing comments:', e);
-    }
-  }
-
-  return {
-    ...post,
-    imageLoaded: false,
-    imageError: false,
-    showComments: false,
-    comments: comments,
-    newComment: '',
-    liked: Boolean(post.is_liked),
-    likes: parseInt(post.like_count || 0),
-    commentCount: parseInt(post.comment_count || 0)
-  };
-});
-
-      // Pre-load comment counts for all posts
-      await Promise.all(posts.value.map(async (post) => {
-        try {
-          const commentsResponse = await newsService.getComments(post.id);
-          if (commentsResponse.success) {
-            post.commentCount = commentsResponse.comments.length;
-          }
-        } catch (error) {
-          console.error(`Error loading comments for post ${post.id}:`, error);
+        loading.value = true;
+        const response = await newsService.getPublicPosts();
+        
+        if (response.success) {
+            posts.value = response.posts.map(post => ({
+                ...post,
+                imageLoaded: false,
+                imageError: false,
+                showComments: false,
+                comments: [],
+                newComment: '',
+                liked: Boolean(post.is_liked),
+                likes: parseInt(post.like_count) || 0,
+                commentCount: parseInt(post.comment_count) || 0
+            }));
         }
-      }));
-
-      // Force reactivity update
-      posts.value = [...posts.value];
+    } catch (error) {
+        console.error('Error loading posts:', error);
+        notificationStore.error('Failed to load posts');
+    } finally {
+        loading.value = false;
     }
-  } catch (error) {
-    console.error('Error loading posts:', error);
-    notificationStore.error('Failed to load posts');
-  } finally {
-    loading.value = false;
-  }
 };
 
 const formatDate = (date) => {
@@ -470,7 +442,10 @@ const likePost = async (post) => {
       post.liked = response.liked;
       post.likes = response.likes;
       // Force reactivity update
-      posts.value = [...posts.value];
+      const postIndex = posts.value.findIndex(p => p.id === post.id);
+      if (postIndex !== -1) {
+        posts.value[postIndex] = { ...post };
+      }
     }
   } catch (error) {
     console.error('Error liking post:', error);
