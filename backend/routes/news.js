@@ -480,18 +480,17 @@ router.get('/public', async (req, res) => {
             (await auth.getUserFromToken(req.headers.authorization))?.userId : 
             null;
 
-        const [posts] = await db.execute(`
-            SELECT 
-                p.*,
-                u.username as author,
-                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
-                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
-                ${userId ? `(SELECT COUNT(*) > 0 FROM likes WHERE post_id = p.id AND user_id = ?) as liked` : 'FALSE as liked'}
-            FROM posts p
-            LEFT JOIN users u ON p.author_id = u.id
-            WHERE p.status = 'approved'
-            ORDER BY p.created_at DESC
-        `, userId ? [userId] : []);
+// In your getPublicPosts or similar route
+const [posts] = await db.execute(`
+    SELECT p.*,
+           COUNT(DISTINCT l.id) as like_count,
+           EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = ?) as is_liked
+    FROM posts p
+    LEFT JOIN likes l ON p.id = l.post_id
+    WHERE p.status = 'approved'
+    GROUP BY p.id
+    ORDER BY p.created_at DESC
+`, [req.user?.userId || null]);
         
         return res.json({
             success: true,

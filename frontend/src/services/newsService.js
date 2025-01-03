@@ -22,7 +22,7 @@ const getHeaders = () => {
 export const newsService = {
     async getPublicPosts() {
         try {
-            const response = await axios.get(`${API_URL}/api/news/public`, {
+            const response = await axios.get(`${API_URL}/news/public`, {
                 withCredentials: true,
                 timeout: 15000
             });

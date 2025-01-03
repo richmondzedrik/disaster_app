@@ -103,9 +103,9 @@
             <button 
               @click="isAuthenticated ? likePost(post) : handleGuestInteraction('like')"
               class="interaction-btn"
-              :class="{ 'disabled': !isAuthenticated }"
+              :class="{ 'disabled': !isAuthenticated, 'active': post.liked }"
             >
-              <i class="far fa-heart"></i>
+              <i :class="['fa-heart', post.liked ? 'fas' : 'far']"></i>
               <span>{{ post.likes || 0 }}</span>
             </button>
             <button 
@@ -319,8 +319,8 @@ const loadPosts = async () => {
         showComments: false,
         comments: [],
         newComment: '',
-        liked: false,
-        saved: false,
+        liked: Boolean(post.liked || post.is_liked),
+        saved: Boolean(post.saved),
         commentCount: parseInt(post.comment_count || post.commentCount || 0),
         likes: parseInt(post.like_count || post.likes || 0)
       }));
@@ -437,16 +437,13 @@ const likePost = async (post) => {
     return;
   }
   try {
-    const currentLiked = post.liked;
-    const currentLikes = post.likes || 0;
-    
-    // Make API call first
     const response = await newsService.likePost(post.id);
     
     if (response.success) {
-      // Only update UI after successful API call
+      // Update the post's like status and count
       post.liked = response.liked;
       post.likes = response.likes;
+      // Force reactivity update
       posts.value = [...posts.value];
     } else {
       throw new Error(response.message || 'Failed to update like status');
