@@ -8,11 +8,20 @@
       </div>
     </div>
 
+    <div class="action-buttons" v-if="canPost">
+      <button 
+        class="add-post-btn"
+        @click="showPostModal = true"
+      >
+        <i class="fas fa-plus"></i> Add Post
+      </button>
+    </div>
+
     <div class="news-content" :class="{ 'blur-content': loading }">
       <div class="news-header">
         <h1>Community News</h1>
         <button 
-          v-if="isAuthenticated && canPost" 
+          v-if="canPost"
           @click="showPostModal = true" 
           class="create-post-btn"
         >
@@ -285,6 +294,28 @@ const filteredPosts = computed(() => {
   
   return filtered;
 });
+
+const showAddPostModal = ref(false);
+const isLoggedIn = computed(() => authStore.isLoggedIn);
+
+const createPost = async (postData) => {
+  try {
+    loading.value = true;
+    const response = await newsService.createPost(postData);
+    if (response.success) {
+      notificationStore.success('Post created successfully and pending approval');
+      showAddPostModal.value = false;
+      await loadPosts();
+    } else {
+      throw new Error(response.message || 'Failed to create post');
+    }
+  } catch (error) {
+    console.error('Error creating post:', error);
+    notificationStore.error('Failed to create post');
+  } finally {
+    loading.value = false;
+  }
+};
 
 // Methods
 const loadPosts = async () => {
@@ -609,6 +640,29 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.action-buttons {
+  margin: 1rem 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.add-post-btn {
+  background-color: #00ADA9;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.add-post-btn:hover {
+  background-color: #008B87;
+}
+
 .news-container {
   max-width: 1200px;
   margin: 2rem auto;
