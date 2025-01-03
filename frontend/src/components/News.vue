@@ -7,21 +7,12 @@
         <span>Loading news...</span>
       </div>
     </div>
-
-    <div class="action-buttons" v-if="canPost">
-      <button 
-        class="add-post-btn"
-        @click="showPostModal = true"
-      >
-        <i class="fas fa-plus"></i> Add Post
-      </button>
-    </div>
-
+    
     <div class="news-content" :class="{ 'blur-content': loading }">
       <div class="news-header">
         <h1>Community News</h1>
         <button 
-          v-if="canPost"
+          v-if="isAuthenticated && (isAdmin || canCreatePost)"
           @click="showPostModal = true" 
           class="create-post-btn"
         >
@@ -250,9 +241,11 @@ import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useNotificationStore } from '../stores/notification';
 import { newsService } from '../services/newsService';
+import { useRouter } from 'vue-router';
 
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
+const router = useRouter();
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:3000';
 
@@ -278,8 +271,11 @@ const isAuthenticated = computed(() => authStore.isAuthenticated);
 const canInteract = computed(() => {
   return isAuthenticated.value && authStore.user?.verified;
 });
-const canPost = computed(() => {
-  return isAuthenticated.value && authStore.user?.verified;
+const canCreatePost = computed(() => {
+  return isAuthenticated.value && (
+    authStore.user?.role === 'admin' || 
+    (authStore.user?.verified && authStore.user?.status === 'active')
+  );
 });
 const isAdmin = computed(() => user.value?.role === 'admin');
 const filteredPosts = computed(() => {
@@ -384,6 +380,11 @@ const removeImage = () => {
 };
 
 const submitPost = async () => {
+  if (!canCreatePost.value) {
+    notificationStore.error('You do not have permission to create posts');
+    return;
+  }
+
   try {
     loading.value = true;
     const formData = new FormData();
@@ -400,7 +401,6 @@ const submitPost = async () => {
       notificationStore.success('Post created successfully and pending approval');
       closeModal();
       
-      // Add the new post to the posts array with proper image loading states
       if (response.post) {
         const newPost = {
           ...response.post,
@@ -414,9 +414,7 @@ const submitPost = async () => {
           commentCount: 0,
           comments: []
         };
-        // Properly merge the new post with existing posts
         posts.value = [newPost, ...posts.value];
-        // Reload posts to ensure consistency
         await loadPosts();
       }
     } else {
@@ -694,6 +692,7 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  z-index: 1;
 }
 
 .loading-overlay {
@@ -889,7 +888,7 @@ onMounted(() => {
 
 .create-post-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 209, 209, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 209, 209, 0.2);
 }
 
 .create-post-btn:hover::before {

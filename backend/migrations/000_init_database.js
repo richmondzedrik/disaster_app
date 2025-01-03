@@ -121,6 +121,21 @@ async function up() {
             )
         `);
 
+        // Add post_likes table
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS post_likes (
+                id bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+                post_id int NOT NULL,
+                user_id int NOT NULL,
+                created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY post_id (post_id),
+                KEY user_id (user_id),
+                CONSTRAINT post_likes_ibfk_1 FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
+                CONSTRAINT post_likes_ibfk_2 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
         await connection.commit();
         console.log('All tables created successfully');
     } catch (error) {
