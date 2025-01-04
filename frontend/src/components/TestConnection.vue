@@ -60,6 +60,17 @@
             </ul>
           </div>
         </div>
+
+        <div class="service-details">
+          <StatusItem title="Admin Alerts API" :status="status.adminAlerts" />
+          <div v-if="status.adminAlerts?.success" class="test-data">
+            <strong>Admin Alerts Service:</strong>
+            <ul>
+              <li>Admin Alerts API Access</li>
+              <li>Authentication Check</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <!-- Auth Services -->
@@ -76,7 +87,7 @@
 import { ref, computed } from 'vue';
 import api from '../services/api';
 import StatusItem from './StatusItem.vue';
-
+import { alertService } from '../services/alertService';
 // Main component logic
 const loading = ref(false);
 const status = ref({
@@ -87,6 +98,7 @@ const status = ref({
   checklist: null,
   auth: null,
   admin: null,
+  adminAlerts: null,
   imageUpload: null
 });
 
@@ -230,6 +242,15 @@ const testAllSystems = async () => {
       message: imageUploadTest.success 
         ? 'Image upload service operational'
         : imageUploadTest.message
+    };
+
+    // Test admin alerts
+    const adminAlertsTest = await alertService.testAdminAlerts();
+    status.value.adminAlerts = {
+      ...adminAlertsTest,
+      message: adminAlertsTest.success 
+        ? 'Admin alerts service operational'
+        : adminAlertsTest.message
     };
 
   } catch (error) {

@@ -143,6 +143,27 @@ export const alertService = {
       console.error('Error deleting alert:', error);
       throw new Error(error.response?.data?.message || 'Failed to delete alert');
     }
+  },
+
+  async testAdminAlerts() {
+    try {
+      const headers = getHeaders();
+      const response = await api.get('/admin/alerts/test', { 
+        headers,
+        withCredentials: true
+      });
+      
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error testing admin alerts:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to test admin alerts'
+      };
+    }
   }
 };
 
