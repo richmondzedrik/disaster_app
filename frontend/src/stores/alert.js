@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { alertService } from '../services/alertService';
+import alertService from '../services/alertService';
 import { useNotificationStore } from './notification';
 
 
@@ -12,6 +12,7 @@ export const useAlertStore = defineStore('alert', () => {
 
   const fetchAlerts = async () => {
     try {
+      isLoading.value = true;
       const response = await alertService.getAdminAlerts();
       if (response.success) {
         alerts.value = response.alerts;
@@ -20,6 +21,7 @@ export const useAlertStore = defineStore('alert', () => {
           alerts: response.alerts
         };
       }
+      notificationStore.error(response.message || 'Failed to fetch alerts');
       return {
         success: false,
         alerts: [],
@@ -27,11 +29,14 @@ export const useAlertStore = defineStore('alert', () => {
       };
     } catch (error) {
       console.error('Error in fetchAlerts:', error);
+      notificationStore.error(error.message || 'Failed to fetch alerts');
       return {
         success: false,
         alerts: [],
-        message: 'Failed to fetch alerts'
+        message: error.message || 'Failed to fetch alerts'
       };
+    } finally {
+      isLoading.value = false;
     }
   };
 

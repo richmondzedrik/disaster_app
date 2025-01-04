@@ -31,7 +31,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useNotificationStore } from '../stores/notification';
-import { alertService } from '../services/alertService';
+import alertService from '../services/alertService';
 
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();

@@ -1,7 +1,5 @@
-import axios from 'axios';
+import api from './api';
 import { useAuthStore } from '../stores/auth';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com/api';
 
 const getHeaders = () => {
   const authStore = useAuthStore();
@@ -17,23 +15,12 @@ const getHeaders = () => {
   };
 };
 
-const axiosInstance = axios.create({
-  baseURL: API_URL,
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
-
-
-
-const alertService = {
+export const alertService = {
   async getAdminAlerts() {
     try {
       const headers = getHeaders();
-      const response = await axiosInstance.get('/admin/alerts', { 
+      const response = await api.get('admin/alerts', { 
         headers,
-        timeout: 30000,
         withCredentials: true
       });
       
@@ -46,7 +33,7 @@ const alertService = {
       return {
         success: false,
         alerts: [],
-        message: 'Failed to fetch alerts. Please try again.'
+        message: error.message || 'Failed to fetch alerts. Please try again.'
       };
     }
   },
@@ -54,7 +41,7 @@ const alertService = {
   async getActiveAlerts() {
     try {
       const headers = getHeaders();
-      const response = await axiosInstance.get('/alerts/active', { headers });
+      const response = await api.get('/alerts/active', { headers });
       return response.data;
     } catch (error) {
       console.error('Error fetching active alerts:', error);
@@ -65,7 +52,7 @@ const alertService = {
   async getAlertCount() {
     try {
       const headers = getHeaders();
-      const response = await axiosInstance.get('/alerts/count', { headers });
+      const response = await api.get('/alerts/count', { headers });
       return response.data;
     } catch (error) {
       console.error('Error fetching alert count:', error);
@@ -88,7 +75,7 @@ const alertService = {
         throw new Error('Alert message is required');
       }
 
-      const response = await axiosInstance.post('/admin/alerts', formattedData, { headers });
+      const response = await api.post('/admin/alerts', formattedData, { headers });
       
       return {
         success: true,
@@ -107,7 +94,7 @@ const alertService = {
   async deactivateAlert(alertId) {
     try {
       const headers = getHeaders();
-      const response = await axiosInstance.post(`/alerts/deactivate/${alertId}`, {}, { headers });
+      const response = await api.post(`/alerts/deactivate/${alertId}`, {}, { headers });
       
       if (response.data && response.data.success) {
         return {
@@ -125,7 +112,7 @@ const alertService = {
   async reactivateAlert(alertId) {
     try {
       const headers = getHeaders();
-      const response = await axiosInstance.post(`/alerts/reactivate/${alertId}`, {}, { headers });
+      const response = await api.post(`/alerts/reactivate/${alertId}`, {}, { headers });
       
       if (response.data && response.data.success) {
         return {
@@ -143,7 +130,7 @@ const alertService = {
   async deleteAlert(alertId) {
     try {
       const headers = getHeaders();
-      const response = await axiosInstance.delete(`/alerts/${alertId}`, { headers });
+      const response = await api.delete(`/alerts/${alertId}`, { headers });
       
       if (response.data && response.data.success) {
         return {
@@ -159,4 +146,4 @@ const alertService = {
   }
 };
 
-export { alertService };
+export default alertService;

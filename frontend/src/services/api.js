@@ -1,8 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.PROD 
-  ? 'https://disaster-app-backend.onrender.com'
-  : 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com/api';
 
 const api = axios.create({
     baseURL: API_URL,
@@ -10,9 +8,11 @@ const api = axios.create({
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     },
-    withCredentials: true
+    withCredentials: true,
+    timeout: 30000
 });
-/// Request interceptor
+
+// Request interceptor
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -21,33 +21,20 @@ api.interceptors.request.use(
             config.headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
         }
 
-        // Handle auth routes
-        if (config.url.startsWith('/auth/')) {
-            config.url = `/api${config.url}`;
-            return config;
+        // Ensure proper API path formatting
+        if (!config.url.startsWith('/')) {
+            config.url = `/${config.url}`;
         }
-
-        // For other routes, ensure they have /api prefix
-        if (!config.url.startsWith('/api/')) {
-            config.url = `/api${config.url}`;
-        }
-
-        // Remove any duplicate /api prefixes
-        config.url = config.url.replace(/\/api\/api/, '/api');
-
+        
         return config;
     },
     (error) => Promise.reject(error)
 );
 
-// Response interceptor
+// Response interceptor with better error handling
 api.interceptors.response.use(
-    (response) => {
-        console.log(`✅ Response for ${response.config.url}:`, response.data);
-        return response;
-    },
+    (response) => response,
     (error) => {
-        // Enhanced error logging
         console.error('❌ Response error:', {
             url: error.config?.url,
             method: error.config?.method,
@@ -56,9 +43,11 @@ api.interceptors.response.use(
             status: error.response?.status
         });
 
-        // Handle token expiration or invalid token
+        if (error.code === 'ERR_NETWORK') {
+            error.message = 'Unable to connect to the server. Please check your connection.';
+        }
+
         if (error.response?.status === 401) {
-            console.log('🔒 Authentication error - clearing local storage');
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/login';

@@ -252,7 +252,7 @@
       }
     } catch (error) {
       console.error('Error loading alerts:', error);
-      notificationStore.error('Failed to load alerts');
+      notificationStore.error(error.message || 'Failed to load alerts');
       alerts.value = [];
     } finally {
       loading.value = false;
