@@ -20,6 +20,8 @@ async function up() {
                 email_verified BOOLEAN DEFAULT false,
                 verification_code VARCHAR(6),
                 verification_code_expires DATETIME,
+                reset_token VARCHAR(255) NULL,
+                reset_token_expires TIMESTAMP NULL,
                 phone VARCHAR(20),
                 notifications JSON,
                 location VARCHAR(255) NULL,

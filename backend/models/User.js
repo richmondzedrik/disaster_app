@@ -239,23 +239,34 @@ class User {
     }
 
     static async setResetToken(email) {
-        const resetToken = crypto.randomBytes(32).toString('hex');
-        const resetTokenHash = crypto
-            .createHash('sha256')
-            .update(resetToken)
-            .digest('hex');
-        
-        const resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour
+        try {
+            // Generate reset token
+            const resetToken = crypto.randomBytes(32).toString('hex');
+            const hashedToken = crypto
+                .createHash('sha256')
+                .update(resetToken)
+                .digest('hex');
 
-        const query = `
-            UPDATE users 
-            SET reset_token = ?, 
-                reset_token_expires = ? 
-            WHERE email = ?
-        `;
+            // Set expiration to 1 hour from now
+            const expires = new Date(Date.now() + 3600000); // 1 hour
 
-        await db.query(query, [resetTokenHash, resetTokenExpires, email]);
-        return resetToken;
+            // Update user with reset token
+            const [result] = await db.query(`
+                UPDATE users 
+                SET reset_token = ?, 
+                    reset_token_expires = ? 
+                WHERE email = ?
+            `, [hashedToken, expires, email]);
+
+            if (result.affectedRows === 0) {
+                throw new Error('No user found with that email');
+            }
+
+            return resetToken; // Return unhashed token for email
+        } catch (error) {
+            console.error('Set reset token error:', error);
+            throw error;
+        }
     }
 
     static async resetPassword(token, newPassword) {
