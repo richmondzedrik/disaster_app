@@ -148,20 +148,23 @@ export const alertService = {
   async testAdminAlerts() {
     try {
       const headers = getHeaders();
-      const response = await api.get('/admin/alerts/test', { 
+      const response = await api.get('/api/admin/alerts/test', { 
         headers,
         withCredentials: true
       });
       
+      const isValid = response.data?.success && Array.isArray(response.data?.data?.alerts);
+      
       return {
-        success: true,
-        data: response.data
+        success: isValid,
+        message: isValid ? 'Admin alerts service operational' : 'Invalid response format',
+        data: response.data?.data || null
       };
     } catch (error) {
       console.error('Error testing admin alerts:', error);
       return {
         success: false,
-        message: error.message || 'Failed to test admin alerts'
+        message: error.response?.data?.message || 'Failed to test admin alerts'
       };
     }
   }
