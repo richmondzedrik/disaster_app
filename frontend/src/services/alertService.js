@@ -17,25 +17,44 @@ const getHeaders = () => {
   };
 };
 
+const axiosInstance = axios.create({
+  baseURL: API_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+
+
 const alertService = {
   async getAdminAlerts() {
     try {
       const headers = getHeaders();
-      const response = await axios.get(`${API_URL}/admin/alerts`, { 
+      const response = await axios({
+        method: 'get',
+        url: `${API_URL}/admin/alerts`,
         headers,
-        withCredentials: true,
-        timeout: 15000
+        timeout: 30000,
+        maxRedirects: 5,
+        validateStatus: (status) => status >= 200 && status < 500
       });
       
+      if (response.data?.success) {
+        return {
+          success: true,
+          alerts: response.data.alerts || []
+        };
+      }
       return {
-        success: true,
-        alerts: response.data?.alerts || []
+        success: false,
+        message: response.data?.message || 'Failed to fetch alerts'
       };
     } catch (error) {
       console.error('Error fetching admin alerts:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Network error occurred'
+        message: 'Network error occurred'
       };
     }
   },
@@ -43,10 +62,7 @@ const alertService = {
   async getActiveAlerts() {
     try {
       const headers = getHeaders();
-      const response = await axios.get(`${API_URL}/alerts/active`, {
-        headers,
-        withCredentials: true
-      });
+      const response = await axiosInstance.get('/alerts/active', { headers });
       return response.data;
     } catch (error) {
       console.error('Error fetching active alerts:', error);
@@ -57,10 +73,7 @@ const alertService = {
   async getAlertCount() {
     try {
       const headers = getHeaders();
-      const response = await axios.get(`${API_URL}/alerts/count`, {
-        headers,
-        withCredentials: true
-      });
+      const response = await axiosInstance.get('/alerts/count', { headers });
       return response.data;
     } catch (error) {
       console.error('Error fetching alert count:', error);
@@ -83,32 +96,26 @@ const alertService = {
         throw new Error('Alert message is required');
       }
 
-      const response = await axios.post(`${API_URL}/admin/alerts`, formattedData, { 
-        headers,
-        withCredentials: true 
-      });
+      const response = await axiosInstance.post('/admin/alerts', formattedData, { headers });
       
-      if (response.data?.success) {
-        return {
-          success: true,
-          message: response.data.message || 'Alert created successfully',
-          alert: response.data.data
-        };
-      }
-      throw new Error(response.data?.message || 'Failed to create alert');
+      return {
+        success: true,
+        message: response.data?.message || 'Alert created successfully',
+        alert: response.data?.data
+      };
     } catch (error) {
       console.error('Error creating alert:', error);
-      throw new Error(error.response?.data?.message || 'Failed to create alert');
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to create alert'
+      };
     }
   },
 
   async deactivateAlert(alertId) {
     try {
       const headers = getHeaders();
-      const response = await axios.post(`${API_URL}/alerts/deactivate/${alertId}`, {}, { 
-        headers,
-        withCredentials: true 
-      });
+      const response = await axiosInstance.post(`/alerts/deactivate/${alertId}`, {}, { headers });
       
       if (response.data && response.data.success) {
         return {
@@ -126,10 +133,7 @@ const alertService = {
   async reactivateAlert(alertId) {
     try {
       const headers = getHeaders();
-      const response = await axios.post(`${API_URL}/alerts/reactivate/${alertId}`, {}, { 
-        headers,
-        withCredentials: true 
-      });
+      const response = await axiosInstance.post(`/alerts/reactivate/${alertId}`, {}, { headers });
       
       if (response.data && response.data.success) {
         return {
@@ -147,7 +151,7 @@ const alertService = {
   async deleteAlert(alertId) {
     try {
       const headers = getHeaders();
-      const response = await axios.delete(`${API_URL}/alerts/${alertId}`, { headers });
+      const response = await axiosInstance.delete(`/alerts/${alertId}`, { headers });
       
       if (response.data && response.data.success) {
         return {
