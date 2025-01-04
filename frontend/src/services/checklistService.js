@@ -7,7 +7,7 @@ const getHeaders = () => {
   const authStore = useAuthStore();
   
   // Get token from localStorage if not in store
-  let token = authStore.token || localStorage.getItem('token');
+  let token = authStore.token || localStorage.getItem('token'); 
   
   if (!token) {
     // Try to get it from auth header

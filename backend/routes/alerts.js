@@ -177,7 +177,7 @@ router.post('/reactivate/:id', auth.authMiddleware, async (req, res) => {
     );
     res.json({ 
       success: true, 
-      message: 'Alert reactivated successfully' 
+      message: 'Alert reactivated successfully'  
     });
   } catch (error) {
     console.error('Reactivate alert error:', error);
@@ -191,7 +191,7 @@ router.post('/reactivate/:id', auth.authMiddleware, async (req, res) => {
 // Delete alert (admin only)
 router.delete('/:id', auth.authMiddleware, async (req, res) => {
   try {
-    // Check admin role directly
+    // Check admin role
     if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -200,6 +200,7 @@ router.delete('/:id', auth.authMiddleware, async (req, res) => {
     }
 
     await db.execute('DELETE FROM alerts WHERE id = ?', [req.params.id]);
+    
     res.json({ 
       success: true, 
       message: 'Alert deleted successfully' 
