@@ -30,6 +30,14 @@ router.get('/progress', auth.authMiddleware, async (req, res) => {
 router.post('/progress', auth.authMiddleware, async (req, res) => {
   try {
     const { item } = req.body;
+    
+    if (!item || !item.id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid request: item ID is required'
+      });
+    }
+
     const userId = req.user.userId;
 
     await db.execute(
@@ -37,10 +45,20 @@ router.post('/progress', auth.authMiddleware, async (req, res) => {
       [userId, item.id, item.completed]
     );
 
-    res.json({ success: true, message: 'Progress updated successfully' });
+    res.json({ 
+      success: true, 
+      message: 'Progress updated successfully',
+      item: {
+        id: item.id,
+        completed: item.completed
+      }
+    });
   } catch (error) {
     console.error('Update progress error:', error);
-    res.status(500).json({ success: false, message: 'Failed to update progress' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update progress' 
+    });
   }
 });
 
@@ -90,6 +108,6 @@ router.get('/test', (req, res) => {
     success: true, 
     message: 'Checklist service is operational' 
   });
-});
+}); 
 
 module.exports = router;
