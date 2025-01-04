@@ -166,6 +166,63 @@ export const alertService = {
         message: error.response?.data?.message || 'Failed to test admin alerts'
       };
     }
+  },
+
+  async testAdminAlertOperations() {
+    try {
+      const headers = getHeaders();
+      
+      // Create a test alert
+      const testAlert = {
+        message: 'Test Alert',
+        type: 'info',
+        priority: 0,
+        is_public: true
+      };
+      
+      // Test creation
+      const createResponse = await api.post('/api/admin/alerts', testAlert, { 
+        headers,
+        withCredentials: true 
+      });
+      
+      if (!createResponse.data?.success) {
+        throw new Error('Failed to create test alert');
+      }
+      
+      const alertId = createResponse.data.data.id;
+      
+      // Test deactivation
+      const deactivateResponse = await api.put(`/api/admin/alerts/${alertId}/status`, 
+        { isActive: false }, 
+        { headers, withCredentials: true }
+      );
+      
+      if (!deactivateResponse.data?.success) {
+        throw new Error('Failed to deactivate test alert');
+      }
+      
+      // Test deletion
+      const deleteResponse = await api.delete(`/api/admin/alerts/${alertId}`, 
+        { headers, withCredentials: true }
+      );
+      
+      return {
+        success: true,
+        message: 'Admin alert operations test successful',
+        testResults: {
+          create: createResponse.data?.success,
+          deactivate: deactivateResponse.data?.success,
+          delete: deleteResponse.data?.success
+        }
+      };
+    } catch (error) {
+      console.error('Error testing admin alert operations:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to test admin alert operations'
+      };
+    }
   }
 };
 

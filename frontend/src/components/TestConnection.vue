@@ -71,6 +71,18 @@
             </ul>
           </div>
         </div>
+
+        <div class="service-details">
+          <StatusItem title="Admin Alert Operations" :status="status.adminAlertOps" />
+          <div v-if="status.adminAlertOps?.success" class="test-data">
+            <strong>Operations Test Results:</strong>
+            <ul>
+              <li>Create Alert: {{ status.adminAlertOps.testResults?.create ? '✓' : '✗' }}</li>
+              <li>Deactivate Alert: {{ status.adminAlertOps.testResults?.deactivate ? '✓' : '✗' }}</li>
+              <li>Delete Alert: {{ status.adminAlertOps.testResults?.delete ? '✓' : '✗' }}</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <!-- Auth Services -->
@@ -99,7 +111,8 @@ const status = ref({
   auth: null,
   admin: null,
   adminAlerts: null,
-  imageUpload: null
+  imageUpload: null,
+  adminAlertOps: null
 });
 
 const hasResults = computed(() => 
@@ -146,7 +159,7 @@ const testEndpoint = async (endpoint, options = {}) => {
 const getContentDetails = (data) => {
   if (!data) return '';
   return Array.isArray(data) ? `${data.length} items found` : 'Service operational';
-};
+}; 
 
 // Test image upload service
 const testImageUpload = async () => {
@@ -187,10 +200,10 @@ const testImageUpload = async () => {
 };
 
 const testAllSystems = async () => {
-  loading.value = true;
-  Object.keys(status.value).forEach(key => status.value[key] = null);
-
   try {
+    loading.value = true;
+    Object.keys(status.value).forEach(key => status.value[key] = null);
+
     // Test core systems
     status.value.backend = await testEndpoint('/api/test');
     status.value.database = await testEndpoint('/api/db-test');
@@ -242,8 +255,13 @@ const testAllSystems = async () => {
         : adminAlertsTest.message
     };
 
+    // Test admin alert operations
+    const adminAlertOpsTest = await alertService.testAdminAlertOperations();
+    status.value.adminAlertOps = adminAlertOpsTest;
+
   } catch (error) {
-    console.error('System test error:', error);
+    console.error('Test all systems error:', error);
+    notificationStore.error('Failed to complete system tests');
   } finally {
     loading.value = false;
   }
