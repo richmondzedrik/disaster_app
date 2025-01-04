@@ -381,13 +381,18 @@ exports.verifyCode = async (req, res) => {
             });
         }
 
+        // First check if user exists
+        const user = await User.findByEmail(email);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
         const result = await User.verifyCode(email, code);
         
-        return res.json({ 
-            success: result.success,
-            verified: result.success,
-            message: result.message
-        });
+        return res.json(result);
 
     } catch (error) {
         console.error('Verification error:', error);

@@ -85,6 +85,7 @@ app.use('/api/admin/news', adminNewsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/news', newsRoutes);
 app.use('/api/alerts', require('./routes/alerts'));
+app.use('/auth', authRoutes);
 
 // Route debugging endpoint in development
 if (process.env.NODE_ENV !== 'production') {

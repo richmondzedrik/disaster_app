@@ -317,23 +317,38 @@ class User {
 
     static async verifyCode(email, code) {
         try {
+            // First check if the code exists and is valid
+            const [user] = await db.execute(
+                `SELECT * FROM users 
+                 WHERE email = ? 
+                 AND verification_code = ?
+                 AND verification_code_expires > NOW()`,
+                [email, code]
+            );
+    
+            if (!user[0]) {
+                return {
+                    success: false,
+                    message: 'Invalid or expired verification code'
+                };
+            }
+    
+            // If code is valid, update the user
             const [result] = await db.execute(
                 `UPDATE users 
                  SET email_verified = true,
                      verification_code = NULL,
                      verification_code_expires = NULL
                  WHERE email = ? 
-                 AND verification_code = ?
-                 AND verification_code_expires > NOW()`,
+                 AND verification_code = ?`,
                 [email, code]
             );
-
-            // Return single response object
+    
             return {
                 success: result.affectedRows > 0,
                 message: result.affectedRows > 0 
                     ? 'Email verified successfully! Please login to continue'
-                    : 'Invalid or expired verification code'
+                    : 'Verification failed. Please try again.'
             };
         } catch (error) {
             console.error('Error in verifyCode:', error);
