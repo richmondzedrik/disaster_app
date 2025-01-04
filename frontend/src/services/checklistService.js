@@ -62,7 +62,7 @@ export const checklistService = {
       }
       
       const response = await axios.post(
-        `${API_URL}/checklist/progress`, 
+        `${API_URL}/checklist/progress`,  
         { 
           item: {
             id: item.id,
@@ -123,7 +123,77 @@ export const checklistService = {
         }
       };
     }
+  },
+
+  async addCustomItem(item) {
+    try {
+      const headers = getHeaders();
+      const response = await axios.post(
+        `${API_URL}/checklist/custom`,
+        { item },
+        { headers }
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || 'Failed to add custom item');
+      }
+
+      return {
+        success: true,
+        message: 'Custom item added successfully',
+        item: response.data.item || item
+      };
+    } catch (error) {
+      console.error('Add custom item error:', error);
+      throw error; // Let the component handle the error
+    }
+  },
+
+  async deleteCustomItem(itemId) {
+    try {
+      const headers = getHeaders();
+      const response = await axios.delete(
+        `${API_URL}/checklist/custom/${itemId}`,
+        { headers }
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || 'Failed to delete item');
+      }
+
+      return {
+        success: true,
+        message: 'Item deleted successfully'
+      };
+    } catch (error) {
+      console.error('Delete item error:', error);
+      throw error;
+    }
+  },
+
+  async updateCustomItem(itemId, item) {
+    try {
+      const headers = getHeaders();
+      const response = await axios.put(
+        `${API_URL}/checklist/custom/${itemId}`,
+        { item },
+        { headers }
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || 'Failed to update item');
+      }
+
+      return {
+        success: true,
+        message: 'Item updated successfully',
+        item: response.data.item
+      };
+    } catch (error) {
+      console.error('Update item error:', error);
+      throw error;
+    }
   }
 };
 
-export default checklistService; 
+export default checklistService;  

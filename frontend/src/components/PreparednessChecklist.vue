@@ -13,7 +13,7 @@
     <div class="checklist-categories">
       <div v-for="(items, category) in groupedChecklist" :key="category" class="category-section">
         <h3>{{ category }}</h3>
-        <div class="checklist-items">
+        <div class="checklist-items"> 
           <div v-for="item in items" :key="item.id" class="checklist-item" :class="{ completed: item.completed }">
             <div class="item-content">
               <label :for="item.id" class="item-label">
@@ -25,9 +25,17 @@
                 >
                 <span class="item-text">{{ item.text }}</span>
               </label>
-              <button v-if="item.info" @click="showInfo(item)" class="info-btn">
-                <i class="fas fa-info-circle"></i>
-              </button>
+              <div class="item-actions">
+                <button v-if="item.info" @click="showInfo(item)" class="info-btn">
+                  <i class="fas fa-info-circle"></i>
+                </button>
+                <button v-if="item.isCustom" @click="editItem(item)" class="edit-btn">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button v-if="item.isCustom" @click="deleteItem(item)" class="delete-btn">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
             </div>
             <div v-if="item.showDetails" class="item-details">
               {{ item.info }}
@@ -93,6 +101,47 @@
             </div>
           </form>
         </div>
+      </div>
+    </div>
+
+    <!-- Edit Item Modal -->
+    <div v-if="showEditForm && editingItem" class="modal-overlay">
+      <div class="modal-content">
+        <h3>Edit Checklist Item</h3>
+        <form @submit.prevent="saveEdit" class="edit-item-form">
+          <div class="form-group">
+            <label for="editItemText">Item Description</label>
+            <input 
+              type="text" 
+              id="editItemText" 
+              v-model="editingItem.text" 
+              required
+              placeholder="Enter item description"
+            >
+          </div>
+          <div class="form-group">
+            <label for="editItemCategory">Category</label>
+            <input 
+              type="text" 
+              id="editItemCategory" 
+              v-model="editingItem.category"
+              required
+              placeholder="Enter category"
+            >
+          </div>
+          <div class="form-group">
+            <label for="editItemInfo">Additional Information (Optional)</label>
+            <textarea 
+              id="editItemInfo" 
+              v-model="editingItem.info"
+              placeholder="Enter additional details or instructions"
+            ></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="submit" class="save-btn">Save Changes</button>
+            <button type="button" @click="showEditForm = false" class="cancel-btn">Cancel</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -251,29 +300,53 @@ const availableCategories = computed(() => {
 
 const addNewItem = async () => {
   try {
-    const itemCategory = newItem.value.category === 'custom' 
-      ? newItem.value.newCategory 
-      : newItem.value.category;
+    if (!checkAuth()) return;
+
+    const newItemText = newItem.value.text.trim();
+    const newItemCategory = newItem.value.category === 'custom' 
+      ? newItem.value.newCategory.trim() 
+      : newItem.value.category.trim();
+
+    // Normalize text for comparison (lowercase, remove extra spaces)
+    const normalizedNewText = newItemText.toLowerCase().replace(/\s+/g, ' ');
+
+    // Check for duplicates across all categories
+    const isDuplicate = checklist.value.some(item => {
+      const normalizedExistingText = item.text.toLowerCase().replace(/\s+/g, ' ');
+      
+      // Check for exact matches regardless of category
+      if (normalizedExistingText === normalizedNewText) {
+        return true;
+      }
+      
+      // Check for similar items (80% similarity) regardless of category
+      const similarity = calculateStringSimilarity(normalizedExistingText, normalizedNewText);
+      return similarity > 0.8;
+    });
+
+    if (isDuplicate) {
+      notificationStore.error('This item already exists in the checklist');
+      return;
+    }
 
     const item = {
       id: `custom-${Date.now()}`,
-      text: newItem.value.text,
-      category: itemCategory,
-      info: newItem.value.info || null,
-      completed: false
+      text: newItemText,
+      category: newItemCategory,
+      info: newItem.value.info?.trim() || null,
+      completed: false,
+      isCustom: true
     };
 
-    // Add item to checklist first
-    checklist.value.push(item);
+    // Try to save the new item first
+    const saveResponse = await checklistService.addCustomItem(item);
     
-    // Try to save the new item
-    try {
-      await updateProgress(item);
-    } catch (error) {
-      // If saving fails, remove the item from the checklist
-      checklist.value = checklist.value.filter(i => i.id !== item.id);
-      throw error;
+    if (!saveResponse?.success) {
+      throw new Error(saveResponse?.message || 'Failed to save custom item');
     }
+
+    // Only add to local checklist after successful save
+    checklist.value.push(item);
     
     // Reset form
     newItem.value = {
@@ -287,13 +360,34 @@ const addNewItem = async () => {
     notificationStore.success('Item added successfully');
   } catch (error) {
     console.error('Error adding item:', error);
-    notificationStore.error('Failed to add item');
+    notificationStore.error(error.message || 'Failed to add item');
   }
+};
+
+// Add this helper function for string similarity checking
+const calculateStringSimilarity = (str1, str2) => {
+  if (str1.length < 2 || str2.length < 2) return 0;
+
+  const createNGrams = (text, n = 2) => {
+    const ngrams = [];
+    for (let i = 0; i < text.length - n + 1; i++) {
+      ngrams.push(text.slice(i, i + n));
+    }
+    return new Set(ngrams);
+  };
+
+  const ngrams1 = createNGrams(str1);
+  const ngrams2 = createNGrams(str2);
+  
+  const intersection = new Set([...ngrams1].filter(x => ngrams2.has(x)));
+  const union = new Set([...ngrams1, ...ngrams2]);
+  
+  return intersection.size / union.size;
 };
 
 onMounted(async () => {
   try {
-    if (!checkAuth()) return;
+    if (!checkAuth()) return; 
     
     console.log('Loading checklist progress...');
     const savedProgress = await checklistService.loadProgress();
@@ -321,6 +415,53 @@ onMounted(async () => {
     notificationStore.error('Failed to load checklist progress');
   }
 });
+
+const showEditForm = ref(false);
+const editingItem = ref(null);
+
+const editItem = (item) => {
+  editingItem.value = { ...item };
+  showEditForm.value = true;
+};
+
+const deleteItem = async (item) => {
+  if (!confirm('Are you sure you want to delete this item?')) return;
+  
+  try {
+    const response = await checklistService.deleteCustomItem(item.id);
+    if (response.success) {
+      checklist.value = checklist.value.filter(i => i.id !== item.id);
+      notificationStore.success('Item deleted successfully');
+    }
+  } catch (error) {
+    console.error('Error deleting item:', error);
+    notificationStore.error(error.message || 'Failed to delete item');
+  }
+};
+
+const saveEdit = async () => {
+  try {
+    if (!editingItem.value) return;
+
+    const response = await checklistService.updateCustomItem(
+      editingItem.value.id,
+      editingItem.value
+    );
+
+    if (response.success) {
+      const index = checklist.value.findIndex(item => item.id === editingItem.value.id);
+      if (index !== -1) {
+        checklist.value[index] = { ...editingItem.value };
+      }
+      showEditForm.value = false;
+      editingItem.value = null;
+      notificationStore.success('Item updated successfully');
+    }
+  } catch (error) {
+    console.error('Error updating item:', error);
+    notificationStore.error(error.message || 'Failed to update item');
+  }
+};
 </script>
 
 <style scoped>
@@ -563,5 +704,36 @@ onMounted(async () => {
 
 .cancel-btn:hover {
   background-color: #e9ecef;
+}
+
+.item-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.edit-btn,
+.delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: color 0.3s ease;
+}
+
+.edit-btn {
+  color: #4a9eff;
+}
+
+.delete-btn {
+  color: #ff4a4a;
+}
+
+.edit-btn:hover {
+  color: #2384ff;
+}
+
+.delete-btn:hover {
+  color: #ff2424;
 }
 </style> 

@@ -12,7 +12,7 @@ router.get('/progress', auth.authMiddleware, async (req, res) => {
     const [rows] = await db.execute(
       'SELECT item_id, completed FROM checklist_progress WHERE user_id = ?',
       [userId]
-    );
+    ); 
 
     const items = rows.map(row => ({
       id: row.item_id,
@@ -91,15 +91,86 @@ router.post('/custom', auth.authMiddleware, async (req, res) => {
     const { item } = req.body;
     const userId = req.user.userId;
 
+    // Validate required fields
+    if (!item?.text || !item?.category || !item?.id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields' 
+      });
+    }
+
+    // Insert into checklist_items
     await db.execute(
       'INSERT INTO checklist_items (user_id, item_id, text, category, info) VALUES (?, ?, ?, ?, ?)',
-      [userId, item.id, item.text, item.category, item.info]
+      [userId, item.id, item.text, item.category, item.info || null]
     );
 
-    res.json({ success: true, message: 'Custom item added successfully' });
+    // Also insert into checklist_progress to track completion
+    await db.execute(
+      'INSERT INTO checklist_progress (user_id, item_id, completed) VALUES (?, ?, ?)',
+      [userId, item.id, false]
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Custom item added successfully',
+      item: {
+        ...item,
+        completed: false
+      }
+    });
   } catch (error) {
     console.error('Add custom item error:', error);
-    res.status(500).json({ success: false, message: 'Failed to add custom item' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to add custom item' 
+    });
+  }
+});
+
+// Delete custom item
+router.delete('/custom/:itemId', auth.authMiddleware, async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const userId = req.user.userId;
+
+    // Delete from checklist_items and checklist_progress
+    await db.execute(
+      'DELETE FROM checklist_items WHERE user_id = ? AND item_id = ?',
+      [userId, itemId]
+    );
+    await db.execute(
+      'DELETE FROM checklist_progress WHERE user_id = ? AND item_id = ?',
+      [userId, itemId]
+    );
+
+    res.json({ success: true, message: 'Item deleted successfully' });
+  } catch (error) {
+    console.error('Delete item error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete item' });
+  }
+});
+
+// Update custom item
+router.put('/custom/:itemId', auth.authMiddleware, async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { item } = req.body;
+    const userId = req.user.userId;
+
+    await db.execute(
+      'UPDATE checklist_items SET text = ?, category = ?, info = ? WHERE user_id = ? AND item_id = ?',
+      [item.text, item.category, item.info, userId, itemId]
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Item updated successfully',
+      item
+    });
+  } catch (error) {
+    console.error('Update item error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update item' });
   }
 });
 
@@ -110,4 +181,4 @@ router.get('/test', (req, res) => {
   });
 }); 
 
-module.exports = router;
+module.exports = router; 
