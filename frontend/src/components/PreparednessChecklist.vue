@@ -261,26 +261,33 @@ const updateProgress = async (item) => {
   try {
     if (!checkAuth()) return;
     
-    console.log('Updating progress for item:', item);
-    const updateResponse = await checklistService.updateProgress({
-      id: item.id,
-      completed: item.completed
-    });
+    // Save the original state in case we need to revert 
+    const originalState = item.completed;
     
-    if (!updateResponse?.success) {
-      throw new Error(updateResponse?.message || 'Failed to update progress');
+    try {
+      const updateResponse = await checklistService.updateProgress({
+        id: item.id,
+        completed: item.completed
+      });
+      
+      if (!updateResponse?.success) {
+        throw new Error(updateResponse?.message || 'Failed to update progress');
+      }
+      
+      // Also update the local checklist state
+      const index = checklist.value.findIndex(i => i.id === item.id);
+      if (index !== -1) {
+        checklist.value[index].completed = item.completed;
+      }
+      
+      notificationStore.success('Progress saved successfully');
+    } catch (error) {
+      // Revert the checkbox state if the save failed
+      item.completed = originalState;
+      throw error;
     }
-    
-    notificationStore.success('Progress saved successfully');
   } catch (error) {
-    console.error('Error saving progress:', {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data,
-      config: error.config
-    });
-    // Revert the checkbox state if the save failed
-    item.completed = !item.completed;
+    console.error('Error saving progress:', error);
     notificationStore.error(error.message || 'Failed to save progress');
   }
 };
@@ -387,31 +394,31 @@ const calculateStringSimilarity = (str1, str2) => {
 
 onMounted(async () => {
   try {
-    if (!checkAuth()) return; 
+    if (!checkAuth()) return;
     
-    console.log('Loading checklist progress...');
     const savedProgress = await checklistService.loadProgress();
-    console.log('Received progress:', savedProgress);
     
     if (savedProgress?.success && Array.isArray(savedProgress.items)) {
-      checklist.value = checklist.value.map(item => {
-        const savedItem = savedProgress.items.find(saved => saved.id === item.id);
-        console.log(`Mapping item ${item.id}:`, savedItem);
-        return {
-          ...item,
-          completed: savedItem?.completed ?? false
-        };
-      });
-    } else {
-      console.log('No valid saved progress found:', savedProgress);
+      // Create a map of saved progress
+      const progressMap = new Map(
+        savedProgress.items.map(item => [item.id, item.completed])
+      );
+      
+      // Update the checklist with saved progress
+      checklist.value = checklist.value.map(item => ({
+        ...item,
+        completed: progressMap.has(item.id) ? progressMap.get(item.id) : false
+      }));
+      
+      // Add any custom items from the saved progress
+      const customItems = savedProgress.items.filter(item => 
+        item.isCustom && !checklist.value.some(existing => existing.id === item.id)
+      );
+      
+      checklist.value.push(...customItems);
     }
   } catch (error) {
-    console.error('Error loading progress:', {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data,
-      config: error.config
-    });
+    console.error('Error loading progress:', error);
     notificationStore.error('Failed to load checklist progress');
   }
 });
@@ -451,7 +458,7 @@ const saveEdit = async () => {
     if (response.success) {
       const index = checklist.value.findIndex(item => item.id === editingItem.value.id);
       if (index !== -1) {
-        checklist.value[index] = { ...editingItem.value };
+        checklist.value[index] = { ...editingItem.value }; 
       }
       showEditForm.value = false;
       editingItem.value = null;
@@ -713,7 +720,8 @@ const saveEdit = async () => {
 }
 
 .edit-btn,
-.delete-btn {
+.delete-btn,
+.info-btn {
   background: none;
   border: none;
   cursor: pointer;
@@ -729,6 +737,10 @@ const saveEdit = async () => {
   color: #ff4a4a;
 }
 
+.info-btn {
+  color: #6c757d;
+}
+
 .edit-btn:hover {
   color: #2384ff;
 }
@@ -736,4 +748,31 @@ const saveEdit = async () => {
 .delete-btn:hover {
   color: #ff2424;
 }
-</style> 
+
+.info-btn:hover {
+  color: #42b983;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+</style>  

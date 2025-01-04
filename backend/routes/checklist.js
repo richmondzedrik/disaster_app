@@ -7,22 +7,34 @@ const db = require('../db/connection');
 router.get('/progress', auth.authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
-    console.log('Loading progress for user:', userId); // Debug log
     
-    const [rows] = await db.execute(
-      'SELECT item_id, completed FROM checklist_progress WHERE user_id = ?',
-      [userId]
-    ); 
+    // Get both custom and default items progress
+    const [rows] = await db.execute(`
+      SELECT cp.item_id, cp.completed, ci.text, ci.category, ci.info, 
+      CASE WHEN ci.user_id IS NOT NULL THEN 1 ELSE 0 END as is_custom
+      FROM checklist_progress cp
+      LEFT JOIN checklist_items ci 
+      ON cp.item_id = ci.item_id AND cp.user_id = ci.user_id
+      WHERE cp.user_id = ?
+    `, [userId]);
 
     const items = rows.map(row => ({
       id: row.item_id,
-      completed: row.completed === 1
+      completed: Boolean(row.completed),
+      text: row.text,
+      category: row.category,
+      info: row.info,
+      isCustom: Boolean(row.is_custom)
     }));
 
     res.json({ success: true, items });
   } catch (error) {
     console.error('Load checklist error:', error);
-    res.status(500).json({ success: false, message: 'Failed to load progress' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to load progress',
+      error: error.message 
+    });
   }
 });
 
@@ -181,4 +193,4 @@ router.get('/test', (req, res) => {
   });
 }); 
 
-module.exports = router; 
+module.exports = router;  

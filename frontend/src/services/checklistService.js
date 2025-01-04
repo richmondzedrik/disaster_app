@@ -31,25 +31,24 @@ export const checklistService = {
       const url = `${API_URL}/checklist/progress`;
       const response = await axios.get(url, { headers });
       
-      if (!response.data.success) {
-        throw new Error(response.data.message || 'Failed to load checklist progress');
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || 'Failed to load checklist progress');
       }
+      
+      // Ensure we're getting an array of items
+      const items = Array.isArray(response.data.items) ? response.data.items : [];
       
       return {
         success: true,
-        items: response.data.items.map(item => ({
-          ...item,
+        items: items.map(item => ({
+          id: item.id,
           completed: Boolean(item.completed),
           required: Boolean(item.required)
         }))
       };
     } catch (error) {
       console.error('Load progress error:', error);
-      return { 
-        success: false, 
-        items: [],
-        message: error.message || 'Failed to load checklist progress'
-      };
+      throw error;
     }
   },
 
@@ -151,7 +150,7 @@ export const checklistService = {
 
   async deleteCustomItem(itemId) {
     try {
-      const headers = getHeaders();
+      const headers = getHeaders(); 
       const response = await axios.delete(
         `${API_URL}/checklist/custom/${itemId}`,
         { headers }
