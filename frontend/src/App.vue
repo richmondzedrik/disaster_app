@@ -76,13 +76,13 @@
           <div ref="userDropdownRef" class="nav-dropdown" :class="{ active: isUserDropdownActive }">
             <button class="dropdown-btn" @click="toggleUserDropdown">
               <i class="fas fa-user-circle"></i>
-              <span>{{ user.name || 'Profile' }}</span>
+              <span>{{ displayName }}</span>
               <i class="fas fa-chevron-down"></i>
             </button>
             <div class="dropdown-content">
               <div class="profile-header">
                 <div class="user-info">
-                  <div class="avatar">
+                  <div class="avatar"> 
                     {{ getUserInitials }}
                   </div>
                   <div class="user-details">
@@ -231,6 +231,13 @@ onMounted(() => {
     fetchAlertCount();
   }
 });
+
+// Add this computed property alongside other computed properties
+const displayName = computed(() => {
+  if (!user.value) return 'Profile';
+  if (isAdmin.value) return 'Admin';
+  return user.value.name || user.value.username || 'Profile';
+});
 </script>
 
 <style scoped>
@@ -257,7 +264,7 @@ onMounted(() => {
   z-index: 1000;
   border-bottom: 1px solid rgba(0, 209, 209, 0.1);
   animation: slideInDown 0.5s ease;
-}
+} 
 
 @keyframes slideInDown {
   from {
