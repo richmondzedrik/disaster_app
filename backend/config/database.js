@@ -7,11 +7,14 @@ const config = {
     database: process.env.MYSQL_ADDON_DB || process.env.DB_NAME || 'disaster_prep',
     port: process.env.MYSQL_ADDON_PORT || process.env.DB_PORT || 3306,
     waitForConnections: true,
-    connectionLimit: 10,
+    connectionLimit: 3,
     queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000,
     ssl: process.env.NODE_ENV === 'production' ? {
         rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
+        minVersion: 'TLSv1.2',
+        ssl: true
     } : false
 };
 

@@ -3,22 +3,32 @@ const mysql = require('mysql2/promise');
 const config = require('../config/database');
 
 const pool = mysql.createPool({
-    ...config,
-    ssl: process.env.NODE_ENV === 'production' ? {
-        rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
-    } : false,
-    connectionLimit: 10,
-    waitForConnections: true,
-    queueLimit: 0,
-    enableKeepAlive: true,
-    keepAliveInitialDelay: 0
+  ...config,
+  ssl: process.env.NODE_ENV === 'production' ? {
+      rejectUnauthorized: false,
+      minVersion: 'TLSv1.2'
+  } : false,
+  connectionLimit: 3, // Reduced from 10
+  waitForConnections: true,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
+  idleTimeout: 60000 // Close idle connections after 60 seconds
 });
 
 // Add connection error handling
 pool.on('connection', (connection) => {
   console.log('New connection established');
+  
+  // Set session timeout
+  connection.query('SET SESSION wait_timeout=60');
 });
+
+// Add periodic connection cleanup
+setInterval(() => {
+  pool.query('SELECT 1')
+      .catch(err => console.error('Connection cleanup error:', err));
+}, 30000);
 
 pool.on('error', (err) => {
   console.error('Database pool error:', err);

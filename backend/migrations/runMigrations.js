@@ -14,9 +14,9 @@ async function runMigrations() {
             ssl: process.env.NODE_ENV === 'production' ? {
                 rejectUnauthorized: false
             } : false,
-            connectTimeout: 10000, // 10 seconds timeout
+            connectTimeout: 10000,
             waitForConnections: true,
-            connectionLimit: 10
+            connectionLimit: 1 // Only need one connection for migrations
         });
 
         // Create database if it doesn't exist
