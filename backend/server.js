@@ -117,8 +117,10 @@ exports.sendVerificationEmail = async (email, code) => {
 const originalExecute = db.execute;
 
 async function checkDatabaseTables() {
+    let connection;
     try {
-        const [tables] = await db.execute(`
+        connection = await db.getConnection();
+        const [tables] = await connection.execute(`
             SELECT TABLE_NAME 
             FROM information_schema.TABLES 
             WHERE TABLE_SCHEMA = ?
@@ -127,8 +129,8 @@ async function checkDatabaseTables() {
         const tableNames = tables.map(t => t.TABLE_NAME);
         console.log('Available tables:', tableNames);
         
-        // Check for required tables
-        const requiredTables = ['users', 'posts', 'alerts', 'comments', 'likes'];
+        // Add checklist_progress to required tables
+        const requiredTables = ['users', 'posts', 'alerts', 'comments', 'likes', 'checklist_progress'];
         const missingTables = requiredTables.filter(table => !tableNames.includes(table));
         
         if (missingTables.length > 0) {
@@ -139,12 +141,9 @@ async function checkDatabaseTables() {
         return true;
     } catch (error) {
         console.error('Database table check failed:', error);
-        console.error('Database config:', {
-            host: config.host,
-            database: config.database,
-            port: config.port
-        });
         return false;
+    } finally {
+        if (connection) connection.release();
     }
 };
 
@@ -202,7 +201,7 @@ async function checkDatabaseTables() {
 }
 
 // Start server
-async function startServer() {
+async function startServer() { 
     try {
         // Test database connection first
         const dbConnected = await testDbConnection();

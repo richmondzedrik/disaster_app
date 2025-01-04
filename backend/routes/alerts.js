@@ -186,7 +186,7 @@ router.post('/reactivate/:id', auth.authMiddleware, async (req, res) => {
       message: 'Failed to reactivate alert' 
     });
   }
-});
+}); 
 
 // Delete alert (admin only)
 router.delete('/:id', auth.authMiddleware, async (req, res) => {
@@ -199,8 +199,16 @@ router.delete('/:id', auth.authMiddleware, async (req, res) => {
       });
     }
 
-    await db.execute('DELETE FROM alerts WHERE id = ?', [req.params.id]);
+    // Use connection.query instead of execute for simple queries
+    const [result] = await db.query('DELETE FROM alerts WHERE id = ?', [req.params.id]);
     
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Alert not found'
+      });
+    }
+
     res.json({ 
       success: true, 
       message: 'Alert deleted successfully' 

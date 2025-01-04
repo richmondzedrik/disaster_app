@@ -31,6 +31,20 @@ async function up() {
                 emergency_contacts JSON NULL DEFAULT ('[]'),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) 
+        `);
+
+        // Add checklist_progress table
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS checklist_progress (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                user_id INT NOT NULL,
+                item_id INT NOT NULL,
+                completed BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_user_item (user_id, item_id),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         `);
         
@@ -50,6 +64,7 @@ async function down() {
         await connection.beginTransaction();
 
         // Drop tables in reverse order of creation (due to foreign key constraints)
+        await connection.execute('DROP TABLE IF EXISTS checklist_progress');
         await connection.execute('DROP TABLE IF EXISTS verification_attempts');
         await connection.execute('DROP TABLE IF EXISTS alert_reads');
         await connection.execute('DROP TABLE IF EXISTS alerts');
