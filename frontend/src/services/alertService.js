@@ -19,7 +19,7 @@ export const alertService = {
   async getAdminAlerts() {
     try {
       const headers = getHeaders();
-      const response = await api.get('/admin/alerts', { 
+      const response = await api.get('/api/admin/alerts', { 
         headers,
         withCredentials: true
       });
@@ -32,8 +32,7 @@ export const alertService = {
       console.error('Error fetching admin alerts:', error);
       return {
         success: false,
-        alerts: [],
-        message: error.message || 'Failed to fetch alerts. Please try again.'
+        message: error.response?.data?.message || 'Failed to fetch admin alerts'
       };
     }
   },

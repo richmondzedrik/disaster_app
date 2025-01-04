@@ -239,25 +239,31 @@
     }
   }, { deep: true });
   
-  onMounted(async () => {
-    try {
-      loading.value = true;
-      const response = await alertStore.fetchAlerts();
-      
-      if (response?.success) {
-        alerts.value = response.alerts || [];
-      } else {
-        notificationStore.error('Failed to load alerts');
-        alerts.value = [];
-      }
-    } catch (error) {
-      console.error('Error loading alerts:', error);
-      notificationStore.error(error.message || 'Failed to load alerts');
-      alerts.value = [];
-    } finally {
-      loading.value = false;
+  // In the script setup section, update the onMounted function:
+
+onMounted(async () => {
+  try {
+    loading.value = true;
+    const response = await alertService.getAdminAlerts();
+    
+    if (response.success) {
+      alerts.value = response.alerts.map(alert => ({
+        ...alert,
+        is_active: Boolean(alert.is_active),
+        is_public: Boolean(alert.is_public)
+      }));
+    } else {
+      throw new Error(response.message || 'Failed to load alerts');
     }
-  });
+  } catch (error) {
+    console.error('Error loading alerts:', error);
+    notificationStore.error(error.message || 'Failed to load alerts');
+    alerts.value = [];
+  } finally {
+    loading.value = false;
+  }
+});
+
   </script>
   
   <style scoped>

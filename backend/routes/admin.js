@@ -393,13 +393,8 @@ router.get('/analytics', async (req, res) => {
   }
 });
 
-// Get all alerts (admin)
+// Add this route after your existing admin routes
 router.get('/alerts', async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'https://disasterapp.netlify.app');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
   try {
     if (!req.user || !req.user.userId) {
       return res.status(401).json({
