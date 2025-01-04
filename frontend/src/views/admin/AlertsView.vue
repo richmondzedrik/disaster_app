@@ -137,6 +137,7 @@
   import { ref, onMounted, watch } from 'vue';
   import { useAlertStore } from '@/stores/alert';
   import { useNotificationStore } from '@/stores/notification';
+  import alertService from '@/services/alertService';
   
   const alertStore = useAlertStore();
   const notificationStore = useNotificationStore();
@@ -244,16 +245,16 @@
 onMounted(async () => {
   try {
     loading.value = true;
-    const response = await alertService.getAdminAlerts();
+    const response = await alertStore.fetchAlerts();
     
-    if (response.success) {
+    if (response?.success) {
       alerts.value = response.alerts.map(alert => ({
         ...alert,
         is_active: Boolean(alert.is_active),
         is_public: Boolean(alert.is_public)
       }));
     } else {
-      throw new Error(response.message || 'Failed to load alerts');
+      throw new Error(response?.message || 'Failed to load alerts');
     }
   } catch (error) {
     console.error('Error loading alerts:', error);
