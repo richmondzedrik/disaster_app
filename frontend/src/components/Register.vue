@@ -72,40 +72,48 @@
           <label for="password">
             <i class="fas fa-lock"></i> Password
           </label>
-          <input
-            type="password"
-            id="password"
-            v-model="formData.password"
-            required
-            placeholder="Create a password"
-            :class="{ 'error': errors.password }"
-          />
+          <div class="password-input">
+            <input
+              :type="showPassword ? 'text' : 'password'"
+              id="password"
+              v-model="formData.password"
+              required
+              placeholder="Create a password"
+              :class="{ 'error': errors.password }"
+            />
+            <i 
+              class="fas password-toggle" 
+              :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"
+              @click="showPassword = !showPassword"
+            ></i>
+          </div>
           <span class="error-message" v-if="errors.password">
             <i class="fas fa-exclamation-triangle"></i>
             {{ errors.password }}
           </span>
-          <span class="password-hint" v-else>
-            <i class="fas fa-info-circle"></i>
-            Password must include: 8+ characters, uppercase & lowercase letters, and numbers
-          </span>
-        </div>
-
-        <div class="password-strength" v-if="formData.password">
-          <div class="strength-item" :class="{ valid: passwordStrength.length }">
-            <i :class="['fas', passwordStrength.length ? 'fa-check' : 'fa-times']"></i>
-            8+ characters
-          </div>
-          <div class="strength-item" :class="{ valid: passwordStrength.uppercase }">
-            <i :class="['fas', passwordStrength.uppercase ? 'fa-check' : 'fa-times']"></i>
-            Uppercase letter
-          </div>
-          <div class="strength-item" :class="{ valid: passwordStrength.lowercase }">
-            <i :class="['fas', passwordStrength.lowercase ? 'fa-check' : 'fa-times']"></i>
-            Lowercase letter
-          </div>
-          <div class="strength-item" :class="{ valid: passwordStrength.number }">
-            <i :class="['fas', passwordStrength.number ? 'fa-check' : 'fa-times']"></i>
-            Number
+          <div class="password-requirements" v-else>
+            <div class="requirements-header">
+              <i class="fas fa-shield-alt"></i>
+              <span>Password Requirements</span>
+            </div>
+            <div class="requirements-list">
+              <div class="requirement-item" :class="{ valid: passwordStrength.length }">
+                <i :class="['fas', passwordStrength.length ? 'fa-check-circle' : 'fa-circle']"></i>
+                8+ characters
+              </div>
+              <div class="requirement-item" :class="{ valid: passwordStrength.uppercase }">
+                <i :class="['fas', passwordStrength.uppercase ? 'fa-check-circle' : 'fa-circle']"></i>
+                Uppercase letter
+              </div>
+              <div class="requirement-item" :class="{ valid: passwordStrength.lowercase }">
+                <i :class="['fas', passwordStrength.lowercase ? 'fa-check-circle' : 'fa-circle']"></i>
+                Lowercase letter
+              </div>
+              <div class="requirement-item" :class="{ valid: passwordStrength.number }">
+                <i :class="['fas', passwordStrength.number ? 'fa-check-circle' : 'fa-circle']"></i>
+                Number
+              </div>
+            </div>
           </div>
         </div>
 
@@ -113,9 +121,9 @@
           <label for="confirmPassword">
             <i class="fas fa-lock"></i> Confirm Password
           </label>
-          <div class="input-wrapper">
+          <div class="password-input">
             <input
-              type="password"
+              :type="showConfirmPassword ? 'text' : 'password'"
               id="confirmPassword"
               v-model="formData.confirmPassword"
               required
@@ -125,6 +133,11 @@
                 'success': formData.confirmPassword && formData.confirmPassword === formData.password 
               }"
             />
+            <i 
+              class="fas password-toggle" 
+              :class="showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'"
+              @click="showConfirmPassword = !showConfirmPassword"
+            ></i>
           </div>
           <span class="error-message" v-if="errors.confirmPassword">
             <i class="fas fa-exclamation-triangle"></i>
@@ -134,6 +147,10 @@
             <i class="fas fa-check-circle"></i>
             Passwords match
           </span>
+          <div class="password-match-hint" v-else-if="formData.confirmPassword">
+            <i class="fas fa-exclamation-circle"></i>
+            Passwords do not match
+          </div>
         </div>
 
         <button type="submit" class="submit-btn" :disabled="isLoading">
@@ -143,9 +160,15 @@
       </form>
 
       <div class="links">
-        <router-link to="/login" class="login-link">
-          <i class="fas fa-arrow-left"></i> Already have an account? Login
-        </router-link>
+        <div class="links-divider">
+          <span>or</span>
+        </div>
+        <p class="login-prompt">
+          Already have an account? 
+          <router-link to="/login" class="login-link">
+            <i class="fas fa-sign-in-alt"></i> Login
+          </router-link>
+        </p>
       </div>
     </div>
   </div>
@@ -427,6 +450,9 @@ const handleRegistrationError = (error) => {
     notificationStore.error('Registration failed. Please try again.');
   }
 };
+
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
 </script>
 
 <style scoped>
@@ -598,5 +624,249 @@ input.success {
 
 .success-message i {
   color: #198754;
+}
+
+.password-input {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #6c757d;
+  transition: color 0.3s ease;
+}
+
+.password-toggle:hover {
+  color: #42b983;
+}
+
+.links {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.links-divider {
+  position: relative;
+  margin: 1.5rem 0;
+}
+
+.links-divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(0, 173, 173, 0.2);
+}
+
+.links-divider span {
+  position: relative;
+  background: white;
+  padding: 0 1rem;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.login-prompt {
+  color: #005C5C;
+  font-size: 1rem;
+}
+
+.login-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4052D6;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  margin-left: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+}
+
+.login-link:hover {
+  color: #00D1D1;
+  transform: translateY(-1px);
+  background: rgba(0, 209, 209, 0.05);
+}
+
+.login-link i {
+  font-size: 0.9rem;
+}
+
+.password-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: rgba(0, 209, 209, 0.05);
+  border: 1px solid rgba(0, 173, 173, 0.1);
+}
+
+.password-hint i {
+  color: #00D1D1;
+  margin-top: 0.25rem;
+}
+
+.hint-content {
+  flex: 1;
+}
+
+.hint-title {
+  display: block;
+  color: #005C5C;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.hint-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.hint-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #00ADAD;
+  font-size: 0.9rem;
+}
+
+.hint-list li i {
+  font-size: 0.8rem;
+  color: #00D1D1;
+}
+
+@media (max-width: 480px) {
+  .hint-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+.password-requirements {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: rgba(0, 209, 209, 0.05);
+  border: 1px solid rgba(0, 173, 173, 0.1);
+}
+
+.requirements-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #005C5C;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.requirements-header i {
+  color: #00D1D1;
+}
+
+.requirements-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.requirement-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #64748b;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.requirement-item i {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  transition: all 0.3s ease;
+}
+
+.requirement-item.valid {
+  color: #00ADAD;
+}
+
+.requirement-item.valid i {
+  color: #00D1D1;
+}
+
+@media (max-width: 480px) {
+  .requirements-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+.password-match-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: rgba(255, 171, 0, 0.05);
+  color: #ff9800;
+  font-size: 0.875rem;
+}
+
+.password-match-hint i {
+  font-size: 0.9rem;
+}
+
+.success-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: rgba(25, 135, 84, 0.05);
+  color: #198754;
+  font-size: 0.875rem;
+}
+
+.success-message i {
+  font-size: 0.9rem;
+}
+
+input.success {
+  border-color: #198754;
+}
+
+input.success:focus {
+  border-color: #198754;
+  box-shadow: 0 0 0 4px rgba(25, 135, 84, 0.1);
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: rgba(220, 53, 69, 0.05);
+  color: #dc3545;
+  font-size: 0.875rem;
+}
+
+.error-message i {
+  font-size: 0.9rem;
 }
 </style> 

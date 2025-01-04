@@ -31,15 +31,22 @@
           <label for="password">
             <i class="fas fa-lock"></i> Password
           </label>
-          <input 
-            type="password" 
-            id="password" 
-            v-model="password" 
-            required 
-            placeholder="Enter your password"
-            :disabled="loading"
-            :class="{ 'error': error && error.toLowerCase().includes('password') }"
-          />
+          <div class="password-input">
+            <input 
+              :type="showPassword ? 'text' : 'password'"
+              id="password" 
+              v-model="password" 
+              required 
+              placeholder="Enter your password"
+              :disabled="loading"
+              :class="{ 'error': error && error.toLowerCase().includes('password') }"
+            />
+            <i 
+              class="fas password-toggle" 
+              :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"
+              @click="showPassword = !showPassword"
+            ></i>
+          </div>
           <span class="error-message" v-if="error && error.toLowerCase().includes('password')">
             <i class="fas fa-exclamation-triangle"></i>
             {{ error }}
@@ -53,7 +60,8 @@
 
         <div class="form-options">
           <router-link to="/forgot-password" class="forgot-password-link">
-            Forgot Password?
+            <i class="fas fa-key"></i>
+            <span>Forgot Password?</span>
           </router-link>
         </div>
 
@@ -64,9 +72,13 @@
       </form>
 
       <div class="links">
-        <p>Don't have an account?
+        <div class="links-divider">
+          <span>or</span>
+        </div>
+        <p class="register-prompt">
+          Don't have an account? 
           <router-link to="/register" class="register-link">
-            Create Account
+            <i class="fas fa-user-plus"></i> Create Account
           </router-link>
         </p>
       </div>
@@ -89,6 +101,7 @@ const email = ref('');
 const password = ref('');
 const loading = ref(false);
 const error = ref('');
+const showPassword = ref(false);
 
 // Add validation function
 const validateForm = () => {
@@ -384,5 +397,101 @@ input.error:focus {
 
 .admin-table tr:hover {
   background-color: rgba(0, 209, 209, 0.05);
+}
+
+.password-input {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #6c757d;
+  transition: color 0.3s ease;
+}
+
+.password-toggle:hover {
+  color: #42b983;
+}
+
+.links {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.links-divider {
+  position: relative;
+  margin: 1.5rem 0;
+}
+
+.links-divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(0, 173, 173, 0.2);
+}
+
+.links-divider span {
+  position: relative;
+  background: white;
+  padding: 0 1rem;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.register-prompt {
+  color: #005C5C;
+  font-size: 1rem;
+}
+
+.register-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4052D6;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  margin-left: 0.5rem;
+}
+
+.register-link:hover {
+  color: #00D1D1;
+  transform: translateY(-1px);
+}
+
+.form-options {
+  display: flex;
+  justify-content: flex-end;
+  margin: -0.5rem 0 1.5rem;
+}
+
+.forgot-password-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4052D6;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  padding: 0.5rem;
+  border-radius: 6px;
+}
+
+.forgot-password-link:hover {
+  color: #00D1D1;
+  transform: translateY(-1px);
+  background: rgba(0, 209, 209, 0.05);
+}
+
+.forgot-password-link i {
+  font-size: 0.9rem;
 }
 </style>
