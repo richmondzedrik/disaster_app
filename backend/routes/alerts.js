@@ -4,7 +4,7 @@ const auth = require('../middleware/auth');
 const db = require('../db/connection');
 const Alert = require('../models/Alert');
 const { sendAlertEmail } = require('../utils/email');
-
+ 
 // Base route test
 router.get('/test', (req, res) => {
   res.json({ message: 'Alerts route working' });
@@ -189,9 +189,9 @@ router.post('/reactivate/:id', auth.authMiddleware, async (req, res) => {
 }); 
 
 // Delete alert (admin only)
+// Delete alert (admin only)
 router.delete('/:id', auth.authMiddleware, async (req, res) => {
   try {
-    // Check admin role
     if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -199,7 +199,6 @@ router.delete('/:id', auth.authMiddleware, async (req, res) => {
       });
     }
 
-    // Use connection.query instead of execute for simple queries
     const [result] = await db.query('DELETE FROM alerts WHERE id = ?', [req.params.id]);
     
     if (result.affectedRows === 0) {
@@ -221,7 +220,6 @@ router.delete('/:id', auth.authMiddleware, async (req, res) => {
     });
   }
 });
-
 // Get all alerts
 router.get('/', auth.authMiddleware, async (req, res) => {
   try {

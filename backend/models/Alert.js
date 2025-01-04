@@ -17,6 +17,7 @@ class Alert {
         }
     }
 
+    
     static async getAll() {
         const connection = await db.getConnection();
         try {
@@ -71,10 +72,11 @@ class Alert {
     static async deactivate(id) {
         const connection = await db.getConnection();
         try {
-            await connection.execute(
+            const [result] = await connection.execute(
                 'UPDATE alerts SET is_active = false WHERE id = ?',
                 [id]
             );
+            return result.affectedRows > 0;
         } finally {
             connection.release();
         }
@@ -95,7 +97,8 @@ class Alert {
     static async delete(id) {
         const connection = await db.getConnection();
         try {
-            await connection.execute('DELETE FROM alerts WHERE id = ?', [id]);
+            const [result] = await connection.query('DELETE FROM alerts WHERE id = ?', [id]);
+            return result.affectedRows > 0;
         } finally {
             connection.release();
         }

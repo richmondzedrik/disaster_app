@@ -12,7 +12,6 @@ exports.createAlert = async (req, res) => {
                 message: 'Message and type are required'
             });
         }
-
         // Create alert
         const alert = await Alert.create({
             message,
@@ -141,7 +140,13 @@ exports.reactivateAlert = async (req, res) => {
 
 exports.deleteAlert = async (req, res) => {
     try {
-        await Alert.delete(req.params.id);
+        const success = await Alert.delete(req.params.id);
+        if (!success) {
+            return res.status(404).json({
+                success: false,
+                message: 'Alert not found'
+            });
+        }
         res.json({ 
             success: true, 
             message: 'Alert deleted successfully' 
