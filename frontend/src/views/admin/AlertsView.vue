@@ -12,6 +12,10 @@
       </div>
   
       <div class="table-container" :class="{ 'loading': loading }">
+        <div v-if="loading" class="loading-overlay">
+          <i class="fas fa-spinner fa-spin"></i>
+          Loading alerts...
+        </div>
         <table>
           <thead>
             <tr>
@@ -137,6 +141,7 @@
   const alertStore = useAlertStore();
   const notificationStore = useNotificationStore();
   const showCreateModal = ref(false);
+  const loading = ref(false);
   
   const newAlert = ref({
     message: '',
@@ -161,19 +166,30 @@
   };
   
   const createNewAlert = async () => {
-    try {
-      const success = await alertStore.createAlert({
-        ...newAlert.value,
-        priority: parseInt(newAlert.value.priority)
-      });
-      if (success) {
-        showCreateModal.value = false;
-        resetForm();
-      }
-    } catch (error) {
-      notificationStore.error('Failed to create alert');
+  try {
+    const alertData = {
+      message: newAlert.value.message,
+      type: newAlert.value.type,
+      priority: parseInt(newAlert.value.priority),
+      expiry_date: newAlert.value.expiryDate || null,
+      is_public: newAlert.value.isPublic === 'true'
+    };
+
+    const response = await alertStore.createAlert(alertData);
+    
+    if (response.success) {
+      showCreateModal.value = false;
+      resetForm();
+      notificationStore.success('Alert created successfully');
+      await alertStore.fetchAlerts(); // Refresh the alerts list
+    } else {
+      throw new Error(response.message || 'Failed to create alert');
     }
-  };
+  } catch (error) {
+    console.error('Create alert error:', error);
+    notificationStore.error(error.message || 'Failed to create alert');
+  }
+};
   
   const toggleAlertStatus = async (alert) => {
     await alertStore.toggleAlertStatus(alert.id, !alert.is_active);
@@ -195,13 +211,19 @@
   };
   
   onMounted(async () => {
-    try {
-      await alertStore.fetchAlerts();
-    } catch (error) {
-      console.error('Error initializing alerts:', error);
+  try {
+    loading.value = true;
+    const response = await alertStore.fetchAlerts();
+    if (!response?.success) {
       notificationStore.error('Failed to load alerts');
     }
-  });
+  } catch (error) {
+    console.error('Error initializing alerts:', error);
+    notificationStore.error('Failed to load alerts');
+  } finally {
+    loading.value = false;
+  }
+});
   </script>
   
   <style scoped>
@@ -490,5 +512,29 @@
   .btn-secondary:hover {
     background: #e2e8f0;
     transform: translateY(-2px);
+  }
+  
+  .loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    color: #00D1D1;
+    font-weight: 600;
+  }
+  
+  .loading-overlay i {
+    font-size: 2rem;
+  }
+  
+  .table-container {
+    position: relative;
   }
   </style>

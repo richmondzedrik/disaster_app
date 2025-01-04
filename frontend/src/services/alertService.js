@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com/api';
 
 const getHeaders = () => {
   const authStore = useAuthStore();
@@ -31,13 +31,9 @@ const alertService = {
   async getAdminAlerts() {
     try {
       const headers = getHeaders();
-      const response = await axios({
-        method: 'get',
-        url: `${API_URL}/admin/alerts`,
+      const response = await axiosInstance.get('/admin/alerts', { 
         headers,
-        timeout: 30000,
-        maxRedirects: 5,
-        validateStatus: (status) => status >= 200 && status < 500
+        timeout: 30000 
       });
       
       if (response.data?.success) {
@@ -54,7 +50,7 @@ const alertService = {
       console.error('Error fetching admin alerts:', error);
       return {
         success: false,
-        message: 'Network error occurred'
+        message: error.response?.data?.message || 'Network error occurred'
       };
     }
   },
