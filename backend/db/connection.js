@@ -8,13 +8,19 @@ const pool = mysql.createPool({
       rejectUnauthorized: false,
       minVersion: 'TLSv1.2'
   } : false,
-  connectionLimit: 3, // Reduced from 10
+  connectionLimit: 3,
   waitForConnections: true,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 10000,
-  idleTimeout: 60000 // Close idle connections after 60 seconds
+  queueLimit: 0
 });
+
+// Add cleanup interval
+setInterval(async () => {
+  try {
+      await pool.query('SELECT 1');
+  } catch (error) {
+      console.error('Connection cleanup error:', error);
+  }
+}, 30000);
 
 // Add connection error handling
 pool.on('connection', (connection) => {
@@ -24,14 +30,18 @@ pool.on('connection', (connection) => {
   connection.query('SET SESSION wait_timeout=60');
 });
 
-// Add periodic connection cleanup
-setInterval(() => {
-  pool.query('SELECT 1')
-      .catch(err => console.error('Connection cleanup error:', err));
-}, 30000);
-
+// Handle pool errors
 pool.on('error', (err) => {
   console.error('Database pool error:', err);
+  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+      console.error('Database connection was closed.');
+  }
+  if (err.code === 'ER_CON_COUNT_ERROR') {
+      console.error('Database has too many connections.');
+  }
+  if (err.code === 'ECONNREFUSED') {
+      console.error('Database connection was refused.');
+  }
 });
 
 async function testConnection() {

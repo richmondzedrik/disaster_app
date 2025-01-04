@@ -3,24 +3,24 @@ const config = require('../config/database');
 const initDatabase = require('./000_init_database');
 
 async function runMigrations() {
-    let connection;
+    let initialConnection;
     try {
         console.log('Starting migrations...');
         
-        // Create initial connection without database to ensure it exists
-        connection = await mysql.createConnection({
-            ...config,
-            database: undefined,
+        // Create initial connection without database
+        initialConnection = await mysql.createConnection({
+            host: config.host,
+            user: config.user,
+            password: config.password,
             ssl: process.env.NODE_ENV === 'production' ? {
                 rejectUnauthorized: false
             } : false,
-            connectTimeout: 10000,
-            waitForConnections: true,
-            connectionLimit: 1 // Only need one connection for migrations
+            connectTimeout: 10000
         });
 
         // Create database if it doesn't exist
-        await connection.query(`CREATE DATABASE IF NOT EXISTS ${config.database}`);
+        await initialConnection.query(`CREATE DATABASE IF NOT EXISTS ${config.database}`);
+        await initialConnection.end();
         
         // Run the main migration
         await initDatabase.up();
@@ -31,9 +31,9 @@ async function runMigrations() {
         console.error('Migration failed:', error);
         return false;
     } finally {
-        if (connection) {
+        if (initialConnection) {
             try {
-                await connection.end();
+                await initialConnection.end();
             } catch (err) {
                 console.error('Error closing initial connection:', err);
             }
