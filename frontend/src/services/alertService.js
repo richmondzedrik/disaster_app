@@ -19,7 +19,7 @@ export const alertService = {
   async getAdminAlerts() {
     try {
       const headers = getHeaders();
-      const response = await api.get('admin/alerts', { 
+      const response = await api.get('/admin/alerts', { 
         headers,
         withCredentials: true
       });
