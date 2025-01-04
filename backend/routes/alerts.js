@@ -97,7 +97,7 @@ router.post('/', auth.authMiddleware, async (req, res) => {
       });
     }
 
-    const { message, type, priority, expiryDate, isPublic } = req.body;
+    const { message, type, priority, expiry_date, is_public } = req.body;
     
     if (!message?.trim()) {
       return res.status(400).json({
@@ -109,8 +109,8 @@ router.post('/', auth.authMiddleware, async (req, res) => {
     const [result] = await db.execute(
       `INSERT INTO alerts (message, type, priority, expiry_date, is_public, user_id, is_active)
        VALUES (?, ?, ?, ?, ?, ?, true)`,
-      [message.trim(), type || 'info', priority || 0, expiryDate || null, 
-       isPublic || false, req.user.userId]
+      [message.trim(), type || 'info', priority || 0, expiry_date || null, 
+       is_public || false, req.user.userId]
     );
 
     const [newAlert] = await db.execute(
@@ -127,7 +127,7 @@ router.post('/', auth.authMiddleware, async (req, res) => {
     console.error('Create alert error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to create alert'
+      message: 'Database error occurred while creating alert'
     });
   }
 });

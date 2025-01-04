@@ -28,11 +28,13 @@ export const useAlertStore = defineStore('alert', () => {
       const response = await alertService.createAlert(alertData);
       if (response.success) {
         await fetchAlerts();
+        notificationStore.success('Alert created successfully');
         return true;
       }
       return false;
     } catch (error) {
       console.error('Error creating alert:', error);
+      notificationStore.error(error.message || 'Failed to create alert');
       return false;
     }
   };

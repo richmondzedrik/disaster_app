@@ -80,10 +80,7 @@ const alertService = {
         priority: alertData.priority === undefined ? 0 : parseInt(alertData.priority),
         expiry_date: alertData.expiryDate || null,
         is_public: alertData.isPublic === undefined ? false : Boolean(alertData.isPublic),
-        is_active: true,
-        send_email: true,
-        email_subject: alertData.email_subject,
-        email_content: alertData.email_content
+        is_active: true
       };
 
       if (!formattedData.message) {
@@ -95,32 +92,14 @@ const alertService = {
         withCredentials: true 
       });
       
-      if (response.data?.success) {
-        return {
-          success: true,
-          message: response.data.message || 'Alert created successfully',
-          alert: response.data.alert,
-          emailSent: response.data.emailSent
-        };
-      }
-      throw new Error(response.data?.message || 'Failed to create alert');
+      return {
+        success: true,
+        message: response.data.message || 'Alert created successfully',
+        alert: response.data.alert
+      };
     } catch (error) {
       console.error('Error creating alert:', error);
-      if (error.response) {
-        const errorMessage = error.response.data?.message || error.response.data?.error || error.message;
-        if (error.response.status === 401) {
-          const authStore = useAuthStore();
-          authStore.handleAuthError();
-          throw new Error('Authentication required');
-        } else if (error.response.status === 403) {
-          throw new Error('Admin access required');
-        } else if (error.response.status === 400) {
-          throw new Error(errorMessage || 'Invalid alert data');
-        } else if (error.response.status === 500) {
-          throw new Error(errorMessage || 'Database error occurred while creating alert');
-        }
-      }
-      throw new Error(error.message || 'Failed to create alert');
+      throw new Error(error.response?.data?.message || 'Failed to create alert');
     }
   },
 
