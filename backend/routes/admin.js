@@ -395,19 +395,31 @@ router.get('/analytics', async (req, res) => {
 
 // Get all alerts (admin)
 router.get('/alerts', async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'https://disasterapp.netlify.app');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
   try {
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
     const [rows] = await db.execute(`
       SELECT 
         a.*,
         u.username as created_by_username
       FROM alerts a
-      LEFT JOIN users u ON a.user_id = u.id
+      LEFT JOIN users u ON a.created_by = u.id
       ORDER BY a.created_at DESC
     `);
     
-    res.json({ 
+    return res.json({ 
       success: true, 
-      data: rows.map(alert => ({
+      alerts: rows.map(alert => ({
         ...alert,
         is_active: Boolean(alert.is_active),
         is_public: Boolean(alert.is_public)
@@ -415,7 +427,7 @@ router.get('/alerts', async (req, res) => {
     });
   } catch (error) {
     console.error('Get alerts error:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       success: false, 
       message: 'Failed to fetch alerts' 
     });
@@ -435,7 +447,7 @@ router.post('/alerts', async (req, res) => {
     }
 
     const [result] = await db.execute(
-      `INSERT INTO alerts (message, type, priority, expiry_date, is_public, user_id, is_active)
+      `INSERT INTO alerts (message, type, priority, expiry_date, is_public, created_by, is_active)
        VALUES (?, ?, ?, ?, ?, ?, true)`,
       [message.trim(), type || 'info', priority || 0, expiry_date || null, 
        is_public || false, req.user.userId]
@@ -444,7 +456,7 @@ router.post('/alerts', async (req, res) => {
     const [newAlert] = await db.execute(
       `SELECT a.*, u.username as created_by_username
        FROM alerts a
-       LEFT JOIN users u ON a.user_id = u.id
+       LEFT JOIN users u ON a.created_by = u.id
        WHERE a.id = ?`, 
       [result.insertId]
     );

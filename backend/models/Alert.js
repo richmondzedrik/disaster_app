@@ -23,7 +23,7 @@ class Alert {
             const [rows] = await connection.execute(
                 `SELECT a.*, u.username as created_by_username 
                  FROM alerts a 
-                 LEFT JOIN users u ON a.user_id = u.id 
+                 LEFT JOIN users u ON a.created_by = u.id 
                  ORDER BY a.created_at DESC`
             );
             return rows;

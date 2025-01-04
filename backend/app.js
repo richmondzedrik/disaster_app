@@ -21,15 +21,18 @@ app.use(express.urlencoded({ extended: true }));
 const corsOptions = {
     origin: [
         'https://disasterapp.netlify.app',
-        'http://localhost:5173'
+        'http://localhost:5173',
+        'http://localhost:3000'
     ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin'],
     exposedHeaders: ['Content-Range', 'X-Content-Range']
 };
 
 app.set('trust proxy', true);
+
+app.options('*', cors(corsOptions));
 
 // Update CORS configuration
 app.use(cors({
@@ -135,11 +138,10 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-    console.error('Error:', err);
+    console.error('Global error handler:', err);
     res.status(err.status || 500).json({
         success: false,
-        message: err.message || 'Internal server error',
-        ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
+        message: err.message || 'Internal server error'
     });
 });
 

@@ -23,23 +23,20 @@ const alertService = {
       const headers = getHeaders();
       const response = await axios.get(`${API_URL}/admin/alerts`, { 
         headers,
-        withCredentials: true 
+        withCredentials: true,
+        timeout: 15000
       });
       
-      if (response.data?.success) {
-        return {
-          success: true,
-          alerts: response.data.alerts || []
-        };
-      }
-      throw new Error(response.data?.message || 'Failed to fetch admin alerts');
+      return {
+        success: true,
+        alerts: response.data?.alerts || []
+      };
     } catch (error) {
       console.error('Error fetching admin alerts:', error);
-      if (error.response?.status === 401) {
-        const authStore = useAuthStore();
-        authStore.handleAuthError();
-      }
-      throw error;
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Network error occurred'
+      };
     }
   },
 
