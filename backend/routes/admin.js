@@ -425,7 +425,7 @@ router.get('/alerts', async (req, res) => {
 // Create new alert
 router.post('/alerts', async (req, res) => {
   try {
-    const { message, type, priority, expiryDate, isPublic, sendEmail } = req.body;
+    const { message, type, priority, expiry_date, is_public } = req.body;
     
     if (!message?.trim()) {
       return res.status(400).json({
@@ -437,8 +437,8 @@ router.post('/alerts', async (req, res) => {
     const [result] = await db.execute(
       `INSERT INTO alerts (message, type, priority, expiry_date, is_public, user_id, is_active)
        VALUES (?, ?, ?, ?, ?, ?, true)`,
-      [message.trim(), type || 'info', priority || 0, expiryDate || null, 
-       isPublic || false, req.user.userId]
+      [message.trim(), type || 'info', priority || 0, expiry_date || null, 
+       is_public || false, req.user.userId]
     );
 
     const [newAlert] = await db.execute(

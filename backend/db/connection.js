@@ -15,6 +15,15 @@ const pool = mysql.createPool({
     keepAliveInitialDelay: 0
 });
 
+// Add connection error handling
+pool.on('connection', (connection) => {
+  console.log('New connection established');
+});
+
+pool.on('error', (err) => {
+  console.error('Database pool error:', err);
+});
+
 async function testConnection() {
   try {
     const connection = await pool.getConnection();

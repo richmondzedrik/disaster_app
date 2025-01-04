@@ -26,15 +26,19 @@ export const useAlertStore = defineStore('alert', () => {
   const createAlert = async (alertData) => {
     try {
       const response = await alertService.createAlert(alertData);
-      if (response.success) {
+      if (response && response.success) {
         await fetchAlerts();
-        notificationStore.success('Alert created successfully');
+        notificationStore.success(response.message || 'Alert created successfully');
         return true;
       }
+      notificationStore.error(response?.message || 'Failed to create alert');
       return false;
     } catch (error) {
       console.error('Error creating alert:', error);
-      notificationStore.error(error.message || 'Failed to create alert');
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Network error occurred while creating alert';
+      notificationStore.error(errorMessage);
       return false;
     }
   };

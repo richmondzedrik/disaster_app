@@ -13,13 +13,15 @@ async function runMigrations() {
             database: undefined,
             ssl: process.env.NODE_ENV === 'production' ? {
                 rejectUnauthorized: false
-            } : false
+            } : false,
+            connectTimeout: 10000, // 10 seconds timeout
+            waitForConnections: true,
+            connectionLimit: 10
         });
 
         // Create database if it doesn't exist
         await connection.query(`CREATE DATABASE IF NOT EXISTS ${config.database}`);
-        await connection.end();
-
+        
         // Run the main migration
         await initDatabase.up();
         

@@ -79,24 +79,26 @@ const alertService = {
         type: alertData.type || 'info',
         priority: alertData.priority === undefined ? 0 : parseInt(alertData.priority),
         expiry_date: alertData.expiryDate || null,
-        is_public: alertData.isPublic === undefined ? false : Boolean(alertData.isPublic),
-        is_active: true
+        is_public: alertData.isPublic === undefined ? false : Boolean(alertData.isPublic)
       };
 
       if (!formattedData.message) {
         throw new Error('Alert message is required');
       }
 
-      const response = await axios.post(`${API_URL}/alerts`, formattedData, { 
+      const response = await axios.post(`${API_URL}/admin/alerts`, formattedData, { 
         headers,
         withCredentials: true 
       });
       
-      return {
-        success: true,
-        message: response.data.message || 'Alert created successfully',
-        alert: response.data.alert
-      };
+      if (response.data?.success) {
+        return {
+          success: true,
+          message: response.data.message || 'Alert created successfully',
+          alert: response.data.data
+        };
+      }
+      throw new Error(response.data?.message || 'Failed to create alert');
     } catch (error) {
       console.error('Error creating alert:', error);
       throw new Error(error.response?.data?.message || 'Failed to create alert');

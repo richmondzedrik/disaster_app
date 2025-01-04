@@ -11,7 +11,9 @@ class Alert {
             );
             return { id: result.insertId, message, type, priority, expiry_date, is_public, created_by };
         } finally {
-            connection.release();
+            if (connection) {
+                await connection.release();
+            }
         }
     }
 
@@ -60,7 +62,9 @@ class Alert {
             );
             return rows;
         } finally {
-            connection.release();
+            if (connection) {
+                await connection.release();
+            }
         }
     }
 
