@@ -396,9 +396,12 @@ onMounted(async () => {
   try {
     if (!checkAuth()) return;
     
+    console.log('Loading checklist progress...');
     const savedProgress = await checklistService.loadProgress();
     
     if (savedProgress?.success && Array.isArray(savedProgress.items)) {
+      console.log('Progress loaded successfully:', savedProgress.items);
+      
       // Create a map of saved progress
       const progressMap = new Map(
         savedProgress.items.map(item => [item.id, item.completed])
@@ -415,11 +418,20 @@ onMounted(async () => {
         item.isCustom && !checklist.value.some(existing => existing.id === item.id)
       );
       
-      checklist.value.push(...customItems);
+      if (customItems.length > 0) {
+        console.log('Adding custom items:', customItems);
+        checklist.value.push(...customItems);
+      }
+    } else {
+      console.warn('Invalid progress data:', savedProgress);
+      throw new Error('Invalid progress data received');
     }
   } catch (error) {
-    console.error('Error loading progress:', error);
-    notificationStore.error('Failed to load checklist progress');
+    console.error('Error loading progress:', {
+      message: error.message,
+      response: error.response?.data
+    });
+    notificationStore.error('Failed to load checklist progress. Please try refreshing the page.');
   }
 });
 
@@ -775,4 +787,4 @@ const saveEdit = async () => {
   max-height: 90vh;
   overflow-y: auto;
 }
-</style>  
+</style>   

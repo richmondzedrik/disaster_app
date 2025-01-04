@@ -11,7 +11,7 @@ router.get('/progress', auth.authMiddleware, async (req, res) => {
     // Get both custom and default items progress
     const [rows] = await db.execute(`
       SELECT cp.item_id, cp.completed, ci.text, ci.category, ci.info, 
-      CASE WHEN ci.user_id IS NOT NULL THEN 1 ELSE 0 END as is_custom
+      CASE WHEN ci.user_id IS NOT NULL THEN 1 ELSE 0 END as is_custom 
       FROM checklist_progress cp
       LEFT JOIN checklist_items ci 
       ON cp.item_id = ci.item_id AND cp.user_id = ci.user_id
@@ -102,40 +102,69 @@ router.post('/custom', auth.authMiddleware, async (req, res) => {
   try {
     const { item } = req.body;
     const userId = req.user.userId;
+    
+    console.log('Adding custom item:', { userId, item });
 
     // Validate required fields
     if (!item?.text || !item?.category || !item?.id) {
+      console.log('Validation failed:', { item });
       return res.status(400).json({ 
         success: false, 
-        message: 'Missing required fields' 
+        message: 'Missing required fields',
+        details: {
+          hasText: Boolean(item?.text),
+          hasCategory: Boolean(item?.category),
+          hasId: Boolean(item?.id)
+        }
       });
     }
 
-    // Insert into checklist_items
-    await db.execute(
-      'INSERT INTO checklist_items (user_id, item_id, text, category, info) VALUES (?, ?, ?, ?, ?)',
-      [userId, item.id, item.text, item.category, item.info || null]
-    );
+    // Start transaction
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
 
-    // Also insert into checklist_progress to track completion
-    await db.execute(
-      'INSERT INTO checklist_progress (user_id, item_id, completed) VALUES (?, ?, ?)',
-      [userId, item.id, false]
-    );
+    try {
+      // Insert into checklist_items
+      await connection.execute(
+        'INSERT INTO checklist_items (user_id, item_id, text, category, info) VALUES (?, ?, ?, ?, ?)',
+        [userId, item.id, item.text, item.category, item.info || null]
+      );
 
-    res.json({ 
-      success: true, 
-      message: 'Custom item added successfully',
-      item: {
-        ...item,
-        completed: false
-      }
-    });
+      // Insert into checklist_progress
+      await connection.execute(
+        'INSERT INTO checklist_progress (user_id, item_id, completed) VALUES (?, ?, ?)',
+        [userId, item.id, false]
+      );
+
+      await connection.commit();
+      
+      console.log('Custom item added successfully:', { userId, itemId: item.id });
+
+      res.json({ 
+        success: true, 
+        message: 'Custom item added successfully',
+        item: {
+          ...item,
+          completed: false
+        }
+      });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   } catch (error) {
-    console.error('Add custom item error:', error);
+    console.error('Add custom item error:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user.userId
+    });
+    
     res.status(500).json({ 
       success: false, 
-      message: 'Failed to add custom item' 
+      message: 'Failed to add custom item',
+      error: error.message
     });
   }
 });

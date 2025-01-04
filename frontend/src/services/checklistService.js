@@ -29,30 +29,40 @@ export const checklistService = {
     try {
       const headers = getHeaders();
       const url = `${API_URL}/checklist/progress`;
+      console.log('Fetching checklist progress from:', url);
+      
       const response = await axios.get(url, { headers });
+      console.log('Checklist progress response:', response.data);
       
       if (!response.data?.success) {
         throw new Error(response.data?.message || 'Failed to load checklist progress');
       }
       
-      // Ensure we're getting an array of items
+      // Ensure we're getting an array of items with proper validation
       const items = Array.isArray(response.data.items) ? response.data.items : [];
       
       return {
         success: true,
         items: items.map(item => ({
-          id: item.id,
+          id: item.id || item.item_id, // Handle both id formats
           completed: Boolean(item.completed),
-          required: Boolean(item.required)
+          text: item.text || '',
+          category: item.category || '',
+          info: item.info || null,
+          isCustom: Boolean(item.is_custom)
         }))
       };
     } catch (error) {
-      console.error('Load progress error:', error);
+      console.error('Load progress error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       throw error;
     }
   },
 
-  async updateProgress(item) {
+  async updateProgress(item) { 
     try {
       const headers = getHeaders();
       

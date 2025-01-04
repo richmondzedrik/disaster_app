@@ -39,7 +39,7 @@ async function up() {
             CREATE TABLE IF NOT EXISTS checklist_progress (
                 id INT PRIMARY KEY AUTO_INCREMENT,
                 user_id INT NOT NULL,
-                item_id INT NOT NULL,
+                item_id VARCHAR(50) NOT NULL,
                 completed BOOLEAN DEFAULT false, 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -108,7 +108,7 @@ async function down() {
         await connection.execute('DROP TABLE IF EXISTS checklist_items');
 
         await connection.commit();
-        console.log('All tables dropped successfully');
+        console.log('All tables dropped successfully'); 
     } catch (error) {
         await connection.rollback();
         console.error('Migration rollback failed:', error);
