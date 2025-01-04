@@ -16,7 +16,7 @@ export const useAlertStore = defineStore('alert', () => {
       const response = await alertService.getAdminAlerts();
       if (response.success) {
         alerts.value = response.alerts;
-        return {
+        return { 
           success: true,
           alerts: response.alerts
         };
@@ -65,10 +65,14 @@ export const useAlertStore = defineStore('alert', () => {
       const response = await alertService[isActive ? 'reactivateAlert' : 'deactivateAlert'](alertId);
       if (response.success) {
         await fetchAlerts();
+        notificationStore.success(`Alert ${isActive ? 'activated' : 'deactivated'} successfully`);
+        return true;
       }
+      throw new Error(response.message || `Failed to ${isActive ? 'activate' : 'deactivate'} alert`);
     } catch (error) {
       console.error('Error toggling alert status:', error);
-      notificationStore.error('Failed to update alert status');
+      notificationStore.error(error.message || `Failed to ${isActive ? 'activate' : 'deactivate'} alert`);
+      return false;
     }
   };
 
@@ -77,10 +81,14 @@ export const useAlertStore = defineStore('alert', () => {
       const response = await alertService.deleteAlert(alertId);
       if (response.success) {
         await fetchAlerts();
+        notificationStore.success('Alert deleted successfully');
+        return true;
       }
+      throw new Error(response.message || 'Failed to delete alert');
     } catch (error) {
       console.error('Error deleting alert:', error);
-      notificationStore.error('Failed to delete alert');
+      notificationStore.error(error.message || 'Failed to delete alert');
+      return false;
     }
   };
 

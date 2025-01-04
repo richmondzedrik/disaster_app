@@ -93,15 +93,15 @@ export const alertService = {
   async deactivateAlert(alertId) {
     try {
       const headers = getHeaders();
-      const response = await api.post(`/alerts/deactivate/${alertId}`, {}, { headers });
+      const response = await api.put(`/api/admin/alerts/${alertId}/status`, 
+        { isActive: false }, 
+        { headers, withCredentials: true }
+      );
       
-      if (response.data && response.data.success) {
-        return {
-          success: true,
-          message: response.data.message
-        };
-      }
-      throw new Error(response.data?.message || 'Failed to deactivate alert');
+      return {
+        success: true,
+        message: response.data?.message || 'Alert deactivated successfully'
+      };
     } catch (error) {
       console.error('Error deactivating alert:', error);
       throw new Error(error.response?.data?.message || 'Failed to deactivate alert');
@@ -129,15 +129,15 @@ export const alertService = {
   async deleteAlert(alertId) {
     try {
       const headers = getHeaders();
-      const response = await api.delete(`/alerts/${alertId}`, { headers });
+      const response = await api.delete(`/api/admin/alerts/${alertId}`, { 
+        headers,
+        withCredentials: true 
+      });
       
-      if (response.data && response.data.success) {
-        return {
-          success: true,
-          message: response.data.message
-        };
-      }
-      throw new Error(response.data?.message || 'Failed to delete alert');
+      return {
+        success: true,
+        message: response.data?.message || 'Alert deleted successfully'
+      };
     } catch (error) {
       console.error('Error deleting alert:', error);
       throw new Error(error.response?.data?.message || 'Failed to delete alert');
@@ -227,5 +227,6 @@ export const alertService = {
     }
   }
 };
+
 
 export default alertService;

@@ -19,6 +19,20 @@ router.use(cors(corsOptions));
 // Pre-flight OPTIONS handling
 router.options('*', cors(corsOptions));
 
+// Add this middleware at the top of your admin routes 
+router.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'https://disasterapp.netlify.app');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 // Modify the middleware application
 router.use(async (req, res, next) => {
   try {
@@ -427,7 +441,7 @@ router.get('/alerts', async (req, res) => {
       message: 'Failed to fetch alerts' 
     });
   }
-});
+}); 
 
 // Create new alert
 router.post('/alerts', async (req, res) => {
@@ -780,6 +794,34 @@ router.get('/checklist/test', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Checklist service test failed'
+    });
+  }
+});
+
+// Add this route for testing
+router.get('/alerts/test', async (req, res) => {
+  try {
+    // Test database connection
+    const [testResult] = await db.execute('SELECT 1');
+    
+    // Test alerts table
+    const [alerts] = await db.execute('SELECT * FROM alerts LIMIT 1');
+    
+    res.json({
+      success: true,
+      message: 'Alert system operational',
+      data: {
+        dbConnection: !!testResult,
+        alertsTable: true,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Alert system test error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Alert system test failed',
+      error: error.message
     });
   }
 });

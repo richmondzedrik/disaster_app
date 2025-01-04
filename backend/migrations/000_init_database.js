@@ -39,12 +39,29 @@ async function up() {
             CREATE TABLE IF NOT EXISTS checklist_progress (
                 id INT PRIMARY KEY AUTO_INCREMENT,
                 user_id INT NOT NULL,
-                item_id INT NOT NULL,
+                item_id VARCHAR(50) NOT NULL,
                 completed BOOLEAN DEFAULT false,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 UNIQUE KEY unique_user_item (user_id, item_id),
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE 
+            )
+        `);
+        
+        // Add alerts table creation
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS alerts (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                message TEXT NOT NULL,
+                type ENUM('info', 'warning', 'danger') DEFAULT 'info',
+                priority INT DEFAULT 0,
+                is_active BOOLEAN DEFAULT true,
+                is_public BOOLEAN DEFAULT false,
+                created_by INT,
+                expiry_date DATETIME,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
             )
         `);
         
