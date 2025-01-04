@@ -826,4 +826,34 @@ router.get('/alerts/test', async (req, res) => {
   }
 });
 
+// Reactivate alert
+router.post('/alerts/:id/reactivate', async (req, res) => {
+  try {
+    const alertId = req.params.id;
+    
+    const [result] = await db.execute(
+      'UPDATE alerts SET is_active = true WHERE id = ?',
+      [alertId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Alert not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Alert reactivated successfully'
+    });
+  } catch (error) {
+    console.error('Reactivate alert error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reactivate alert'
+    });
+  }
+});
+
 module.exports = router; 

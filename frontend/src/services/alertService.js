@@ -123,12 +123,15 @@ export const alertService = {
       console.error('Error deactivating alert:', error);
       throw new Error(error.response?.data?.message || 'Failed to deactivate alert');
     }
-  },
+  },   
 
   async reactivateAlert(alertId) {
     try {
-      const headers = getHeaders();
-      const response = await api.post(`/alerts/reactivate/${alertId}`, {}, { headers });
+      const headers = await getHeaders();
+      const response = await api.post(`/api/admin/alerts/${alertId}/reactivate`, {}, { 
+        headers,
+        withCredentials: true 
+      });
       
       if (response.data && response.data.success) {
         return {
