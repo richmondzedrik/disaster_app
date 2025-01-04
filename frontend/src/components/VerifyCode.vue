@@ -114,6 +114,7 @@ const handleSubmit = async () => {
     error.value = '';
 
     try {
+        // Add Content-Type header to ensure proper parsing
         const response = await authService.verifyCode(email.value, code.value);
         
         if (response.success) {

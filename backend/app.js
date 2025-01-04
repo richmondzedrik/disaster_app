@@ -13,6 +13,10 @@ const adminNewsRoutes = require('./routes/admin/news');
 
 const app = express();
 
+// Move these lines BEFORE any route definitions
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // CORS configuration
 const corsOptions = {
     origin: [
@@ -55,10 +59,6 @@ app.get('/api/db-test', async (req, res) => {
         });
     }
 });
-app.use('/api/auth', authRoutes); 
-// Basic middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Request logging in development
 if (process.env.NODE_ENV !== 'production') {
