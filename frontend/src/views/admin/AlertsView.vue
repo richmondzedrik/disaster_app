@@ -29,7 +29,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="alert in alertStore.alerts" :key="alert.id">
+            <tr v-for="alert in alerts" :key="alert.id">
               <td class="message-cell">{{ alert.message }}</td>
               <td>
                 <span :class="['type-badge', alert.type]">
@@ -134,7 +134,7 @@
   </template>
   
   <script setup>
-  import { ref, onMounted } from 'vue';
+  import { ref, onMounted, watch } from 'vue';
   import { useAlertStore } from '@/stores/alert';
   import { useNotificationStore } from '@/stores/notification';
   
@@ -142,6 +142,7 @@
   const notificationStore = useNotificationStore();
   const showCreateModal = ref(false);
   const loading = ref(false);
+  const alerts = ref([]);
   
   const newAlert = ref({
     message: '',
@@ -181,7 +182,10 @@
       showCreateModal.value = false;
       resetForm();
       notificationStore.success('Alert created successfully');
-      await alertStore.fetchAlerts(); // Refresh the alerts list
+      const alertsResponse = await alertStore.fetchAlerts();
+      if (alertsResponse?.success) {
+        alerts.value = alertsResponse.alerts || [];
+      }
     } else {
       throw new Error(response.message || 'Failed to create alert');
     }
@@ -192,12 +196,31 @@
 };
   
   const toggleAlertStatus = async (alert) => {
-    await alertStore.toggleAlertStatus(alert.id, !alert.is_active);
+    try {
+      const response = await alertStore.toggleAlertStatus(alert.id, !alert.is_active);
+      if (response?.success) {
+        await alertStore.fetchAlerts();
+        alerts.value = alertStore.alerts;
+      }
+    } catch (error) {
+      console.error('Error toggling alert status:', error);
+      notificationStore.error('Failed to update alert status');
+    }
   };
   
   const deleteAlert = async (alertId) => {
     if (!confirm('Are you sure you want to delete this alert?')) return;
-    await alertStore.deleteAlert(alertId);
+    try {
+      const response = await alertStore.deleteAlert(alertId);
+      if (response?.success) {
+        await alertStore.fetchAlerts();
+        alerts.value = alertStore.alerts;
+        notificationStore.success('Alert deleted successfully');
+      }
+    } catch (error) {
+      console.error('Error deleting alert:', error);
+      notificationStore.error('Failed to delete alert');
+    }
   };
   
   const resetForm = () => {
@@ -210,20 +233,31 @@
     };
   };
   
-  onMounted(async () => {
-  try {
-    loading.value = true;
-    const response = await alertStore.fetchAlerts();
-    if (!response?.success) {
-      notificationStore.error('Failed to load alerts');
+  watch(() => alertStore.alerts, (newAlerts) => {
+    if (newAlerts && Array.isArray(newAlerts)) {
+      alerts.value = newAlerts;
     }
-  } catch (error) {
-    console.error('Error initializing alerts:', error);
-    notificationStore.error('Failed to load alerts');
-  } finally {
-    loading.value = false;
-  }
-});
+  }, { deep: true });
+  
+  onMounted(async () => {
+    try {
+      loading.value = true;
+      const response = await alertStore.fetchAlerts();
+      
+      if (response?.success) {
+        alerts.value = response.alerts || [];
+      } else {
+        notificationStore.error('Failed to load alerts');
+        alerts.value = [];
+      }
+    } catch (error) {
+      console.error('Error loading alerts:', error);
+      notificationStore.error('Failed to load alerts');
+      alerts.value = [];
+    } finally {
+      loading.value = false;
+    }
+  });
   </script>
   
   <style scoped>

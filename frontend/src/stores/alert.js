@@ -12,16 +12,26 @@ export const useAlertStore = defineStore('alert', () => {
 
   const fetchAlerts = async () => {
     try {
-      isLoading.value = true;
       const response = await alertService.getAdminAlerts();
       if (response.success) {
         alerts.value = response.alerts;
+        return {
+          success: true,
+          alerts: response.alerts
+        };
       }
+      return {
+        success: false,
+        alerts: [],
+        message: response.message
+      };
     } catch (error) {
-      console.error('Error fetching alerts:', error);
-      notificationStore.error('Failed to fetch alerts');
-    } finally {
-      isLoading.value = false;
+      console.error('Error in fetchAlerts:', error);
+      return {
+        success: false,
+        alerts: [],
+        message: 'Failed to fetch alerts'
+      };
     }
   };
 

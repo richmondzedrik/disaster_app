@@ -33,24 +33,20 @@ const alertService = {
       const headers = getHeaders();
       const response = await axiosInstance.get('/admin/alerts', { 
         headers,
-        timeout: 30000 
+        timeout: 30000,
+        withCredentials: true
       });
       
-      if (response.data?.success) {
-        return {
-          success: true,
-          alerts: response.data.alerts || []
-        };
-      }
       return {
-        success: false,
-        message: response.data?.message || 'Failed to fetch alerts'
+        success: true,
+        alerts: response.data?.alerts || []
       };
     } catch (error) {
       console.error('Error fetching admin alerts:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Network error occurred'
+        alerts: [],
+        message: 'Failed to fetch alerts. Please try again.'
       };
     }
   },
