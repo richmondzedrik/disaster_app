@@ -1,17 +1,20 @@
 import api from './api';
 import { useAuthStore } from '../stores/auth';
 
-const getHeaders = () => {
+const getHeaders = async () => {
   const authStore = useAuthStore();
-  const token = authStore.accessToken || localStorage.getItem('token');
+  let token = authStore.accessToken || localStorage.getItem('token');
   
   if (!token) {
-    throw new Error('No authentication token available'); 
+    throw new Error('No authentication token available');
   }
-
+  
+  // Ensure token format
+  token = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+  
   return {
     'Content-Type': 'application/json',
-    'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
+    'Authorization': token
   };
 };
 
@@ -40,11 +43,25 @@ export const alertService = {
   async getActiveAlerts() {
     try {
       const headers = getHeaders();
-      const response = await api.get('/alerts/active', { headers });
-      return response.data;
+      const response = await api.get('/api/alerts/active', { 
+        headers,
+        withCredentials: true
+      });
+      
+      if (!response.data) {
+        throw new Error('Invalid response format');
+      }
+      
+      return {
+        success: true,
+        alerts: response.data.alerts || [] 
+      };
     } catch (error) {
       console.error('Error fetching active alerts:', error);
-      throw error;
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to fetch active alerts'
+      };
     }
   },
 
@@ -229,4 +246,4 @@ export const alertService = {
 };
 
 
-export default alertService;
+export default alertService; 

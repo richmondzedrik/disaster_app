@@ -31,7 +31,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useNotificationStore } from '../stores/notification';
-import alertService from '../services/alertService';
+import alertService from '../services/alertService'; 
 
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
@@ -55,17 +55,28 @@ const loadAlerts = async () => {
   try {
     loading.value = true;
     error.value = '';
+    
+    // Check authentication first
+    if (!authStore.isAuthenticated) {
+      throw new Error('Authentication required');
+    }
+    
     const response = await alertService.getActiveAlerts();
+    console.log('Alerts response:', response); // Add this for debugging
     
     if (response?.success) {
-      alerts.value = response.alerts || [];
+      alerts.value = response.alerts.map(alert => ({
+        ...alert,
+        is_active: Boolean(alert.is_active),
+        is_public: Boolean(alert.is_public)
+      }));
     } else {
       throw new Error(response?.message || 'Failed to load alerts');
     }
   } catch (err) {
     console.error('Error loading alerts:', err);
-    error.value = 'Failed to load alerts. Please try again.';
-    notificationStore.error('Failed to load alerts');
+    error.value = err.message || 'Failed to load alerts. Please try again.';
+    notificationStore.error(error.value);
     alerts.value = [];
   } finally {
     loading.value = false;

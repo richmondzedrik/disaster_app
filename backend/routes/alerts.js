@@ -13,15 +13,28 @@ router.get('/test', (req, res) => {
 // Get active alerts
 router.get('/active', auth.authMiddleware, async (req, res) => {
     try {
+        // Add CORS headers
+        res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'https://disasterapp.netlify.app');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
         const [rows] = await db.execute(`
-            SELECT * FROM alerts 
-            WHERE is_active = true 
-            ORDER BY priority DESC, created_at DESC
+            SELECT a.*, u.username as created_by_username 
+            FROM alerts a
+            LEFT JOIN users u ON a.created_by = u.id
+            WHERE a.is_active = true 
+            AND (a.expiry_date IS NULL OR a.expiry_date > NOW())
+            ORDER BY a.priority DESC, a.created_at DESC
         `);
         
         res.json({
             success: true,
-            alerts: rows
+            alerts: rows.map(alert => ({
+                ...alert,
+                is_active: Boolean(alert.is_active),
+                is_public: Boolean(alert.is_public)
+            }))
         });
     } catch (error) {
         console.error('Error fetching active alerts:', error);
@@ -213,7 +226,7 @@ router.delete('/:id', auth.authMiddleware, async (req, res) => {
       message: 'Alert deleted successfully' 
     });
   } catch (error) {
-    console.error('Delete alert error:', error);
+    console.error('Delete alert error:', error); 
     res.status(500).json({ 
       success: false, 
       message: 'Failed to delete alert' 
