@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
 
 const getHeaders = () => {
   const authStore = useAuthStore();
@@ -18,8 +18,8 @@ const getHeaders = () => {
 
   // Ensure token is properly formatted
   token = token.replace('Bearer ', '');
-  
-  return {
+    
+  return {  
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
   };
