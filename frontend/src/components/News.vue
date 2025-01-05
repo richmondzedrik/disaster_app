@@ -62,7 +62,7 @@
           <p>No news posts yet</p>
         </div>
         
-        <div v-else v-for="post in filteredPosts" :key="post.id" class="news-card">
+        <div v-else v-for="post in processedPosts" :key="post.id" class="news-card">
           <div class="post-header">
             <div class="author-info">
               <i class="fas fa-user-circle"></i>
@@ -101,12 +101,15 @@
           
           <div class="post-footer">
             <button 
-              @click="isAuthenticated ? likePost(post) : handleGuestInteraction('like')"
+              @click="likePost(post)"
               class="interaction-btn"
-              :class="{ 'disabled': !isAuthenticated, 'active': post.liked }"
+              :class="{ 
+                  'active': post.liked,
+                  'disabled': !isAuthenticated 
+              }"
             >
-              <i :class="['fa-heart', post.liked ? 'fas' : 'far']"></i>
-              <span>{{ post.likes || 0 }}</span>
+              <i class="fas fa-heart"></i>
+              <span>{{ post.likes }}</span>
             </button>
             <button 
               @click="isAuthenticated ? toggleComments(post) : handleGuestInteraction('comment')"
@@ -137,16 +140,6 @@
           </div>
 
           <div v-if="post.showComments" class="comments-section">
-            <div class="comment-form">
-              <input 
-                v-model="post.newComment" 
-                placeholder="Write a comment..." 
-                @keyup.enter="addComment(post)"
-              >
-              <button @click="addComment(post)" class="comment-btn">
-                <i class="fas fa-paper-plane"></i>
-              </button>
-            </div>
             <div class="comments-list">
               <div v-for="comment in post.comments" :key="comment.id" class="comment">
                 <div class="comment-header">
@@ -154,12 +147,7 @@
                     <i class="fas fa-user-circle"></i>
                     <span>{{ comment.username }}</span>
                   </div>
-                  <div class="comment-actions">
-                    <span class="comment-date">{{ formatDate(comment.created_at || comment.createdAt) }}</span>
-                    <button v-if="isAdmin" @click="deleteComment(post, comment)" class="delete-comment-btn">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
+                  <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
                 </div>
                 <div class="comment-content" :class="{ 'deleted': comment.deleted_by }">
                   {{ comment.content }}
@@ -168,6 +156,18 @@
                   </div>
                 </div>
               </div>
+            </div>
+            
+            <!-- Add comment form -->
+            <div v-if="isAuthenticated" class="add-comment">
+              <textarea 
+                v-model="post.newComment"
+                placeholder="Write a comment..."
+                @keyup.enter="addComment(post)"
+              ></textarea>
+              <button @click="addComment(post)" :disabled="!post.newComment?.trim()">
+                Post Comment
+              </button>
             </div>
           </div>
         </div>
@@ -312,14 +312,14 @@ const loadPosts = async () => {
         const response = await newsService.getPublicPosts();
         
         if (response.success) {
-            posts.value = response.posts.map(post => ({
+            posts.value = response.posts.map(post => ({ 
                 ...post,
                 imageLoaded: false,
                 imageError: false,
                 showComments: false,
                 comments: [],
                 newComment: '',
-                liked: Boolean(post.is_liked),
+                liked: Boolean(post.is_liked) || Boolean(post.liked),
                 likes: parseInt(post.like_count) || 0,
                 commentCount: parseInt(post.comment_count) || 0
             }));
@@ -421,7 +421,7 @@ const deletePost = async (postId) => {
     loading.value = true;
     await newsService.deletePost(postId);
     notificationStore.success('Post deleted successfully');
-    loadPosts();
+    loadPosts(); 
   } catch (error) {
     console.error('Delete post error:', error);
     notificationStore.error('Failed to delete post');
@@ -430,27 +430,35 @@ const deletePost = async (postId) => {
   }
 };
 
+const processedPosts = computed(() => {
+  return posts.value.map(post => ({
+    ...post,
+    liked: typeof post.liked === 'boolean' ? post.liked : false
+  }));
+});
+
 const likePost = async (post) => {
-  if (!isAuthenticated.value) {
-    notificationStore.info('Please sign in to like posts');
-    return;
-  }
-  
-  try {
-    const response = await newsService.likePost(post.id);
-    if (response.success) {
-      post.liked = response.liked;
-      post.likes = response.likes;
-      // Force reactivity update
-      const postIndex = posts.value.findIndex(p => p.id === post.id);
-      if (postIndex !== -1) {
-        posts.value[postIndex] = { ...post };
-      }
+    if (!isAuthenticated.value) { 
+        notificationStore.info('Please sign in to like posts');
+        return;
     }
-  } catch (error) {
-    console.error('Error liking post:', error);
-    notificationStore.error('Failed to like post');
-  }
+    
+    try {
+        const response = await newsService.likePost(post.id);
+        if (response.success) {
+            const postIndex = posts.value.findIndex(p => p.id === post.id);
+            if (postIndex !== -1) {
+                posts.value[postIndex] = {
+                    ...posts.value[postIndex],
+                    liked: Boolean(response.liked),
+                    likes: parseInt(response.likes) || posts.value[postIndex].likes
+                };
+            }
+        }
+    } catch (error) {
+        console.error('Error liking post:', error);
+        notificationStore.error('Failed to like post');
+    }
 };
 
 const approvePost = async (postId) => {
@@ -552,9 +560,26 @@ const savePost = async (post) => {
 };
 
 const toggleComments = async (post) => {
-  post.showComments = !post.showComments;
-  if (post.showComments && (!post.comments || post.comments.length === 0)) {
-    await loadComments(post);
+  try {
+    post.showComments = !post.showComments;
+    
+    if (post.showComments && (!post.comments || post.comments.length === 0)) {
+      const response = await newsService.getComments(post.id);
+      if (response.success) {
+        post.comments = response.comments.map(comment => ({
+          ...comment,
+          created_at: comment.created_at || comment.createdAt
+        }));
+        post.commentCount = post.comments.length;
+      }
+    }
+    
+    // Force reactivity update
+    posts.value = [...posts.value];
+  } catch (error) {
+    console.error('Error loading comments:', error);
+    notificationStore.error('Failed to load comments');
+    post.showComments = false; // Reset if error occurs
   }
 };
 
@@ -914,14 +939,16 @@ onMounted(() => {
 .interaction-btn:hover {
   background: rgba(0, 173, 173, 0.1);
 }
-
+ 
 .interaction-btn.active {
-  color: #00D1D1;
+    color: #00D1D1;
+    background: rgba(0, 209, 209, 0.1);
 }
+
 
 .interaction-btn.active i.fa-heart {
   color: #ff4b4b;
-  transform: scale(1.1);
+  transform: scale(1.1);    
 }
 
 .interaction-btn i {
@@ -1271,7 +1298,7 @@ onMounted(() => {
     cursor: pointer;
     transition: all 0.3s ease;
     border-radius: 8px;
-}
+} 
 
 .interaction-btn:hover {
     background: rgba(0, 173, 173, 0.1);

@@ -16,13 +16,13 @@
         <div class="checklist-items"> 
           <div v-for="item in items" :key="item.id" class="checklist-item" :class="{ completed: item.completed }">
             <div class="item-content">
-              <label :for="item.id" class="item-label">
+              <label :for="item.id" class="item-label"> 
                 <input 
                   type="checkbox" 
                   :id="item.id" 
                   v-model="item.completed"
                   @change="updateProgress(item)"
-                >
+                > 
                 <span class="item-text">{{ item.text }}</span>
               </label>
               <div class="item-actions">
@@ -167,67 +167,17 @@ const checkAuth = () => {
   return true;
 };
 
-const checklist = ref([
-  {
-    id: 'water',
-    text: 'Store 1 gallon of water per person per day (3-day supply)',
-    completed: false,
-    category: 'Essential Supplies',
-    info: 'Include water for drinking and sanitation. Store in clean plastic containers.'
-  },
-  {
-    id: 'food',
-    text: 'Non-perishable food (3-day supply)',
-    completed: false,
-    category: 'Essential Supplies',
-    info: 'Select foods that require no refrigeration, preparation, or cooking and little or no water.'
-  },
-  {
-    id: 'firstaid',
-    text: 'First aid kit',
-    completed: false,
-    category: 'Medical',
-    info: 'Include prescription medications, bandages, antiseptic wipes, and basic medical supplies.'
-  },
-  {
-    id: 'radio',
-    text: 'Battery-powered or hand-crank radio',
-    completed: false,
-    category: 'Communication',
-    info: 'NOAA Weather Radio with tone alert recommended.'
-  },
-  {
-    id: 'flashlight',
-    text: 'Flashlight and extra batteries',
-    completed: false,
-    category: 'Essential Supplies',
-    info: 'LED flashlights are more energy-efficient.'
-  },
-  {
-    id: 'documents',
-    text: 'Important documents in waterproof container',
-    completed: false,
-    category: 'Documents',
-    info: 'Include identification, insurance policies, and bank records.'
-  },
-  {
-    id: 'contact-list',
-    text: 'Emergency contact list',
-    completed: false,
-    category: 'Communication',
-    info: 'Include both local and out-of-area contacts.'
-  },
-  {
-    id: 'meeting-place',
-    text: 'Establish family meeting places',
-    completed: false,
-    category: 'Planning',
-    info: 'Choose locations both inside and outside your neighborhood.'
-  }
-]);
+const checklist = ref([]);
+
+const processedChecklist = computed(() => {
+  return checklist.value.map(item => ({
+    ...item,
+    isCustom: typeof item.isCustom === 'boolean' ? item.isCustom : false
+  }));
+});
 
 const groupedChecklist = computed(() => {
-  return checklist.value.reduce((acc, item) => {
+  return processedChecklist.value.reduce((acc, item) => {
     if (!acc[item.category]) {
       acc[item.category] = [];
     }
@@ -237,12 +187,12 @@ const groupedChecklist = computed(() => {
 });
 
 const completedCount = computed(() => {
-  return checklist.value.filter(item => item.completed).length;
+  return processedChecklist.value.filter(item => item.completed).length;
 });
 
 const progressPercentage = computed(() => {
-  if (!checklist.value.length) return 0;
-  return Math.round((completedCount.value / checklist.value.length) * 100);
+  if (!processedChecklist.value.length) return 0;
+  return Math.round((completedCount.value / processedChecklist.value.length) * 100);
 });
 
 watch(progressPercentage, (newProgress) => {
@@ -261,7 +211,6 @@ const updateProgress = async (item) => {
   try {
     if (!checkAuth()) return;
     
-    // Save the original state in case we need to revert 
     const originalState = item.completed;
     
     try {
@@ -274,15 +223,13 @@ const updateProgress = async (item) => {
         throw new Error(updateResponse?.message || 'Failed to update progress');
       }
       
-      // Also update the local checklist state
       const index = checklist.value.findIndex(i => i.id === item.id);
       if (index !== -1) {
         checklist.value[index].completed = item.completed;
       }
       
-      notificationStore.success('Progress saved successfully');
+      notificationStore.success('Progress saved successfully'); 
     } catch (error) {
-      // Revert the checkbox state if the save failed
       item.completed = originalState;
       throw error;
     }
@@ -301,7 +248,7 @@ const newItem = ref({
 });
 
 const availableCategories = computed(() => {
-  const categories = new Set(checklist.value.map(item => item.category));
+  const categories = new Set(processedChecklist.value.map(item => item.category));
   return Array.from(categories);
 });
 
@@ -314,23 +261,21 @@ const addNewItem = async () => {
       ? newItem.value.newCategory.trim() 
       : newItem.value.category.trim();
 
-    // Normalize text for comparison (lowercase, remove extra spaces)
+    // Normalize text for comparison
     const normalizedNewText = newItemText.toLowerCase().replace(/\s+/g, ' ');
 
-    // Check for duplicates across all categories
+    // Check for duplicates using the original checklist
     const isDuplicate = checklist.value.some(item => {
       const normalizedExistingText = item.text.toLowerCase().replace(/\s+/g, ' ');
       
-      // Check for exact matches regardless of category
       if (normalizedExistingText === normalizedNewText) {
         return true;
       }
       
-      // Check for similar items (80% similarity) regardless of category
       const similarity = calculateStringSimilarity(normalizedExistingText, normalizedNewText);
       return similarity > 0.8;
     });
-
+ 
     if (isDuplicate) {
       notificationStore.error('This item already exists in the checklist');
       return;
@@ -345,14 +290,14 @@ const addNewItem = async () => {
       isCustom: true
     };
 
-    // Try to save the new item first
+    // Save the new item
     const saveResponse = await checklistService.addCustomItem(item);
     
     if (!saveResponse?.success) {
       throw new Error(saveResponse?.message || 'Failed to save custom item');
     }
 
-    // Only add to local checklist after successful save
+    // Add to original checklist array
     checklist.value.push(item);
     
     // Reset form
@@ -401,27 +346,7 @@ onMounted(async () => {
     
     if (savedProgress?.success && Array.isArray(savedProgress.items)) {
       console.log('Progress loaded successfully:', savedProgress.items);
-      
-      // Create a map of saved progress
-      const progressMap = new Map(
-        savedProgress.items.map(item => [item.id, item.completed])
-      );
-      
-      // Update the checklist with saved progress
-      checklist.value = checklist.value.map(item => ({
-        ...item,
-        completed: progressMap.has(item.id) ? progressMap.get(item.id) : false
-      }));
-      
-      // Add any custom items from the saved progress
-      const customItems = savedProgress.items.filter(item => 
-        item.isCustom && !checklist.value.some(existing => existing.id === item.id)
-      );
-      
-      if (customItems.length > 0) {
-        console.log('Adding custom items:', customItems);
-        checklist.value.push(...customItems);
-      }
+      checklist.value = savedProgress.items;
     } else {
       console.warn('Invalid progress data:', savedProgress);
       throw new Error('Invalid progress data received');
@@ -431,7 +356,19 @@ onMounted(async () => {
       message: error.message,
       response: error.response?.data
     });
-    notificationStore.error('Failed to load checklist progress. Please try refreshing the page.');
+    
+    if (error.message.includes('Session expired')) {
+      const authStore = useAuthStore();
+      await authStore.logout();
+      router.push('/login');
+      return; 
+    }
+    
+    notificationStore.error(
+      error.message === 'Authentication required' 
+        ? 'Please login to view your checklist' 
+        : 'Failed to load checklist progress. Please try refreshing the page.'
+    );
   }
 });
 
@@ -446,13 +383,13 @@ const editItem = (item) => {
 const deleteItem = async (item) => {
   if (!confirm('Are you sure you want to delete this item?')) return;
   
-  try {
+  try {    
     const response = await checklistService.deleteCustomItem(item.id);
     if (response.success) {
       checklist.value = checklist.value.filter(i => i.id !== item.id);
       notificationStore.success('Item deleted successfully');
-    }
-  } catch (error) {
+    } 
+  } catch (error) { 
     console.error('Error deleting item:', error);
     notificationStore.error(error.message || 'Failed to delete item');
   }
@@ -470,7 +407,7 @@ const saveEdit = async () => {
     if (response.success) {
       const index = checklist.value.findIndex(item => item.id === editingItem.value.id);
       if (index !== -1) {
-        checklist.value[index] = { ...editingItem.value }; 
+        checklist.value[index] = { ...editingItem.value };
       }
       showEditForm.value = false;
       editingItem.value = null;

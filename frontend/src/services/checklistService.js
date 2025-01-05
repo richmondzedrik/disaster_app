@@ -5,59 +5,68 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const getHeaders = () => {
   const authStore = useAuthStore();
-  let token = authStore.token || localStorage.getItem('token'); 
+  let token = authStore.token;
   
   if (!token) {
-    token = authStore.getAuthHeader?.Authorization;
+    token = localStorage.getItem('token');
   }
    
   if (!token) {
     console.warn('No auth token found');
     throw new Error('Authentication required');
   }
- 
+
+  // Ensure token is properly formatted
   token = token.replace('Bearer ', '');
   
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
   };
-};
+}; 
 
 export const checklistService = {
   async loadProgress() {
     try {
       const headers = getHeaders();
       const url = `${API_URL}/checklist/progress`;
-      console.log('Fetching checklist progress from:', url);
+      console.log('Loading progress with headers:', headers);
       
-      const response = await axios.get(url, { headers });
-      console.log('Checklist progress response:', response.data);
+      const response = await axios.get(url, { 
+        headers,
+        withCredentials: true 
+      });
       
       if (!response.data?.success) {
         throw new Error(response.data?.message || 'Failed to load checklist progress');
       }
       
-      // Ensure we're getting an array of items with proper validation
       const items = Array.isArray(response.data.items) ? response.data.items : [];
       
       return {
-        success: true,
-        items: items.map(item => ({
-          id: item.id || item.item_id, // Handle both id formats
-          completed: Boolean(item.completed),
-          text: item.text || '',
-          category: item.category || '',
-          info: item.info || null,
-          isCustom: Boolean(item.is_custom)
-        }))
+        success: true, 
+        items: items.map(item => {
+          const isCustom = typeof item.isCustom === 'boolean' ? 
+            item.isCustom : 
+            item.is_custom === true || item.is_custom === 1;
+            
+          return {
+            id: item.id || item.item_id,
+            completed: Boolean(item.completed),
+            text: item.text || '',
+            category: item.category || '',
+            info: item.info || null,
+            isCustom: isCustom
+          };
+        })
       };
     } catch (error) {
-      console.error('Load progress error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+      if (error.response?.status === 401) { 
+        const authStore = useAuthStore();
+        await authStore.logout();
+        window.location.href = '/login'; // Force a full page reload
+        throw new Error('Session expired. Please login again.');
+      }
       throw error;
     }
   },
@@ -74,7 +83,7 @@ export const checklistService = {
         `${API_URL}/checklist/progress`,  
         { 
           item: {
-            id: item.id,
+            id: item.id, 
             completed: Boolean(item.completed)
           }
         },
