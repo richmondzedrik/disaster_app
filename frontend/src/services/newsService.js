@@ -142,7 +142,7 @@ export const newsService = {
         const headers = getHeaders();
         const response = await axios.delete(`${API_URL}/news/posts/${id}`, {
             headers,
-            withCredentials: true
+            withCredentials: true   
         });
         return response.data;
     },
@@ -174,7 +174,7 @@ export const newsService = {
         });
         return response.data;
     },
-
+   
     async sharePost(postId) {
         const headers = getHeaders();
         const response = await axios.post(`${API_URL}/news/posts/${postId}/share`, {}, {
@@ -222,15 +222,20 @@ export const newsService = {
                 headers,
                 withCredentials: true
             });
-            return {
-                success: true,
-                comment: response.data.comment
-            };
+            
+            if (response.data && response.data.success) {
+                return {
+                    success: true,
+                    comment: response.data.comment
+                };
+            } else {
+                throw new Error(response.data?.message || 'Failed to add comment');
+            }
         } catch (error) {
             console.error('Error adding comment:', error);
             return {
                 success: false,
-                comment: null
+                message: error.message || 'Failed to add comment'
             };
         }
     },

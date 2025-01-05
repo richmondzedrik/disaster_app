@@ -140,34 +140,49 @@
           </div>
 
           <div v-if="post.showComments" class="comments-section">
-            <div class="comments-list">
-              <div v-for="comment in post.comments" :key="comment.id" class="comment">
-                <div class="comment-header">
-                  <div class="comment-author">
-                    <i class="fas fa-user-circle"></i>
-                    <span>{{ comment.username }}</span>
-                  </div>
-                  <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
+            <div v-if="post.loadingComments" class="comments-loading">
+              <i class="fas fa-circle-notch fa-spin"></i>
+              <span>Loading comments...</span>
+            </div>
+            <div v-else>
+              <!-- Add comment form -->
+              <div v-if="isAuthenticated" class="comment-form">
+                <div class="input-wrapper">
+                  <i class="fas fa-user-circle"></i>
+                  <textarea 
+                    v-model="post.newComment"
+                    placeholder="Write a comment..."
+                    rows="1"
+                    @input="autoGrow($event.target)"
+                  ></textarea>
                 </div>
-                <div class="comment-content" :class="{ 'deleted': comment.deleted_by }">
-                  {{ comment.content }}
-                  <div v-if="comment.deleted_by" class="deletion-info">
-                    <span class="deletion-reason">Reason: {{ comment.deletion_reason }}</span>
+                <button 
+                @click="addComment(post)" 
+                :disabled="!post.newComment || post.newComment.trim().length === 0"
+                class="post-comment-btn"
+                >
+                  <i class="fas fa-paper-plane"></i>
+                  <span>Post</span>
+                </button>
+              </div>
+              
+              <div class="comments-list">
+                <div v-for="comment in post.comments" :key="comment.id" class="comment">
+                  <div class="comment-header">
+                    <div class="comment-author">
+                      <i class="fas fa-user-circle"></i>
+                      <span>{{ comment.username }}</span>
+                    </div>
+                    <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
+                  </div>
+                  <div class="comment-content" :class="{ 'deleted': comment.deleted_by }">
+                    {{ comment.content }}
+                    <div v-if="comment.deleted_by" class="deletion-info">
+                      <span class="deletion-reason">Reason: {{ comment.deletion_reason }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <!-- Add comment form -->
-            <div v-if="isAuthenticated" class="add-comment">
-              <textarea 
-                v-model="post.newComment"
-                placeholder="Write a comment..."
-                @keyup.enter="addComment(post)"
-              ></textarea>
-              <button @click="addComment(post)" :disabled="!post.newComment?.trim()">
-                Post Comment
-              </button>
             </div>
           </div>
         </div>
@@ -312,15 +327,11 @@ const loadPosts = async () => {
         const response = await newsService.getPublicPosts();
         
         if (response.success) {
-            posts.value = response.posts.map(post => ({ 
+            posts.value = response.posts.map(post => ({
                 ...post,
-                imageLoaded: false,
-                imageError: false,
                 showComments: false,
                 comments: [],
                 newComment: '',
-                liked: Boolean(post.is_liked) || Boolean(post.liked),
-                likes: parseInt(post.like_count) || 0,
                 commentCount: parseInt(post.comment_count) || 0
             }));
         }
@@ -561,25 +572,44 @@ const savePost = async (post) => {
 
 const toggleComments = async (post) => {
   try {
-    post.showComments = !post.showComments;
-    
-    if (post.showComments && (!post.comments || post.comments.length === 0)) {
+    if (!post.showComments) {
+      post.loadingComments = true;
       const response = await newsService.getComments(post.id);
       if (response.success) {
-        post.comments = response.comments.map(comment => ({
-          ...comment,
-          created_at: comment.created_at || comment.createdAt
-        }));
-        post.commentCount = post.comments.length;
+        const postIndex = posts.value.findIndex(p => p.id === post.id);
+        if (postIndex !== -1) {
+          posts.value[postIndex] = {
+            ...posts.value[postIndex],
+            comments: response.comments.map(comment => ({
+              ...comment,
+              created_at: comment.created_at || comment.createdAt
+            })),
+            showComments: true,
+            commentCount: response.comments.length,
+            loadingComments: false,
+            newComment: '' // Ensure newComment is initialized as empty string
+          };
+        }
+      }
+    } else {
+      const postIndex = posts.value.findIndex(p => p.id === post.id);
+      if (postIndex !== -1) {
+        posts.value[postIndex] = {
+          ...posts.value[postIndex],
+          showComments: false,
+          newComment: '' // Reset newComment when closing
+        };
       }
     }
-    
     // Force reactivity update
     posts.value = [...posts.value];
   } catch (error) {
     console.error('Error loading comments:', error);
     notificationStore.error('Failed to load comments');
-    post.showComments = false; // Reset if error occurs
+    const postIndex = posts.value.findIndex(p => p.id === post.id);
+    if (postIndex !== -1) {
+      posts.value[postIndex].loadingComments = false;
+    }
   }
 };
 
@@ -600,19 +630,27 @@ const loadComments = async (post) => {
 };
 
 const addComment = async (post) => {
-  if (!isAuthenticated.value) {
-    notificationStore.info('Please sign in to comment');
-    return;
-  }
-  if (!post.newComment?.trim()) return;
+  if (!post.newComment || post.newComment.trim().length === 0) return;
   
   try {
-    const response = await newsService.addComment(post.id, post.newComment);
+    const response = await newsService.addComment(post.id, post.newComment.trim());
     if (response.success) {
+      // Add new comment to the list
       if (!post.comments) post.comments = [];
       post.comments.unshift(response.comment);
-      post.commentCount = post.comments.length;
-      post.newComment = '';
+      post.commentCount = (post.commentCount || 0) + 1;
+      
+      // Find the post index and update it properly
+      const postIndex = posts.value.findIndex(p => p.id === post.id);
+      if (postIndex !== -1) {
+        posts.value[postIndex] = {
+          ...posts.value[postIndex],
+          comments: post.comments,
+          commentCount: post.commentCount,
+          newComment: '' // Reset the newComment field after successful post
+        };
+      }
+      
       // Force reactivity update
       posts.value = [...posts.value];
       notificationStore.success('Comment added successfully');
@@ -658,6 +696,11 @@ const handleGuestInteraction = (type) => {
     });
     return;
   }
+};
+
+const autoGrow = (element) => {
+  element.style.height = "auto";
+  element.style.height = (element.scrollHeight) + "px";
 };
 
 onMounted(() => {
@@ -1599,6 +1642,111 @@ onMounted(() => {
 
 .interaction-btn.disabled:hover {
   background: rgba(0, 173, 173, 0.05);
+}
+
+.comments-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  color: #64748b;
+}
+
+.comments-loading i {
+  color: #00D1D1;
+}
+
+.comment-form {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background: white;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 92, 92, 0.06);
+  border: 1px solid rgba(0, 173, 173, 0.1);
+}
+
+.input-wrapper {
+  display: flex;
+  gap: 0.75rem;
+  flex: 1;
+  align-items: flex-start;
+}
+
+.input-wrapper i {
+  font-size: 1.5rem;
+  color: #00D1D1;
+  margin-top: 0.25rem;
+}
+
+.comment-form textarea {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid rgba(0, 173, 173, 0.2);
+  border-radius: 8px;
+  resize: none;
+  min-height: 42px;
+  max-height: 150px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #334155;
+  background: #f8fafc;
+  transition: all 0.3s ease;
+}
+
+.comment-form textarea:focus {
+  outline: none;
+  border-color: #00D1D1;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(0, 209, 209, 0.1);
+}
+
+.comment-form textarea::placeholder {
+  color: #94a3b8;
+}
+
+.post-comment-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  align-self: flex-start;
+}
+
+.post-comment-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #94a3b8;
+}
+
+.post-comment-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 209, 209, 0.2);
+}
+
+.post-comment-btn i {
+  font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .comment-form {
+    flex-direction: column;
+  }
+  
+  .post-comment-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 </style>
