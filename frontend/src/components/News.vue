@@ -157,9 +157,9 @@
                   ></textarea>
                 </div>
                 <button 
-                @click="addComment(post)" 
-                :disabled="!post.newComment || post.newComment.trim().length === 0"
-                class="post-comment-btn"
+                  @click="addComment(post)" 
+                  :disabled="!canInteract || !post.newComment || post.newComment.trim().length === 0"
+                  class="post-comment-btn"
                 >
                   <i class="fas fa-paper-plane"></i>
                   <span>Post</span>
@@ -630,6 +630,16 @@ const loadComments = async (post) => {
 };
 
 const addComment = async (post) => {
+  if (!isAuthenticated.value) {
+    notificationStore.info('Please sign in to comment');
+    return;
+  }
+
+  if (!canInteract.value) {
+    notificationStore.info('Your account needs to be verified to comment');
+    return;
+  }
+
   if (!post.newComment || post.newComment.trim().length === 0) return;
   
   try {
