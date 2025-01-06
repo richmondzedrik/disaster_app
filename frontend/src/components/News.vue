@@ -90,9 +90,9 @@
           <div class="post-footer">
             <button @click="likePost(post)" class="interaction-btn" :class="{
               'active': post.liked,
-              'disabled': !isAuthenticated
-            }">
-              <i class="fas fa-heart"></i>
+              'disabled': !isAuthenticated || post.likeLoading
+            }" :disabled="post.likeLoading">
+              <i class="fas fa-heart" :class="{ 'fa-spin': post.likeLoading }"></i>
               <span>{{ post.likes }}</span>
             </button>
             <button @click="isAuthenticated ? toggleComments(post) : handleGuestInteraction('comment')"
@@ -309,9 +309,10 @@ const loadPosts = async () => {
         comments: [],
         newComment: '',
         commentCount: parseInt(post.comment_count) || 0,
-        // Ensure liked status is properly converted to boolean
-        liked: post.liked === true || post.liked === 1 || post.liked === "true",
-        likes: parseInt(post.likes) || 0
+        // Enhanced liked status handling
+        liked: Boolean(post.liked),
+        likes: parseInt(post.likes) || 0,
+        likeLoading: false
       }));
     }
   } catch (error) {
@@ -429,49 +430,83 @@ const processedPosts = computed(() => {
 });
 
 const likePost = async (post) => {
-    if (!isAuthenticated.value) {
-        notificationStore.info('Please sign in to like posts');
-        return;
+  if (!isAuthenticated.value) {
+    notificationStore.info('Please sign in to like posts');
+    return;
+  }
+
+  // Prevent double-clicking
+  if (post.likeLoading) return;
+
+  try {
+    // Set loading state
+    post.likeLoading = true;
+
+    // Optimistic update
+    const originalLiked = post.liked;
+    const originalLikes = post.likes;
+
+    // Update UI immediately
+    post.liked = !post.liked;
+    post.likes = post.liked ? post.likes + 1 : post.likes - 1;
+
+    const response = await newsService.likePost(post.id);
+
+    if (!response || response.status === 401) {
+      // Revert optimistic update on auth error or network failure
+      post.liked = originalLiked;
+      post.likes = originalLikes;
+      if (response?.status === 401) {
+        notificationStore.error('Session expired. Please login again');
+        router.push('/login');
+      } else {
+        notificationStore.error('Network error. Please try again');
+      }
+      return;
     }
 
-    try {
-        const response = await newsService.likePost(post.id);
-        
-        if (response.status === 401) {
-            notificationStore.error('Session expired. Please login again');
-            router.push('/login');
-            return;
-        }
+    if (response.success) {
+      const postIndex = posts.value.findIndex(p => p.id === post.id);
+      if (postIndex !== -1) {
+        posts.value[postIndex] = {
+          ...posts.value[postIndex],
+          liked: response.liked === true || response.liked === 1 || response.liked === "true",
+          likes: parseInt(response.likes) || 0,
+          likeLoading: false
+        };
+        // Force reactivity update
+        posts.value = [...posts.value];
 
-        if (response.success) {
-            const postIndex = posts.value.findIndex(p => p.id === post.id);
-            if (postIndex !== -1) {
-                // Ensure the liked status is properly converted to boolean
-                const isLiked = response.liked === true || response.liked === 1 || response.liked === "true";
-                posts.value[postIndex] = {
-                    ...posts.value[postIndex],
-                    liked: isLiked,
-                    likes: parseInt(response.likes) || 0
-                };
-                // Force reactivity update
-                posts.value = [...posts.value];
-            }
+        // Store like state in localStorage as backup
+        const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '{}');
+        if (posts.value[postIndex].liked) {
+          likedPosts[post.id] = true;
         } else {
-            throw new Error(response.message || 'Failed to like post');
+          delete likedPosts[post.id];
         }
-    } catch (error) {
-        console.error('Error liking post:', error);
-        if (error.message.includes('Session expired')) {
-            notificationStore.error('Session expired. Please login again');
-            router.push('/login');
-        } else {
-            notificationStore.error('Failed to like post');
-        }
+        localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
+      }
+    } else {
+      // Revert optimistic update on error
+      post.liked = originalLiked;
+      post.likes = originalLikes;
+      throw new Error(response.message || 'Failed to like post');
     }
+  } catch (error) {
+    console.error('Error liking post:', error);
+    notificationStore.error('Failed to like post');
+  } finally {
+    // Ensure loading state is cleared even if there's an error
+    const postIndex = posts.value.findIndex(p => p.id === post.id);
+    if (postIndex !== -1) {
+      posts.value[postIndex].likeLoading = false;
+      posts.value = [...posts.value];
+    }
+  }
 };
 
 const approvePost = async (postId) => {
-  try { 
+  try {
     loading.value = true;
     await newsService.updatePostStatus(postId, 'approved');
     notificationStore.success('Post approved successfully');
@@ -727,10 +762,21 @@ const autoGrow = (element) => {
   element.style.height = (element.scrollHeight) + "px";
 };
 
+const restoreLikedStates = () => {
+  if (!isAuthenticated.value) return;
+
+  const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '{}');
+  posts.value = posts.value.map(post => ({
+    ...post,
+    liked: post.liked || Boolean(likedPosts[post.id])
+  }));
+};
+
 onMounted(async () => {
-    if (isAuthenticated.value) {
-        await loadPosts();
-    }
+  if (isAuthenticated.value) {
+    await loadPosts();
+    restoreLikedStates();
+  }
 });
 
 </script>
@@ -1010,16 +1056,16 @@ onMounted(async () => {
 }
 
 .interaction-btn.active {
-    color: #00D1D1;
-    background: rgba(0, 209, 209, 0.1);
+  color: #00D1D1;
+  background: rgba(0, 209, 209, 0.1);
 }
 
 .interaction-btn.active i.fa-heart,
 .interaction-btn.active .fas.fa-heart {
-    color: #ff4b4b !important;
-    opacity: 1;
-    visibility: visible;
-    animation: heartBeat 0.3s ease-in-out;
+  color: #ff4b4b !important;
+  opacity: 1;
+  visibility: visible;
+  animation: heartBeat 0.3s ease-in-out;
 }
 
 .interaction-btn:hover i {
@@ -1343,13 +1389,13 @@ onMounted(async () => {
 }
 
 .interaction-btn i.fa-heart {
-    color: #64748b;
-    transition: all 0.3s ease;
+  color: #64748b;
+  transition: all 0.3s ease;
 }
 
 .interaction-btn:hover i.fa-heart {
-    color: #ff4b4b;
-    transform: scale(1.1);
+  color: #ff4b4b;
+  transform: scale(1.1);
 }
 
 .post-footer {
@@ -1629,11 +1675,16 @@ onMounted(async () => {
 
 .interaction-btn.disabled {
   opacity: 0.7;
-  cursor: pointer;
+  cursor: not-allowed;
 }
 
 .interaction-btn.disabled:hover {
   background: rgba(0, 173, 173, 0.05);
+}
+
+
+.interaction-btn .fa-heart.fa-spin {
+  animation: heartBeat 1s infinite;
 }
 
 .comments-loading {
