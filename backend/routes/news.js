@@ -5,7 +5,7 @@ const upload = require('../middleware/upload');
 const db = require('../db/connection');
 const fs = require('fs');
 const path = require('path');
-const cloudinary = require('../config/cloudinary');
+const cloudinary = require('../config/cloudinary');        
 
 // Configure upload directory
 const uploadDir = path.join(__dirname, '../public/uploads');
@@ -311,9 +311,36 @@ router.post('/posts/:postId/comments', auth.authMiddleware, async (req, res) => 
         const { content } = req.body;
         const userId = req.user.userId;
 
+        if (!content || !content.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Comment content is required'
+            });
+        }
+
+        // Check if post exists and is approved
+        const [postResult] = await db.execute(
+            'SELECT status FROM posts WHERE id = ?',
+            [postId]
+        );
+
+        if (!postResult || postResult.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Post not found'
+            });
+        }
+
+        if (postResult[0].status !== 'approved') {
+            return res.status(403).json({
+                success: false,
+                message: 'Cannot comment on unapproved posts'
+            });
+        }
+
         // Check if user exists and is verified
         const [userResult] = await db.execute(
-            'SELECT verified FROM users WHERE id = ?',
+            'SELECT email_verified FROM users WHERE id = ?',
             [userId]
         );
 
@@ -324,8 +351,7 @@ router.post('/posts/:postId/comments', auth.authMiddleware, async (req, res) => 
             });
         }
 
-        // If verification check is not needed, you can remove this condition
-        if (userResult[0].verified !== 1) {
+        if (userResult[0].email_verified === 0) {
             return res.status(403).json({
                 success: false,
                 message: 'Your account needs to be verified to comment'
@@ -334,7 +360,7 @@ router.post('/posts/:postId/comments', auth.authMiddleware, async (req, res) => 
 
         const [result] = await db.execute(
             'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)',
-            [postId, userId, content]
+            [postId, userId, content.trim()]
         );
 
         if (result.insertId) {
@@ -349,9 +375,9 @@ router.post('/posts/:postId/comments', auth.authMiddleware, async (req, res) => 
             const [countResult] = await db.execute(
                 'SELECT COUNT(*) as count FROM comments WHERE post_id = ?',
                 [postId]
-            );
+            );  
 
-            res.json({
+            res.json({ 
                 success: true,
                 comment: comments[0],
                 commentCount: parseInt(countResult[0].count)

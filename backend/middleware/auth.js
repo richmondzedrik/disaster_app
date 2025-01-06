@@ -2,53 +2,45 @@ const jwt = require('jsonwebtoken');
 const config = require('../config');
 const db = require('../db/connection');
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization;
+        const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
         
-        if (!authHeader) {
+        if (!token) {
             return res.status(401).json({
                 success: false,
                 message: 'No token provided'
             });
         }
 
-        let token = authHeader;
-        if (authHeader.startsWith('Bearer ')) {
-            token = authHeader.slice(7);
-        }
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
-        if (!token || token === 'null' || token === 'undefined') {
+        // Check if user exists and is verified
+        const [users] = await db.execute(
+            'SELECT id, username, role, email_verified FROM users WHERE id = ?',
+            [decoded.userId]
+        );
+
+        if (!users.length) {
             return res.status(401).json({
                 success: false,
-                message: 'Invalid token'
+                message: 'User not found'
             });
         }
 
-        try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            if (!decoded.userId || !decoded.role) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Invalid token format'
-                });
-            }
-            
-            req.token = token;
-            req.user = decoded;
-            next();
-        } catch (jwtError) {
-            console.error('JWT Verification failed:', jwtError.message);
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid token'
-            });
-        }
+        req.user = {
+            userId: users[0].id,
+            username: users[0].username,
+            role: users[0].role,
+            isVerified: users[0].email_verified === 1
+        };
+
+        next();
     } catch (error) {
         console.error('Auth middleware error:', error);
-        return res.status(500).json({
+        return res.status(401).json({
             success: false,
-            message: 'Authentication error'
+            message: 'Invalid token'
         });
     }
 };

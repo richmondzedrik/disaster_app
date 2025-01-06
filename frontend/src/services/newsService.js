@@ -228,27 +228,50 @@ export const newsService = {
     
     async addComment(postId, content) {
         try {
+            if (!content || !content.trim()) {
+                return {
+                    success: false,
+                    message: 'Comment content is required'
+                };
+            }
+
             const headers = getHeaders();
             const response = await axios.post(`${API_URL}/news/posts/${postId}/comments`, {
-                content
+                content: content.trim()
             }, {
                 headers,
-                withCredentials: true
+                withCredentials: true,
+                timeout: 15000,
+                validateStatus: status => status < 500 // Only treat 500+ as errors
             });
             
-            if (response.data && response.data.success) {
+            if (response.status === 401) {
+                const authStore = useAuthStore();
+                await authStore.logout();
+                window.location.href = '/login';
+                return {
+                    success: false,
+                    message: 'Session expired. Please login again.'
+                };
+            }
+
+            if (response.data?.success) {
                 return {
                     success: true,
-                    comment: response.data.comment
+                    comment: response.data.comment,
+                    commentCount: response.data.commentCount
                 };
-            } else {
-                throw new Error(response.data?.message || 'Failed to add comment');
             }
+
+            return {
+                success: false,
+                message: response.data?.message || 'Failed to add comment'
+            };
         } catch (error) {
             console.error('Error adding comment:', error);
             return {
                 success: false,
-                message: error.message || 'Failed to add comment'
+                message: 'Network error or server timeout. Please try again.'
             };
         }
     },
@@ -258,7 +281,7 @@ export const newsService = {
             const headers = getHeaders();
             const response = await axios.delete(`${API_URL}/news/posts/${postId}/comments/${commentId}`, {
                 headers,
-                withCredentials: true,
+                withCredentials: true,  
                 data: { reason }
             });
             return {
