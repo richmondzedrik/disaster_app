@@ -127,7 +127,7 @@ async function checkDatabaseTables() {
                 id INT PRIMARY KEY AUTO_INCREMENT,
                 user_id INT NOT NULL,
                 item_id VARCHAR(50) NOT NULL,
-                completed BOOLEAN DEFAULT FALSE,
+                completed BOOLEAN DEFAULT FALSE, 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -223,6 +223,34 @@ async function startServer() {
             console.error('Required database tables are missing after migrations');
             process.exit(1);
         }
+
+        // Add after database connection is established
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS checklist_items (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                user_id INT NOT NULL,
+                item_id VARCHAR(50) NOT NULL,
+                text TEXT NOT NULL,
+                category VARCHAR(100) NOT NULL,
+                info TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_user_item_id (user_id, item_id)
+            )
+        `);
+
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS checklist_progress (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                user_id INT NOT NULL,
+                item_id VARCHAR(50) NOT NULL,
+                completed BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_user_item (user_id, item_id)
+            )
+        `);
 
         // Start the server
         server.listen(PORT, () => {

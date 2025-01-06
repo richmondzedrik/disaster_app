@@ -30,45 +30,25 @@ export const checklistService = {
     try {
       const headers = getHeaders();
       const url = `${API_URL}/checklist/progress`;  
-      console.log('Loading progress from:', url);
+      console.log('Loading checklist from:', url);
       
       const response = await axios.get(url, { 
         headers,
         withCredentials: true 
       });
       
-      console.log('Progress response:', response.data);
+      console.log('Checklist response:', response.data);
       
       if (!response.data?.success) {
         throw new Error(response.data?.message || 'Failed to load checklist progress');
       }
       
-      const items = Array.isArray(response.data.items) ? response.data.items : [];
-      
       return {
         success: true, 
-        items: items.map(item => {
-          const isCustom = typeof item.isCustom === 'boolean' ? 
-            item.isCustom : 
-            item.is_custom === true || item.is_custom === 1;
-            
-          return {
-            id: item.id || item.item_id,
-            completed: Boolean(item.completed),
-            text: item.text || '',
-            category: item.category || '',
-            info: item.info || null,
-            isCustom: isCustom
-          };
-        })
+        items: Array.isArray(response.data.items) ? response.data.items : []
       };
     } catch (error) {
-      if (error.response?.status === 401) {    
-        const authStore = useAuthStore();
-        await authStore.logout();
-        window.location.href = '/login'; // Force a full page reload
-        throw new Error('Session expired. Please login again.');
-      }
+      console.error('Checklist load error:', error);
       throw error;
     }
   },

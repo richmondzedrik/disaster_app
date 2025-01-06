@@ -8,18 +8,10 @@ router.get('/progress', auth.authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
     
-    // Add this debug logging
-    console.log('Checking checklist tables...');
-    const [tables] = await db.execute(`
-      SELECT TABLE_NAME 
-      FROM information_schema.TABLES 
-      WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME IN ('checklist_progress', 'checklist_items')
-    `);
-    console.log('Found tables:', tables);
+    console.log('Loading checklist for user:', userId);
     
-    // First, get all custom items for this user
-    const [customItems] = await db.execute(`
+    // Get custom items only
+    const [items] = await db.execute(`
       SELECT 
         ci.item_id,
         COALESCE(cp.completed, false) as completed,
@@ -34,37 +26,17 @@ router.get('/progress', auth.authMiddleware, async (req, res) => {
       WHERE ci.user_id = ?
     `, [userId]);
 
-    // Then get default items that haven't been customized
-    const [defaultItems] = await db.execute(`
-      SELECT 
-        di.item_id,
-        COALESCE(cp.completed, false) as completed,
-        di.text,
-        di.category,
-        di.info,
-        false as is_custom
-      FROM default_checklist_items di
-      LEFT JOIN checklist_progress cp 
-        ON di.item_id = cp.item_id 
-        AND cp.user_id = ?
-      WHERE NOT EXISTS (
-        SELECT 1 FROM checklist_items 
-        WHERE item_id = di.item_id AND user_id = ?
-      )
-    `, [userId, userId]);
-
-    // Combine both sets of items
-    const items = [...customItems, ...defaultItems].map(row => ({
+    const formattedItems = items.map(row => ({
       id: row.item_id,
       completed: Boolean(row.completed),
       text: row.text,
       category: row.category,
       info: row.info,
-      isCustom: row.is_custom === 1 || row.is_custom === true
+      isCustom: true
     }));
 
-    console.log('Loaded items:', items);
-    res.json({ success: true, items });
+    console.log('Loaded items:', formattedItems);
+    res.json({ success: true, items: formattedItems });
   } catch (error) {
     console.error('Load checklist error:', error);
     res.status(500).json({ 
