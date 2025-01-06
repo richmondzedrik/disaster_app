@@ -198,26 +198,12 @@ export const newsService = {
             const headers = getHeaders();
             const response = await axios.get(`${API_URL}/news/posts/${postId}/comments`, {
                 headers,
-                withCredentials: true,
-                timeout: 15000,
-                validateStatus: status => status < 500 // Only treat 500+ as errors
+                withCredentials: true
             });
-            
-            if (response.status === 401) {
-                return {
-                    success: false,
-                    message: 'Please sign in to view comments',
-                    status: 401
-                };
-            }
-            
-            if (!response.data?.success) {
-                throw new Error(response.data?.message || 'Failed to fetch comments');
-            }
             
             return {
                 success: true,
-                comments: response.data.comments || []
+                comments: response.data || []
             };
         } catch (error) {
             console.error('Error fetching comments:', error);

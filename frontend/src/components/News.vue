@@ -2,7 +2,7 @@
   <div class="news-container">
     <!-- Loading Overlay -->
     <div v-if="loading" class="loading-overlay">
-      <div class="loading-spinner">
+      <div class="loading-spinner">           
         <i class="fas fa-circle-notch fa-spin"></i>
         <span>Loading news...</span>
       </div>
@@ -141,7 +141,7 @@
                   <p>No comments yet. Be the first to comment!</p>
                 </div>
                 <div v-else v-for="comment in post.comments" :key="comment.id" class="comment">
-                  <div class="comment-header">
+                  <div class="comment-header">   
                     <div class="comment-author">
                       <i class="fas fa-user-circle"></i>
                       <span>{{ comment.username }}</span>
@@ -542,7 +542,7 @@ const toggleComments = async (post) => {
     try {
         post.showComments = !post.showComments;
         
-        if (post.showComments) {
+        if (post.showComments) {  // Remove the additional condition
             post.loadingComments = true;
             const response = await newsService.getComments(post.id);
             
@@ -564,8 +564,8 @@ const toggleComments = async (post) => {
             }
         }
     } catch (error) {
-        console.error('Error toggling comments:', error);
-        post.showComments = false;  
+        console.error('Error toggling comments:', error); 
+        post.showComments = false;
         notificationStore.error('Failed to load comments');
     } finally {
         post.loadingComments = false;
@@ -813,7 +813,7 @@ onMounted(() => {
 }
 
 .author-info h3 {
-  font-size: 1.1rem;
+  font-size: 1.1rem;  
   font-weight: 600;
   color: #005C5C;
   margin: 0;
@@ -954,11 +954,7 @@ onMounted(() => {
 }
 
 
-.interaction-btn.active i.fa-heart {
-  color: #ff4b4b;
-  transform: scale(1.1);
-}
-
+.interaction-btn.active i.fa-heart
 .interaction-btn i {
   font-size: 1.1rem;
   transition: transform 0.3s ease;
@@ -966,6 +962,12 @@ onMounted(() => {
 
 .interaction-btn:hover i {
   transform: scale(1.1);
+}
+
+@keyframes heartBeat {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 
 @keyframes slideIn {
@@ -1270,11 +1272,6 @@ onMounted(() => {
   font-size: 2rem;
 }
 
-.interaction-btn.active i.fa-heart {
-  color: #ff4b4b !important;
-  transform: scale(1.1);
-}
-
 .interaction-btn i.fa-heart {
   color: #64748b;
   transition: all 0.3s ease;
@@ -1405,11 +1402,6 @@ onMounted(() => {
   line-height: 1.5;
 }
 
-.interaction-btn.active i.fa-heart {
-  color: #ff4b4b;
-  transform: scale(1.1);
-}
-
 .interaction-btn i.fa-heart {
   color: #64748b;
   transition: all 0.3s ease;
@@ -1480,11 +1472,6 @@ onMounted(() => {
 .image-loading-overlay i,
 .image-error-overlay i {
   font-size: 2rem;
-}
-
-.interaction-btn.active i.fa-heart {
-  color: #ff4b4b !important;
-  transform: scale(1.1);
 }
 
 .interaction-btn i.fa-heart {
