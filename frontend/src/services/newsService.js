@@ -198,17 +198,30 @@ export const newsService = {
             const headers = getHeaders();
             const response = await axios.get(`${API_URL}/news/posts/${postId}/comments`, {
                 headers,
-                withCredentials: true
+                withCredentials: true,
+                timeout: 15000
             });
+            
+            if (!response.data?.success) {
+                throw new Error(response.data?.message || 'Failed to fetch comments');
+            }
+            
             return {
                 success: true,
-                comments: response.data.comments
+                comments: response.data.comments || []
             };
         } catch (error) {
+            if (error.response?.status === 401) {
+                const authStore = useAuthStore();
+                await authStore.logout();
+                window.location.href = '/login';
+                throw new Error('Session expired. Please login again.');
+            }
             console.error('Error fetching comments:', error);
             return {
                 success: false,
-                comments: []
+                comments: [],
+                message: error.response?.data?.message || 'Failed to fetch comments'
             };
         }
     },

@@ -7,15 +7,12 @@
         <span>Loading news...</span>
       </div>
     </div>
-    
+
     <div class="news-content" :class="{ 'blur-content': loading }">
       <div class="news-header">
         <h1>Community News</h1>
-        <button 
-          v-if="isAuthenticated && (isAdmin || canCreatePost)"
-          @click="showPostModal = true" 
-          class="create-post-btn"
-        >
+        <button v-if="isAuthenticated && (isAdmin || canCreatePost)" @click="showPostModal = true"
+          class="create-post-btn">
           <i class="fas fa-plus"></i>
           Create Post
         </button>
@@ -23,12 +20,8 @@
 
       <div v-if="isAdmin" class="admin-controls">
         <div class="filter-controls">
-          <button 
-            v-for="status in ['all', 'pending', 'approved']" 
-            :key="status"
-            @click="postStatus = status"
-            :class="['filter-btn', { active: postStatus === status }]"
-          >
+          <button v-for="status in ['all', 'pending', 'approved']" :key="status" @click="postStatus = status"
+            :class="['filter-btn', { active: postStatus === status }]">
             {{ status.charAt(0).toUpperCase() + status.slice(1) }}
           </button>
         </div>
@@ -61,7 +54,7 @@
           <i class="fas fa-newspaper"></i>
           <p>No news posts yet</p>
         </div>
-        
+
         <div v-else v-for="post in processedPosts" :key="post.id" class="news-card">
           <div class="post-header">
             <div class="author-info">
@@ -83,47 +76,32 @@
               </button>
             </div>
           </div>
-          
+
           <div class="post-content">
             <h2>{{ post.title }}</h2>
             <p>{{ post.content }}</p>
             <div v-if="post.image_url" class="post-image">
-              <img
-                :src="getImageUrl(post.image_url).url"
-                :crossorigin="getImageUrl(post.image_url).crossorigin"
-                @error="handleImageError($event, post)"
-                @load="handleImageLoad($event, post)"
-                alt="Post image"
-                class="post-img"
-              />
+              <img :src="getImageUrl(post.image_url).url" :crossorigin="getImageUrl(post.image_url).crossorigin"
+                @error="handleImageError($event, post)" @load="handleImageLoad($event, post)" alt="Post image"
+                class="post-img" />
             </div>
           </div>
-          
+
           <div class="post-footer">
-            <button 
-              @click="likePost(post)"
-              class="interaction-btn"
-              :class="{ 
-                  'active': post.liked,
-                  'disabled': !isAuthenticated 
-              }"
-            >
+            <button @click="likePost(post)" class="interaction-btn" :class="{
+              'active': post.liked,
+              'disabled': !isAuthenticated
+            }">
               <i class="fas fa-heart"></i>
               <span>{{ post.likes }}</span>
             </button>
-            <button 
-              @click="isAuthenticated ? toggleComments(post) : handleGuestInteraction('comment')"
-              class="interaction-btn"
-              :class="{ 'disabled': !isAuthenticated }"
-            >
+            <button @click="isAuthenticated ? toggleComments(post) : handleGuestInteraction('comment')"
+              class="interaction-btn" :class="{ 'disabled': !isAuthenticated }">
               <i class="fas fa-comment"></i>
               <span>{{ post.commentCount || 0 }}</span>
             </button>
-            <button 
-              @click="isAuthenticated ? savePost(post) : handleGuestInteraction('save')"
-              class="interaction-btn"
-              :class="{ 'disabled': !isAuthenticated }"
-            >
+            <button @click="isAuthenticated ? savePost(post) : handleGuestInteraction('save')" class="interaction-btn"
+              :class="{ 'disabled': !isAuthenticated }">
               <i class="fas fa-bookmark"></i>
             </button>
           </div>
@@ -149,23 +127,18 @@
               <div v-if="isAuthenticated" class="comment-form">
                 <div class="input-wrapper">
                   <i class="fas fa-user-circle"></i>
-                  <textarea 
-                    v-model="post.newComment"
-                    placeholder="Write a comment..."
-                    rows="1"
-                    @input="autoGrow($event.target)"
-                  ></textarea>
+                  <textarea v-model="post.newComment" placeholder="Write a comment..." rows="1"
+                    @input="autoGrow($event.target)"></textarea>
                 </div>
-                <button 
-                  @click="addComment(post)" 
-                  :disabled="!canInteract || !post.newComment || post.newComment.trim().length === 0"
-                  class="post-comment-btn"
-                >
-                  <i class="fas fa-paper-plane"></i>
-                  <span>Post</span>
-                </button>
+<button 
+  @click="addComment(post)" 
+  :disabled="!post.newComment || post.newComment.trim().length === 0"
+  class="post-comment-btn">
+  <i class="fas fa-paper-plane"></i>
+  <span>Post</span>
+</button>
               </div>
-              
+
               <div class="comments-list">
                 <div v-for="comment in post.comments" :key="comment.id" class="comment">
                   <div class="comment-header">
@@ -195,32 +168,16 @@
         <form @submit.prevent="submitPost">
           <div class="form-group">
             <label for="title">Title</label>
-            <input 
-              type="text" 
-              id="title" 
-              v-model="postForm.title" 
-              required
-            >
+            <input type="text" id="title" v-model="postForm.title" required>
           </div>
           <div class="form-group">
             <label for="content">Content</label>
-            <textarea 
-              id="content" 
-              v-model="postForm.content" 
-              rows="4" 
-              required
-            ></textarea>
+            <textarea id="content" v-model="postForm.content" rows="4" required></textarea>
           </div>
           <div class="form-group">
             <label for="image">Image (optional)</label>
             <div class="image-upload">
-              <input 
-                type="file" 
-                id="image" 
-                @change="handleImageUpload"
-                accept="image/*"
-                class="image-input"
-              >
+              <input type="file" id="image" @change="handleImageUpload" accept="image/*" class="image-input">
               <div class="upload-preview" v-if="imagePreview">
                 <img :src="imagePreview" alt="Preview">
                 <button type="button" @click="removeImage" class="remove-image">
@@ -245,7 +202,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '../stores/auth';          
 import { useNotificationStore } from '../stores/notification';
 import { newsService } from '../services/newsService';
 import { useRouter } from 'vue-router';
@@ -276,25 +233,26 @@ const imageLoaded = ref(false);
 const user = computed(() => authStore.user);
 const isAuthenticated = computed(() => authStore.isAuthenticated);
 const canInteract = computed(() => {
-  return isAuthenticated.value && authStore.user?.verified;
+  return isAuthenticated.value && (authStore.user?.verified || authStore.user?.role === 'admin');
 });
+
 const canCreatePost = computed(() => {
   return isAuthenticated.value && (
-    authStore.user?.role === 'admin' || 
+    authStore.user?.role === 'admin' ||
     (authStore.user?.verified && authStore.user?.status === 'active')
   );
 });
 const isAdmin = computed(() => user.value?.role === 'admin');
 const filteredPosts = computed(() => {
   let filtered = posts.value;
-  
+
   // Always show approved posts for everyone
   if (!isAdmin.value) {
     filtered = filtered.filter(post => post.status === 'approved');
   } else if (postStatus.value !== 'all') {
     filtered = filtered.filter(post => post.status === postStatus.value);
   }
-  
+
   return filtered;
 });
 
@@ -322,32 +280,32 @@ const createPost = async (postData) => {
 
 // Methods
 const loadPosts = async () => {
-    try {
-        loading.value = true;
-        const response = await newsService.getPublicPosts();
-        
-        if (response.success) {
-            posts.value = response.posts.map(post => ({
-                ...post,
-                showComments: false,
-                comments: [],
-                newComment: '',
-                commentCount: parseInt(post.comment_count) || 0
-            }));
-        }
-    } catch (error) {
-        console.error('Error loading posts:', error);
-        notificationStore.error('Failed to load posts');
-    } finally {
-        loading.value = false;
+  try {
+    loading.value = true;
+    const response = await newsService.getPublicPosts();
+
+    if (response.success) {
+      posts.value = response.posts.map(post => ({
+        ...post,
+        showComments: false,
+        comments: [],
+        newComment: '',
+        commentCount: parseInt(post.comment_count) || 0
+      }));
     }
+  } catch (error) {
+    console.error('Error loading posts:', error);
+    notificationStore.error('Failed to load posts');
+  } finally {
+    loading.value = false;
+  }
 };
 
 const formatDate = (date) => {
   if (!date) return '';
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   if (isNaN(dateObj.getTime())) return '';
-  
+
   return dateObj.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -388,13 +346,13 @@ const submitPost = async () => {
     const formData = new FormData();
     formData.append('title', postForm.value.title.trim());
     formData.append('content', postForm.value.content.trim());
-    
+
     if (imageFile.value) {
       formData.append('image', imageFile.value);
     }
 
     const response = await newsService.createPost(formData);
-    
+
     if (response.success) {
       notificationStore.success('Post created successfully and pending approval');
       closeModal();
@@ -432,7 +390,7 @@ const deletePost = async (postId) => {
     loading.value = true;
     await newsService.deletePost(postId);
     notificationStore.success('Post deleted successfully');
-    loadPosts(); 
+    loadPosts();
   } catch (error) {
     console.error('Delete post error:', error);
     notificationStore.error('Failed to delete post');
@@ -449,27 +407,27 @@ const processedPosts = computed(() => {
 });
 
 const likePost = async (post) => {
-    if (!isAuthenticated.value) { 
-        notificationStore.info('Please sign in to like posts');
-        return;
+  if (!isAuthenticated.value) {
+    notificationStore.info('Please sign in to like posts');
+    return;
+  }
+
+  try {
+    const response = await newsService.likePost(post.id);
+    if (response.success) {
+      const postIndex = posts.value.findIndex(p => p.id === post.id);
+      if (postIndex !== -1) {
+        posts.value[postIndex] = {
+          ...posts.value[postIndex],
+          liked: Boolean(response.liked),
+          likes: parseInt(response.likes) || posts.value[postIndex].likes
+        };
+      }
     }
-    
-    try {
-        const response = await newsService.likePost(post.id);
-        if (response.success) {
-            const postIndex = posts.value.findIndex(p => p.id === post.id);
-            if (postIndex !== -1) {
-                posts.value[postIndex] = {
-                    ...posts.value[postIndex],
-                    liked: Boolean(response.liked),
-                    likes: parseInt(response.likes) || posts.value[postIndex].likes
-                };
-            }
-        }
-    } catch (error) {
-        console.error('Error liking post:', error);
-        notificationStore.error('Failed to like post');
-    }
+  } catch (error) {
+    console.error('Error liking post:', error);
+    notificationStore.error('Failed to like post');
+  }
 };
 
 const approvePost = async (postId) => {
@@ -502,7 +460,7 @@ const rejectPost = async (postId) => {
 
 const getImageUrl = (imageUrl) => {
   if (!imageUrl) return { url: '', crossorigin: 'anonymous' };
-  
+
   try {
     // If it's a Cloudinary URL or any other full URL, return as is
     if (imageUrl.startsWith('http')) {
@@ -511,11 +469,11 @@ const getImageUrl = (imageUrl) => {
         crossorigin: 'anonymous'
       };
     }
-    
+
     // Fallback for any legacy images
     const cleanImageUrl = imageUrl.replace(/^\/+/, '').replace(/\\/g, '/');
     const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
-    
+
     return {
       url: `${baseUrl}/uploads/${cleanImageUrl}`,
       crossorigin: 'anonymous'
@@ -528,17 +486,17 @@ const getImageUrl = (imageUrl) => {
 
 const handleImageError = (event, post) => {
   if (!post) return;
-  
+
   post.imageError = true;
   post.imageLoaded = false;
-  
+
   // Log the error with more context for debugging
   console.warn(`Failed to load image for post ${post.id}:`, {
     imageUrl: post.image_url,
     constructedUrl: getImageUrl(post.image_url).url,
     error: event?.target?.error || event
   });
-  
+
   // Attempt to reload the image once with a cache-busting parameter
   if (!event.target.dataset.retried) {
     event.target.dataset.retried = 'true';
@@ -548,7 +506,7 @@ const handleImageError = (event, post) => {
 
 const handleImageLoad = (event, post) => {
   if (!post) return;
-  
+
   post.imageLoaded = true;
   post.imageError = false;
 };
@@ -641,7 +599,7 @@ const addComment = async (post) => {
   }
 
   if (!post.newComment || post.newComment.trim().length === 0) return;
-  
+
   try {
     const response = await newsService.addComment(post.id, post.newComment.trim());
     if (response.success) {
@@ -649,7 +607,7 @@ const addComment = async (post) => {
       if (!post.comments) post.comments = [];
       post.comments.unshift(response.comment);
       post.commentCount = (post.commentCount || 0) + 1;
-      
+
       // Find the post index and update it properly
       const postIndex = posts.value.findIndex(p => p.id === post.id);
       if (postIndex !== -1) {
@@ -660,7 +618,7 @@ const addComment = async (post) => {
           newComment: '' // Reset the newComment field after successful post
         };
       }
-      
+
       // Force reactivity update
       posts.value = [...posts.value];
       notificationStore.success('Comment added successfully');
@@ -672,29 +630,29 @@ const addComment = async (post) => {
 };
 
 const deleteComment = async (post, comment) => {
-    if (!confirm('Are you sure you want to delete this comment?')) {
-        return;
-    }
+  if (!confirm('Are you sure you want to delete this comment?')) {
+    return;
+  }
 
-    try {
-        const reason = prompt('Please provide a reason for deletion:');
-        if (!reason) return;
+  try {
+    const reason = prompt('Please provide a reason for deletion:');
+    if (!reason) return;
 
-        const response = await newsService.deleteComment(post.id, comment.id, reason);
-        
-        if (response.success) {
-            // Update the comment in the UI to show as deleted
-            comment.content = '[Deleted by Admin]';
-            comment.deleted_by = authStore.user.id;
-            comment.deletion_reason = reason;
-            notificationStore.success('Comment deleted successfully');
-        } else {
-            throw new Error(response.message);
-        }
-    } catch (error) {
-        console.error('Failed to delete comment:', error);
-        notificationStore.error(error.message || 'Failed to delete comment');
+    const response = await newsService.deleteComment(post.id, comment.id, reason);
+
+    if (response.success) {
+      // Update the comment in the UI to show as deleted
+      comment.content = '[Deleted by Admin]';
+      comment.deleted_by = authStore.user.id;
+      comment.deletion_reason = reason;
+      notificationStore.success('Comment deleted successfully');
+    } else {
+      throw new Error(response.message);
     }
+  } catch (error) {
+    console.error('Failed to delete comment:', error);
+    notificationStore.error(error.message || 'Failed to delete comment');
+  }
 };
 
 const handleGuestInteraction = (type) => {
@@ -958,12 +916,10 @@ onMounted(() => {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent);
   transition: 0.5s;
 }
 
@@ -992,16 +948,16 @@ onMounted(() => {
 .interaction-btn:hover {
   background: rgba(0, 173, 173, 0.1);
 }
- 
+
 .interaction-btn.active {
-    color: #00D1D1;
-    background: rgba(0, 209, 209, 0.1);
+  color: #00D1D1;
+  background: rgba(0, 209, 209, 0.1);
 }
 
 
 .interaction-btn.active i.fa-heart {
   color: #ff4b4b;
-  transform: scale(1.1);    
+  transform: scale(1.1);
 }
 
 .interaction-btn i {
@@ -1018,6 +974,7 @@ onMounted(() => {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1169,7 +1126,8 @@ onMounted(() => {
   border-top: 1px solid rgba(0, 173, 173, 0.1);
 }
 
-.approve-btn, .reject-btn {
+.approve-btn,
+.reject-btn {
   padding: 0.75rem 1.25rem;
   border-radius: 8px;
   display: flex;
@@ -1284,7 +1242,8 @@ onMounted(() => {
   opacity: 1;
 }
 
-.image-loading, .image-error-overlay {
+.image-loading,
+.image-error-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -1334,217 +1293,217 @@ onMounted(() => {
 }
 
 .post-footer {
-    display: flex;
-    gap: 1rem;
-    padding: 1rem 0;
-    border-top: 1px solid rgba(0, 173, 173, 0.1);
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid rgba(0, 173, 173, 0.1);
 }
 
 .interaction-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border: none;
-    background: transparent;
-    color: #64748b;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border-radius: 8px;
-} 
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+}
 
 .interaction-btn:hover {
-    background: rgba(0, 173, 173, 0.1);
-    color: #00D1D1;
+  background: rgba(0, 173, 173, 0.1);
+  color: #00D1D1;
 }
 
 .interaction-btn.active {
-    color: #00D1D1;
+  color: #00D1D1;
 }
 
 .interaction-btn i {
-    font-size: 1.1rem;
+  font-size: 1.1rem;
 }
 
 .interaction-btn span {
-    font-size: 0.9rem;
-    font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .comments-section {
-    margin-top: 1rem;
-    padding: 1rem;
-    background: rgba(0, 173, 173, 0.05);
-    border-radius: 8px;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 173, 173, 0.05);
+  border-radius: 8px;
 }
 
 .comment-form {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .comment-form input {
-    flex: 1;
-    padding: 0.75rem;
-    border: 1px solid rgba(0, 173, 173, 0.2);
-    border-radius: 8px;
-    background: white;
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid rgba(0, 173, 173, 0.2);
+  border-radius: 8px;
+  background: white;
 }
 
 .comment-btn {
-    padding: 0.75rem;
-    background: #00D1D1;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
+  padding: 0.75rem;
+  background: #00D1D1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .comment-btn:hover {
-    background: #00A3A3;
+  background: #00A3A3;
 }
 
 .comments-list {
-    margin-top: 1rem;
+  margin-top: 1rem;
 }
 
 .comment {
-    padding: 1rem;
-    border-radius: 8px;
-    background: rgba(0, 173, 173, 0.05);
-    margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: rgba(0, 173, 173, 0.05);
+  margin-bottom: 1rem;
 }
 
 .comment-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
 }
 
 .comment-author {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #005C5C;
-    font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #005C5C;
+  font-weight: 600;
 }
 
 .comment-author i {
-    color: #00D1D1;
-    font-size: 1.2rem;
+  color: #00D1D1;
+  font-size: 1.2rem;
 }
 
 .comment-date {
-    font-size: 0.875rem;
-    color: #64748b;
+  font-size: 0.875rem;
+  color: #64748b;
 }
 
 .comment-content {
-    color: #334155;
-    line-height: 1.5;
+  color: #334155;
+  line-height: 1.5;
 }
 
 .interaction-btn.active i.fa-heart {
-    color: #ff4b4b;
-    transform: scale(1.1);
+  color: #ff4b4b;
+  transform: scale(1.1);
 }
 
 .interaction-btn i.fa-heart {
-    color: #64748b;
-    transition: all 0.3s ease;
+  color: #64748b;
+  transition: all 0.3s ease;
 }
 
 .interaction-btn:hover i.fa-heart {
-    color: #ff4b4b;
-    transform: scale(1.1);
+  color: #ff4b4b;
+  transform: scale(1.1);
 }
 
 .comment-actions {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .delete-comment-btn {
-    background: transparent;
-    border: none;
-    color: #dc2626;
-    cursor: pointer;
-    padding: 0.25rem;
-    border-radius: 4px;
-    transition: all 0.3s ease;
+  background: transparent;
+  border: none;
+  color: #dc2626;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.3s ease;
 }
 
 .delete-comment-btn:hover {
-    background: rgba(220, 38, 38, 0.1);
+  background: rgba(220, 38, 38, 0.1);
 }
 
 .comment-content.deleted {
-    color: #64748b;
-    font-style: italic;
+  color: #64748b;
+  font-style: italic;
 }
 
 .deletion-info {
-    margin-top: 0.5rem;
-    font-size: 0.875rem;
-    color: #dc2626;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #dc2626;
 }
 
 .deletion-reason {
-    font-style: italic;
+  font-style: italic;
 }
 
 .image-loading-overlay,
 .image-error-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .image-loading-overlay {
-    background: rgba(255, 255, 255, 0.9);
-    color: #00D1D1;
+  background: rgba(255, 255, 255, 0.9);
+  color: #00D1D1;
 }
 
 .image-error-overlay {
-    background: rgba(255, 255, 255, 0.95);
-    color: #dc2626;
+  background: rgba(255, 255, 255, 0.95);
+  color: #dc2626;
 }
 
 .image-loading-overlay i,
 .image-error-overlay i {
-    font-size: 2rem;
+  font-size: 2rem;
 }
 
 .interaction-btn.active i.fa-heart {
-    color: #ff4b4b !important;
-    transform: scale(1.1);
+  color: #ff4b4b !important;
+  transform: scale(1.1);
 }
 
 .interaction-btn i.fa-heart {
-    color: #64748b;
-    transition: all 0.3s ease;
+  color: #64748b;
+  transition: all 0.3s ease;
 }
 
 .interaction-btn:hover i.fa-heart {
-    color: #ff4b4b;
-    transform: scale(1.1);
+  color: #ff4b4b;
+  transform: scale(1.1);
 }
 
 .interaction-btn.active .fas.fa-heart {
-    opacity: 1;
-    visibility: visible;
-    color: #ff4b4b !important;
+  opacity: 1;
+  visibility: visible;
+  color: #ff4b4b !important;
 }
 
 .guest-prompt {
@@ -1583,7 +1542,8 @@ onMounted(() => {
   justify-content: center;
 }
 
-.login-btn, .register-btn {
+.login-btn,
+.register-btn {
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   font-weight: 600;
@@ -1602,7 +1562,8 @@ onMounted(() => {
   border: 1px solid rgba(0, 209, 209, 0.2);
 }
 
-.login-btn:hover, .register-btn:hover {
+.login-btn:hover,
+.register-btn:hover {
   transform: translateY(-2px);
 }
 
@@ -1752,12 +1713,10 @@ onMounted(() => {
   .comment-form {
     flex-direction: column;
   }
-  
+
   .post-comment-btn {
     width: 100%;
     justify-content: center;
   }
 }
-
 </style>
-
