@@ -311,6 +311,27 @@ router.post('/posts/:postId/comments', auth.authMiddleware, async (req, res) => 
         const { content } = req.body;
         const userId = req.user.userId;
 
+        // Check if user exists and is verified
+        const [userResult] = await db.execute(
+            'SELECT verified FROM users WHERE id = ?',
+            [userId]
+        );
+
+        if (!userResult || userResult.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // If verification check is not needed, you can remove this condition
+        if (userResult[0].verified !== 1) {
+            return res.status(403).json({
+                success: false,
+                message: 'Your account needs to be verified to comment'
+            });
+        }
+
         const [result] = await db.execute(
             'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)',
             [postId, userId, content]
@@ -325,7 +346,6 @@ router.post('/posts/:postId/comments', auth.authMiddleware, async (req, res) => 
                 [result.insertId]
             );
 
-            // Get updated comment count
             const [countResult] = await db.execute(
                 'SELECT COUNT(*) as count FROM comments WHERE post_id = ?',
                 [postId]
@@ -613,7 +633,7 @@ router.post('/auth/verify-code', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Verification failed. Please try again.'
-        });
+        });   
     }
 });
 

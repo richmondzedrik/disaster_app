@@ -130,13 +130,10 @@
                   <textarea v-model="post.newComment" placeholder="Write a comment..." rows="1"
                     @input="autoGrow($event.target)"></textarea>
                 </div>
-<button 
-  @click="addComment(post)" 
-  :disabled="!post.newComment || post.newComment.trim().length === 0"
-  class="post-comment-btn">
-  <i class="fas fa-paper-plane"></i>
-  <span>Post</span>
-</button>
+                <button @click="addComment(post)" class="post-comment-btn">
+                  <i class="fas fa-paper-plane"></i>
+                  <span>Post</span>
+                </button>
               </div>
 
               <div class="comments-list">
@@ -146,7 +143,12 @@
                       <i class="fas fa-user-circle"></i>
                       <span>{{ comment.username }}</span>
                     </div>
-                    <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
+                    <div class="comment-actions">
+                      <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
+                      <button v-if="isAdmin" @click="deleteComment(post, comment)" class="delete-comment-btn">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
                   </div>
                   <div class="comment-content" :class="{ 'deleted': comment.deleted_by }">
                     {{ comment.content }}
@@ -202,7 +204,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useAuthStore } from '../stores/auth';          
+import { useAuthStore } from '../stores/auth';
 import { useNotificationStore } from '../stores/notification';
 import { newsService } from '../services/newsService';
 import { useRouter } from 'vue-router';
@@ -590,38 +592,36 @@ const loadComments = async (post) => {
 const addComment = async (post) => {
   if (!isAuthenticated.value) {
     notificationStore.info('Please sign in to comment');
+    router.push('/login');
     return;
   }
 
-  if (!canInteract.value) {
-    notificationStore.info('Your account needs to be verified to comment');
+  if (!post.newComment || post.newComment.trim().length === 0) {
+    notificationStore.info('Please write a comment before posting');
     return;
   }
-
-  if (!post.newComment || post.newComment.trim().length === 0) return;
 
   try {
     const response = await newsService.addComment(post.id, post.newComment.trim());
     if (response.success) {
-      // Add new comment to the list
       if (!post.comments) post.comments = [];
       post.comments.unshift(response.comment);
       post.commentCount = (post.commentCount || 0) + 1;
 
-      // Find the post index and update it properly
       const postIndex = posts.value.findIndex(p => p.id === post.id);
       if (postIndex !== -1) {
         posts.value[postIndex] = {
           ...posts.value[postIndex],
           comments: post.comments,
           commentCount: post.commentCount,
-          newComment: '' // Reset the newComment field after successful post
+          newComment: ''
         };
       }
 
-      // Force reactivity update
       posts.value = [...posts.value];
       notificationStore.success('Comment added successfully');
+    } else {
+      notificationStore.error(response.message || 'Failed to add comment');
     }
   } catch (error) {
     console.error('Error adding comment:', error);
@@ -1428,19 +1428,17 @@ onMounted(() => {
 }
 
 .delete-comment-btn {
-  background: transparent;
+  background: none;
   border: none;
   color: #dc2626;
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 4px;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .delete-comment-btn:hover {
-  background: rgba(220, 38, 38, 0.1);
+  transform: scale(1.1);
 }
-
 .comment-content.deleted {
   color: #64748b;
   font-style: italic;
@@ -1694,10 +1692,9 @@ onMounted(() => {
   align-self: flex-start;
 }
 
-.post-comment-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background: #94a3b8;
+.post-comment-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 209, 209, 0.2);
 }
 
 .post-comment-btn:not(:disabled):hover {
