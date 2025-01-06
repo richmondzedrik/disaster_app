@@ -809,7 +809,7 @@ onMounted(() => {
   font-size: 2.5rem;
   color: #00D1D1;
   background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
-  -webkit-background-clip: text;
+  -webkit-background-clip: text;          
   -webkit-text-fill-color: transparent;
 }
 
