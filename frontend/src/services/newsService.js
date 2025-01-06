@@ -193,26 +193,32 @@ export const newsService = {
         return response.data;
     },
     
-    async getComments(postId) {
-        try {
-            const headers = getHeaders();
-            const response = await axios.get(`${API_URL}/news/posts/${postId}/comments`, {
-                headers,
-                withCredentials: true
-            });
-            
-            return {
-                success: true,
-                comments: response.data || []
-            };
-        } catch (error) {
-            console.error('Error fetching comments:', error);
-            return {  
-                success: false,
-                comments: [],
-                message: error.response?.data?.message || 'Failed to fetch comments',
-                status: error.response?.status
-            };
+    async getComments(postId, retries = 2) {
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+                const headers = getHeaders();
+                const response = await axios.get(`${API_URL}/news/posts/${postId}/comments`, {
+                    headers,
+                    withCredentials: true,
+                    timeout: 5000
+                });
+                
+                return {
+                    success: true,
+                    comments: response.data.comments || []
+                };
+            } catch (error) {
+                if (attempt === retries) {
+                    console.error('Error fetching comments:', error);
+                    return {  
+                        success: false,
+                        comments: [],
+                        message: error.response?.data?.message || 'Failed to fetch comments',
+                        status: error.response?.status
+                    };
+                }
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            }
         }
     },
     
@@ -223,7 +229,7 @@ export const newsService = {
                     success: false,
                     message: 'Comment content is required'
                 };
-            }
+            }  
 
             const headers = getHeaders();
             const response = await axios.post(`${API_URL}/news/posts/${postId}/comments`, {

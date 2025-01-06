@@ -2,7 +2,7 @@
   <div class="news-container">
     <!-- Loading Overlay -->
     <div v-if="loading" class="loading-overlay">
-      <div class="loading-spinner">           
+      <div class="loading-spinner">
         <i class="fas fa-circle-notch fa-spin"></i>
         <span>Loading news...</span>
       </div>
@@ -119,8 +119,16 @@
 
           <div v-if="post.showComments" class="comments-section">
             <div v-if="post.loadingComments" class="comments-loading">
-              <i class="fas fa-circle-notch fa-spin"></i>
-              <span>Loading comments...</span>
+              <div class="loading-spinner">
+                <i class="fas fa-circle-notch fa-spin"></i>
+                <span>Loading comments...</span>
+              </div>
+            </div>
+            <div v-else-if="post.commentError" class="comments-error">
+              <p>{{ post.commentError }}</p>
+              <button @click="retryLoadComments(post)" class="retry-btn">
+                Retry Loading Comments
+              </button>
             </div>
             <div v-else>
               <!-- Add comment form -->
@@ -140,8 +148,8 @@
                 <div v-if="post.comments && post.comments.length === 0" class="no-comments">
                   <p>No comments yet. Be the first to comment!</p>
                 </div>
-                <div v-else v-for="comment in post.comments" :key="comment.id" class="comment">
-                  <div class="comment-header">   
+                <div v-else v-for="comment in getPostComments(post.id)" :key="comment.id" class="comment">
+                  <div class="comment-header">
                     <div class="comment-author">
                       <i class="fas fa-user-circle"></i>
                       <span>{{ comment.username }}</span>
@@ -281,6 +289,11 @@ const createPost = async (postData) => {
   } finally {
     loading.value = false;
   }
+};
+
+const getPostComments = (postId) => {
+  const post = posts.value.find(p => p.id === postId);
+  return post?.comments || [];
 };
 
 // Methods
@@ -534,42 +547,48 @@ const savePost = async (post) => {
 };
 
 const toggleComments = async (post) => {
-    if (!isAuthenticated.value) {
-        handleGuestInteraction('comment');
-        return;
-    }
+  if (!post.showComments) {
+    post.showComments = true;
+    post.loadingComments = true;
 
     try {
-        post.showComments = !post.showComments;
-        
-        if (post.showComments) {  // Remove the additional condition
-            post.loadingComments = true;
-            const response = await newsService.getComments(post.id);
-            
-            if (response.success) {
-                post.comments = response.comments || [];
-                // Force reactivity update
-                const postIndex = posts.value.findIndex(p => p.id === post.id);
-                if (postIndex !== -1) {
-                    posts.value[postIndex] = { ...post };
-                    posts.value = [...posts.value];
-                }
-            } else {
-                post.showComments = false;
-                if (response.status === 401) {
-                    handleGuestInteraction('comment');
-                } else {
-                    notificationStore.error(response.message || 'Failed to load comments');
-                }
-            }
+      const response = await newsService.getComments(post.id);
+
+      if (response.success) {
+        // Update the post in the posts array to maintain reactivity
+        const postIndex = posts.value.findIndex(p => p.id === post.id);
+        if (postIndex !== -1) {
+          posts.value[postIndex] = {
+            ...posts.value[postIndex],
+            comments: response.comments,
+            showComments: true,
+            loadingComments: false
+          };
+          // Force reactivity update
+          posts.value = [...posts.value];
         }
+      } else {
+        throw new Error(response.message || 'Failed to load comments');
+      }
     } catch (error) {
-        console.error('Error toggling comments:', error); 
-        post.showComments = false;
-        notificationStore.error('Failed to load comments');
+      console.error('Error loading comments:', error);
+      notificationStore.error('Failed to load comments. Please try again.');
+      post.showComments = false;
     } finally {
-        post.loadingComments = false;
+      post.loadingComments = false;
     }
+  } else {
+    // When hiding comments, update the post in the array
+    const postIndex = posts.value.findIndex(p => p.id === post.id);
+    if (postIndex !== -1) {
+      posts.value[postIndex] = {
+        ...posts.value[postIndex],
+        showComments: false,
+        comments: []
+      };
+      posts.value = [...posts.value];
+    }
+  }
 };
 
 const loadComments = async (post) => {
@@ -585,6 +604,22 @@ const loadComments = async (post) => {
   } catch (error) {
     console.error('Error loading comments:', error);
     notificationStore.error('Failed to load comments');
+  }
+};
+
+const retryLoadComments = async (post) => {
+  post.loadingComments = true;
+  try {
+    const response = await newsService.getComments(post.id);
+    if (response.success) {
+      post.comments = response.comments;
+    } else {
+      throw new Error(response.message || 'Failed to load comments');
+    }
+  } catch (error) {
+    notificationStore.error('Failed to load comments. Please try again.');
+  } finally {
+    post.loadingComments = false;
   }
 };
 
@@ -808,16 +843,16 @@ onMounted(() => {
   font-size: 2.5rem;
   color: #00D1D1;
   background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
-  -webkit-background-clip: text;          
+  -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .author-info h3 {
-  font-size: 1.1rem;  
+  font-size: 1.1rem;
   font-weight: 600;
   color: #005C5C;
   margin: 0;
-}   
+}
 
 .post-date {
   color: #64748b;
@@ -954,8 +989,7 @@ onMounted(() => {
 }
 
 
-.interaction-btn.active i.fa-heart
-.interaction-btn i {
+.interaction-btn.active i.fa-heart .interaction-btn i {
   font-size: 1.1rem;
   transition: transform 0.3s ease;
 }
@@ -965,9 +999,17 @@ onMounted(() => {
 }
 
 @keyframes heartBeat {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes slideIn {
@@ -1430,6 +1472,7 @@ onMounted(() => {
 .delete-comment-btn:hover {
   transform: scale(1.1);
 }
+
 .comment-content.deleted {
   color: #64748b;
   font-style: italic;
