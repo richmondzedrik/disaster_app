@@ -114,12 +114,41 @@ exports.sendVerificationEmail = async (email, code) => {
 };
 
 // Database query logging
-const originalExecute = db.execute;
+const originalExecute = db.execute; 
 
 async function checkDatabaseTables() {
     let connection;
     try {
         connection = await db.getConnection();
+        
+        // Add specific checks for checklist tables
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS checklist_progress (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                user_id INT NOT NULL,
+                item_id VARCHAR(50) NOT NULL,
+                completed BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_user_item (user_id, item_id)
+            )
+        `);
+
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS checklist_items (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                user_id INT NOT NULL,
+                item_id VARCHAR(50) NOT NULL,
+                text TEXT NOT NULL,
+                category VARCHAR(100) NOT NULL,
+                info TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_user_item_id (user_id, item_id)
+            )
+        `);
+
         const [tables] = await connection.execute(`
             SELECT TABLE_NAME 
             FROM information_schema.TABLES 

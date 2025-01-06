@@ -29,13 +29,15 @@ export const checklistService = {
   async loadProgress() {
     try {
       const headers = getHeaders();
-      const url = `${API_URL}/checklist/progress`;
-      console.log('Loading progress with headers:', headers);
+      const url = `${API_URL}/checklist/progress`;  
+      console.log('Loading progress from:', url);
       
       const response = await axios.get(url, { 
         headers,
         withCredentials: true 
       });
+      
+      console.log('Progress response:', response.data);
       
       if (!response.data?.success) {
         throw new Error(response.data?.message || 'Failed to load checklist progress');
@@ -61,7 +63,7 @@ export const checklistService = {
         })
       };
     } catch (error) {
-      if (error.response?.status === 401) { 
+      if (error.response?.status === 401) {    
         const authStore = useAuthStore();
         await authStore.logout();
         window.location.href = '/login'; // Force a full page reload

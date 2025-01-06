@@ -8,13 +8,23 @@ router.get('/progress', auth.authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
     
+    // Add this debug logging
+    console.log('Checking checklist tables...');
+    const [tables] = await db.execute(`
+      SELECT TABLE_NAME 
+      FROM information_schema.TABLES 
+      WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME IN ('checklist_progress', 'checklist_items')
+    `);
+    console.log('Found tables:', tables);
+    
     // First, get all custom items for this user
     const [customItems] = await db.execute(`
       SELECT 
         ci.item_id,
         COALESCE(cp.completed, false) as completed,
         ci.text,
-        ci.category,
+        ci.category,  
         ci.info,
         true as is_custom
       FROM checklist_items ci

@@ -26,24 +26,13 @@ const corsOptions = {
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Content-Range', 'X-Content-Range']
 };
 
 app.set('trust proxy', true);
 
-app.options('*', cors(corsOptions));
-
-// Update CORS configuration
-app.use(cors({
-    origin: [
-      'https://disasterapp.netlify.app',
-      'http://localhost:5173' // Keep local development access
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-  }));
+app.use(cors(corsOptions));
 
 app.get('/api/test', (req, res) => {
     res.json({
