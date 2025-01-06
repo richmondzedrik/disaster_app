@@ -8,7 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const getHeaders = () => {
   const authStore = useAuthStore();
   const token = authStore.accessToken || localStorage.getItem('token');
-  
+       
   if (!token) {
     throw new Error('No authentication token available');
   }
@@ -26,7 +26,18 @@ export const newsService = {
                 withCredentials: true,
                 timeout: 15000
             });
-            return response.data;
+            
+            // Ensure liked status is properly set for each post
+            const posts = response.data.posts?.map(post => ({
+                ...post,
+                liked: Boolean(post.liked),
+                likes: parseInt(post.likes) || 0
+            })) || [];
+    
+            return {
+                success: true,
+                posts
+            };
         } catch (error) {
             console.error('getPublicPosts error:', error);
             return {
@@ -152,17 +163,32 @@ export const newsService = {
             const headers = getHeaders();
             const response = await axios.post(`${API_URL}/news/posts/${postId}/like`, {}, {
                 headers,
-                withCredentials: true
+                withCredentials: true,
+                validateStatus: status => status < 500 // Handle 401 in catch
             });
             
+            // Handle 401 Unauthorized
+            if (response.status === 401) {
+                const authStore = useAuthStore();
+                await authStore.logout();
+                throw new Error('Session expired. Please login again.');
+            }
+
             return {
                 success: true,
-                likes: parseInt(response.data.likes),
+                likes: parseInt(response.data.likes) || 0,
                 liked: Boolean(response.data.liked)
             };
         } catch (error) {
+            if (error.message.includes('Session expired')) {
+                throw error; // Rethrow session errors
+            }
             console.error('Error liking post:', error);
-            throw new Error(error.response?.data?.message || 'Failed to like post');
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Failed to like post',
+                status: error.response?.status
+            };
         }
     },
 

@@ -308,7 +308,9 @@ const loadPosts = async () => {
         showComments: false,
         comments: [],
         newComment: '',
-        commentCount: parseInt(post.comment_count) || 0
+        commentCount: parseInt(post.comment_count) || 0,
+        liked: post.liked === true, // Explicitly convert to boolean
+        likes: parseInt(post.likes) || 0
       }));
     }
   } catch (error) {
@@ -425,31 +427,47 @@ const processedPosts = computed(() => {
 });
 
 const likePost = async (post) => {
-  if (!isAuthenticated.value) {
-    notificationStore.info('Please sign in to like posts');
-    return;
-  }
-
-  try {
-    const response = await newsService.likePost(post.id);
-    if (response.success) {
-      const postIndex = posts.value.findIndex(p => p.id === post.id);
-      if (postIndex !== -1) {
-        posts.value[postIndex] = {
-          ...posts.value[postIndex],
-          liked: Boolean(response.liked),
-          likes: parseInt(response.likes) || posts.value[postIndex].likes
-        };
-      }
+    if (!isAuthenticated.value) {
+        notificationStore.info('Please sign in to like posts');
+        return;
     }
-  } catch (error) {
-    console.error('Error liking post:', error);
-    notificationStore.error('Failed to like post');
-  }
+
+    try {
+        const response = await newsService.likePost(post.id);
+        
+        if (response.status === 401) {
+            notificationStore.error('Session expired. Please login again');
+            router.push('/login');
+            return;
+        }
+
+        if (response.success) {
+            const postIndex = posts.value.findIndex(p => p.id === post.id);
+            if (postIndex !== -1) {
+                posts.value[postIndex] = {
+                    ...posts.value[postIndex],
+                    liked: response.liked,
+                    likes: response.likes
+                };
+                // Force reactivity update
+                posts.value = [...posts.value];
+            }
+        } else {
+            throw new Error(response.message || 'Failed to like post');
+        }
+    } catch (error) {
+        console.error('Error liking post:', error);
+        if (error.message.includes('Session expired')) {
+            notificationStore.error('Session expired. Please login again');
+            router.push('/login');
+        } else {
+            notificationStore.error('Failed to like post');
+        }
+    }
 };
 
 const approvePost = async (postId) => {
-  try {
+  try { 
     loading.value = true;
     await newsService.updatePostStatus(postId, 'approved');
     notificationStore.success('Post approved successfully');
@@ -705,9 +723,12 @@ const autoGrow = (element) => {
   element.style.height = (element.scrollHeight) + "px";
 };
 
-onMounted(() => {
-  loadPosts();
+onMounted(async () => {
+    if (isAuthenticated.value) {
+        await loadPosts();
+    }
 });
+
 </script>
 
 <style scoped>
@@ -985,14 +1006,16 @@ onMounted(() => {
 }
 
 .interaction-btn.active {
-  color: #00D1D1;
-  background: rgba(0, 209, 209, 0.1);
+    color: #00D1D1;
+    background: rgba(0, 209, 209, 0.1);
 }
 
-
-.interaction-btn.active i.fa-heart .interaction-btn i {
-  font-size: 1.1rem;
-  transition: transform 0.3s ease;
+.interaction-btn.active i.fa-heart,
+.interaction-btn.active .fas.fa-heart {
+    color: #ff4b4b !important;
+    opacity: 1;
+    visibility: visible;
+    animation: heartBeat 0.3s ease-in-out;
 }
 
 .interaction-btn:hover i {
@@ -1316,19 +1339,13 @@ onMounted(() => {
 }
 
 .interaction-btn i.fa-heart {
-  color: #64748b;
-  transition: all 0.3s ease;
+    color: #64748b;
+    transition: all 0.3s ease;
 }
 
 .interaction-btn:hover i.fa-heart {
-  color: #ff4b4b;
-  transform: scale(1.1);
-}
-
-.interaction-btn.active .fas.fa-heart {
-  opacity: 1;
-  visibility: visible;
-  color: #ff4b4b !important;
+    color: #ff4b4b;
+    transform: scale(1.1);
 }
 
 .post-footer {
@@ -1356,9 +1373,7 @@ onMounted(() => {
   color: #00D1D1;
 }
 
-.interaction-btn.active {
-  color: #00D1D1;
-}
+
 
 .interaction-btn i {
   font-size: 1.1rem;
@@ -1445,16 +1460,6 @@ onMounted(() => {
   line-height: 1.5;
 }
 
-.interaction-btn i.fa-heart {
-  color: #64748b;
-  transition: all 0.3s ease;
-}
-
-.interaction-btn:hover i.fa-heart {
-  color: #ff4b4b;
-  transform: scale(1.1);
-}
-
 .comment-actions {
   display: flex;
   align-items: center;
@@ -1516,22 +1521,6 @@ onMounted(() => {
 .image-loading-overlay i,
 .image-error-overlay i {
   font-size: 2rem;
-}
-
-.interaction-btn i.fa-heart {
-  color: #64748b;
-  transition: all 0.3s ease;
-}
-
-.interaction-btn:hover i.fa-heart {
-  color: #ff4b4b;
-  transform: scale(1.1);
-}
-
-.interaction-btn.active .fas.fa-heart {
-  opacity: 1;
-  visibility: visible;
-  color: #ff4b4b !important;
 }
 
 .guest-prompt {
