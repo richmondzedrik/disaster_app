@@ -137,7 +137,10 @@
               </div>
 
               <div class="comments-list">
-                <div v-for="comment in post.comments" :key="comment.id" class="comment">
+                <div v-if="post.comments && post.comments.length === 0" class="no-comments">
+                  <p>No comments yet. Be the first to comment!</p>
+                </div>
+                <div v-else v-for="comment in post.comments" :key="comment.id" class="comment">
                   <div class="comment-header">
                     <div class="comment-author">
                       <i class="fas fa-user-circle"></i>
@@ -539,12 +542,18 @@ const toggleComments = async (post) => {
     try {
         post.showComments = !post.showComments;
         
-        if (post.showComments && (!post.comments || post.comments.length === 0)) {
+        if (post.showComments) {
             post.loadingComments = true;
             const response = await newsService.getComments(post.id);
             
             if (response.success) {
-                post.comments = response.comments;
+                post.comments = response.comments || [];
+                // Force reactivity update
+                const postIndex = posts.value.findIndex(p => p.id === post.id);
+                if (postIndex !== -1) {
+                    posts.value[postIndex] = { ...post };
+                    posts.value = [...posts.value];
+                }
             } else {
                 post.showComments = false;
                 if (response.status === 401) {
@@ -556,7 +565,7 @@ const toggleComments = async (post) => {
         }
     } catch (error) {
         console.error('Error toggling comments:', error);
-        post.showComments = false;
+        post.showComments = false;  
         notificationStore.error('Failed to load comments');
     } finally {
         post.loadingComments = false;

@@ -221,7 +221,7 @@ export const newsService = {
             };
         } catch (error) {
             console.error('Error fetching comments:', error);
-            return {
+            return {  
                 success: false,
                 comments: [],
                 message: error.response?.data?.message || 'Failed to fetch comments',
