@@ -531,46 +531,36 @@ const savePost = async (post) => {
 };
 
 const toggleComments = async (post) => {
-  try {
-    if (!post.showComments) {
-      post.loadingComments = true;
-      const response = await newsService.getComments(post.id);
-      if (response.success) {
-        const postIndex = posts.value.findIndex(p => p.id === post.id);
-        if (postIndex !== -1) {
-          posts.value[postIndex] = {
-            ...posts.value[postIndex],
-            comments: response.comments.map(comment => ({
-              ...comment,
-              created_at: comment.created_at || comment.createdAt
-            })),
-            showComments: true,
-            commentCount: response.comments.length,
-            loadingComments: false,
-            newComment: '' // Ensure newComment is initialized as empty string
-          };
+    if (!isAuthenticated.value) {
+        handleGuestInteraction('comment');
+        return;
+    }
+
+    try {
+        post.showComments = !post.showComments;
+        
+        if (post.showComments && (!post.comments || post.comments.length === 0)) {
+            post.loadingComments = true;
+            const response = await newsService.getComments(post.id);
+            
+            if (response.success) {
+                post.comments = response.comments;
+            } else {
+                post.showComments = false;
+                if (response.status === 401) {
+                    handleGuestInteraction('comment');
+                } else {
+                    notificationStore.error(response.message || 'Failed to load comments');
+                }
+            }
         }
-      }
-    } else {
-      const postIndex = posts.value.findIndex(p => p.id === post.id);
-      if (postIndex !== -1) {
-        posts.value[postIndex] = {
-          ...posts.value[postIndex],
-          showComments: false,
-          newComment: '' // Reset newComment when closing
-        };
-      }
+    } catch (error) {
+        console.error('Error toggling comments:', error);
+        post.showComments = false;
+        notificationStore.error('Failed to load comments');
+    } finally {
+        post.loadingComments = false;
     }
-    // Force reactivity update
-    posts.value = [...posts.value];
-  } catch (error) {
-    console.error('Error loading comments:', error);
-    notificationStore.error('Failed to load comments');
-    const postIndex = posts.value.findIndex(p => p.id === post.id);
-    if (postIndex !== -1) {
-      posts.value[postIndex].loadingComments = false;
-    }
-  }
 };
 
 const loadComments = async (post) => {
@@ -818,7 +808,7 @@ onMounted(() => {
   font-weight: 600;
   color: #005C5C;
   margin: 0;
-}
+}   
 
 .post-date {
   color: #64748b;

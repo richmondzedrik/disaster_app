@@ -199,8 +199,17 @@ export const newsService = {
             const response = await axios.get(`${API_URL}/news/posts/${postId}/comments`, {
                 headers,
                 withCredentials: true,
-                timeout: 15000
+                timeout: 15000,
+                validateStatus: status => status < 500 // Only treat 500+ as errors
             });
+            
+            if (response.status === 401) {
+                return {
+                    success: false,
+                    message: 'Please sign in to view comments',
+                    status: 401
+                };
+            }
             
             if (!response.data?.success) {
                 throw new Error(response.data?.message || 'Failed to fetch comments');
@@ -211,22 +220,17 @@ export const newsService = {
                 comments: response.data.comments || []
             };
         } catch (error) {
-            if (error.response?.status === 401) {
-                const authStore = useAuthStore();
-                await authStore.logout();
-                window.location.href = '/login';
-                throw new Error('Session expired. Please login again.');
-            }
             console.error('Error fetching comments:', error);
             return {
                 success: false,
                 comments: [],
-                message: error.response?.data?.message || 'Failed to fetch comments'
+                message: error.response?.data?.message || 'Failed to fetch comments',
+                status: error.response?.status
             };
         }
     },
     
-    async addComment(postId, content) {
+    async addComment(postId, content) {  
         try {
             if (!content || !content.trim()) {
                 return {
@@ -289,9 +293,9 @@ export const newsService = {
                 ...response.data
             };
         } catch (error) {
-            console.error('Error deleting comment:', error);
+            console.error('Error deleting comment:', error);  
             return {
-                success: false,
+                success: false,  
                 message: error.response?.data?.message || 'Failed to delete comment'
             };
         }

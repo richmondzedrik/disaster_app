@@ -4,43 +4,53 @@ const db = require('../db/connection');
 
 const authMiddleware = async (req, res, next) => {
     try {
-        const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+        const authHeader = req.headers.authorization;
+        const token = req.cookies?.token || (authHeader && authHeader.split(' ')[1]);
         
         if (!token) {
             return res.status(401).json({
                 success: false,
-                message: 'No token provided'
+                message: 'Authentication required'
             });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        
-        // Check if user exists and is verified
-        const [users] = await db.execute(
-            'SELECT id, username, role, email_verified FROM users WHERE id = ?',
-            [decoded.userId]
-        );
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            
+            const [users] = await db.execute(
+                'SELECT id, username, role, email_verified FROM users WHERE id = ?',
+                [decoded.userId]
+            );
 
-        if (!users.length) {
-            return res.status(401).json({
-                success: false,
-                message: 'User not found'
-            });
+            if (!users.length) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+
+            req.user = {
+                userId: decoded.userId,
+                username: users[0].username,
+                role: users[0].role,
+                isVerified: users[0].email_verified === 1
+            };
+
+            next();
+        } catch (error) {
+            if (error.name === 'TokenExpiredError') {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Session expired'
+                });
+            }
+            throw error;
         }
-
-        req.user = {
-            userId: users[0].id,
-            username: users[0].username,
-            role: users[0].role,
-            isVerified: users[0].email_verified === 1
-        };
-
-        next();
     } catch (error) {
         console.error('Auth middleware error:', error);
         return res.status(401).json({
             success: false,
-            message: 'Invalid token'
+            message: 'Invalid authentication'
         });
     }
 };
@@ -53,12 +63,12 @@ const adminMiddleware = async (req, res, next) => {
                 success: false,
                 message: 'Authentication required'
             });
-        }
+        }  
 
         if (req.user.role !== 'admin') {
             return res.status(403).json({
-                success: false,
-                message: 'Admin access required'
+                success: false,  
+                message: 'Admin access required'   
             });
         }
 
