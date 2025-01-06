@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
 
 const getHeaders = () => {
   const authStore = useAuthStore();
@@ -16,7 +16,6 @@ const getHeaders = () => {
     throw new Error('Authentication required');
   }
 
-  // Ensure token is properly formatted
   token = token.replace('Bearer ', '');
     
   return {  
@@ -29,7 +28,7 @@ export const checklistService = {
   async loadProgress() {
     try {
       const headers = getHeaders();
-      const url = `${API_URL}/checklist/progress`;  
+      const url = `${API_URL}/api/checklist/progress`;
       console.log('Loading checklist from:', url);
       
       const response = await axios.get(url, { 
@@ -62,7 +61,7 @@ export const checklistService = {
       }
       
       const response = await axios.post(
-        `${API_URL}/checklist/progress`,  
+        `${API_URL}/api/checklist/progress`,
         { 
           item: {
             id: item.id, 
@@ -129,7 +128,7 @@ export const checklistService = {
     try {
       const headers = getHeaders();
       const response = await axios.post(
-        `${API_URL}/checklist/custom`,
+        `${API_URL}/api/checklist/custom`,
         { item },
         { headers }
       );
@@ -145,7 +144,7 @@ export const checklistService = {
       };
     } catch (error) {
       console.error('Add custom item error:', error);
-      throw error; // Let the component handle the error
+      throw error;
     }
   },
 
