@@ -309,7 +309,8 @@ const loadPosts = async () => {
         comments: [],
         newComment: '',
         commentCount: parseInt(post.comment_count) || 0,
-        liked: post.liked === true, // Explicitly convert to boolean
+        // Ensure liked status is properly converted to boolean
+        liked: post.liked === true || post.liked === 1 || post.liked === "true",
         likes: parseInt(post.likes) || 0
       }));
     }
@@ -422,7 +423,8 @@ const deletePost = async (postId) => {
 const processedPosts = computed(() => {
   return posts.value.map(post => ({
     ...post,
-    liked: typeof post.liked === 'boolean' ? post.liked : false
+    // Ensure liked status is properly converted to boolean
+    liked: post.liked === true || post.liked === 1 || post.liked === "true"
   }));
 });
 
@@ -444,10 +446,12 @@ const likePost = async (post) => {
         if (response.success) {
             const postIndex = posts.value.findIndex(p => p.id === post.id);
             if (postIndex !== -1) {
+                // Ensure the liked status is properly converted to boolean
+                const isLiked = response.liked === true || response.liked === 1 || response.liked === "true";
                 posts.value[postIndex] = {
                     ...posts.value[postIndex],
-                    liked: response.liked,
-                    likes: response.likes
+                    liked: isLiked,
+                    likes: parseInt(response.likes) || 0
                 };
                 // Force reactivity update
                 posts.value = [...posts.value];
