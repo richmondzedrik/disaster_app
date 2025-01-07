@@ -75,7 +75,7 @@
                 <i class="fas fa-trash-alt"></i>
               </button>
             </div>
-          </div>
+          </div>  
 
           <div class="post-content">
             <h2>{{ post.title }}</h2>
@@ -259,14 +259,16 @@ const isAdmin = computed(() => user.value?.role === 'admin');
 const filteredPosts = computed(() => {
   let filtered = posts.value;
 
-  // Always show approved posts for everyone
-  if (!isAdmin.value) {
-    filtered = filtered.filter(post => post.status === 'approved');
-  } else if (postStatus.value !== 'all') {
-    filtered = filtered.filter(post => post.status === postStatus.value);
+  // For admin users
+  if (isAdmin.value) {
+    if (postStatus.value !== 'all') {
+      filtered = filtered.filter(post => post.status === postStatus.value);
+    }
+    return filtered;
   }
 
-  return filtered;
+  // For non-admin users, only show approved posts
+  return filtered.filter(post => post.status === 'approved');
 });
 
 const showAddPostModal = ref(false);
