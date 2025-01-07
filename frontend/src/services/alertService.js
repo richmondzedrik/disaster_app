@@ -14,7 +14,7 @@ const getHeaders = async () => {
   
   return {
     'Content-Type': 'application/json',
-    'Authorization': token
+    'Authorization': token   
   };
 };
 
@@ -78,7 +78,7 @@ export const alertService = {
 
   async createAlert(alertData) {
     try {
-      const headers = getHeaders();
+      const headers = await getHeaders();
       const formattedData = {
         message: alertData.message?.trim() || '',
         type: alertData.type || 'info',
@@ -91,7 +91,10 @@ export const alertService = {
         throw new Error('Alert message is required');
       }
 
-      const response = await api.post('/admin/alerts', formattedData, { headers });
+      const response = await api.post('/api/admin/alerts', formattedData, { 
+        headers,
+        withCredentials: true 
+      });
       
       return {
         success: true,
@@ -100,6 +103,9 @@ export const alertService = {
       };
     } catch (error) {
       console.error('Error creating alert:', error);
+      if (error.code === 'ERR_NETWORK') {
+        throw new Error('Unable to connect to the server. Please check your connection.');
+      }
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to create alert'
