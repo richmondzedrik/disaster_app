@@ -18,10 +18,10 @@ class User {
 
     static async findById(userId) {
         try {
-            const [rows] = await db.execute( 
+            const [rows] = await db.execute(
                 `SELECT id, username, email, phone, location, notifications, 
                 emergency_contacts, role, email_verified, created_at, updated_at 
-                FROM users WHERE id = ?`, 
+                FROM users WHERE id = ?`,
                 [userId]
             );
 
@@ -31,27 +31,40 @@ class User {
 
             const user = rows[0];
             
-            // Parse JSON fields
+            // Parse JSON fields with better error handling
             try {
-                user.notifications = user.notifications ? JSON.parse(user.notifications) : {};
+                // Parse notifications
+                user.notifications = user.notifications ? 
+                    (typeof user.notifications === 'string' ? 
+                        JSON.parse(user.notifications) : 
+                        user.notifications) : 
+                    {};
+
+                // Parse emergency_contacts with detailed logging
+                console.log('Raw emergency_contacts:', user.emergency_contacts);
                 
-                // Parse emergency_contacts
                 if (user.emergency_contacts) {
-                    const contacts = typeof user.emergency_contacts === 'string' 
-                        ? JSON.parse(user.emergency_contacts)
-                        : user.emergency_contacts;
-                        
-                    user.emergencyContacts = Array.isArray(contacts) ? contacts : [];
+                    let parsedContacts;
+                    
+                    if (typeof user.emergency_contacts === 'string') {
+                        parsedContacts = JSON.parse(user.emergency_contacts);
+                    } else {
+                        parsedContacts = user.emergency_contacts;
+                    }
+                    
+                    // Ensure it's an array
+                    user.emergencyContacts = Array.isArray(parsedContacts) ? parsedContacts : [];
+                    console.log('Parsed emergencyContacts:', user.emergencyContacts);
                 } else {
                     user.emergencyContacts = [];
                 }
-                
+
                 // Remove the snake_case version
                 delete user.emergency_contacts;
-                
-                console.log('Parsed User Data:', user); // Debug log
+
             } catch (e) {
                 console.error('Error parsing JSON fields:', e);
+                console.error('Raw emergency_contacts value:', user.emergency_contacts);
                 user.notifications = {};
                 user.emergencyContacts = [];
             }
