@@ -73,7 +73,7 @@ export const useAuthStore = defineStore('auth', () => {
         } catch (error) {
             console.error('Login error:', error);
             // Clear any existing auth data on error
-            localStorage.removeItem('token');
+            localStorage.removeItem('token');  
             localStorage.removeItem('user');
             isAuthenticated.value = false;
             user.value = null;
@@ -100,7 +100,7 @@ export const useAuthStore = defineStore('auth', () => {
                 console.log('✅ Registration successful:', response.data);
                 localStorage.setItem('pendingVerificationEmail', userData.email);
                 return response.data;
-            } else {
+            } else {   
                 console.error('❌ Registration failed:', response.data);
                 throw new Error(response.data?.message || 'Registration failed');
             }

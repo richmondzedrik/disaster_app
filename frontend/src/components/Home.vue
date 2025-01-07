@@ -580,6 +580,7 @@ watch(() => isLoggedIn.value, (newValue) => {
   font-size: 2.25rem;
   background: linear-gradient(135deg, #005C5C 0%, #4052D6 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 2.5rem;
   position: relative;
@@ -652,6 +653,7 @@ watch(() => isLoggedIn.value, (newValue) => {
   font-size: 1.75rem;
   background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -752,6 +754,7 @@ watch(() => isLoggedIn.value, (newValue) => {
   transform: scale(1.2) rotate(5deg);
   background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
