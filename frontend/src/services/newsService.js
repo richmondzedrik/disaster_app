@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/auth';
 import api from './api';
 import { onMounted, watch } from 'vue';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
 
 const getHeaders = () => {
   const authStore = useAuthStore();
