@@ -26,12 +26,12 @@ export const userService = {
                                 JSON.parse(userData.notifications) : 
                                 userData.notifications) : 
                             { email: true, push: true },
-                        emergencyContacts: userData.emergency_contacts || userData.emergencyContacts || []
+                        emergencyContacts: userData.emergencyContacts || userData.emergency_contacts || []
                     }
                 };
             }
             
-            return response.data;
+            return response.data; 
         } catch (error) {
             console.error('Get profile error:', error);
             throw error;
@@ -53,8 +53,8 @@ export const userService = {
 
             const response = await api.put('/auth/profile', formattedData, {
                 headers: {
-                    'Content-Type': 'application/json',  
-                    'Authorization': `Bearer ${token}`  
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 }
             });
             
@@ -69,7 +69,7 @@ export const userService = {
                     user: {
                         ...userData,
                         notifications: userData.notifications || { email: true, push: true },
-                        emergencyContacts: userData.emergency_contacts || []
+                        emergencyContacts: userData.emergencyContacts || userData.emergency_contacts || []
                     }
                 };
             }

@@ -1066,8 +1066,12 @@ const loadProfileData = async () => {
                 lastLogin: userData.lastLogin || new Date().toISOString()
             };
 
-            // Handle emergency contacts properly
-            const emergencyContacts = userData.emergency_contacts || userData.emergencyContacts || [];
+            // Ensure we handle both emergency_contacts and emergencyContacts fields
+            const emergencyContacts = Array.isArray(userData.emergency_contacts) 
+                ? userData.emergency_contacts 
+                : Array.isArray(userData.emergencyContacts) 
+                    ? userData.emergencyContacts 
+                    : [];
 
             const newProfileData = {
                 username: userData.username || '',
@@ -1078,7 +1082,7 @@ const loadProfileData = async () => {
                     email: userData.notifications?.email ?? true,
                     push: userData.notifications?.push ?? true
                 },
-                emergencyContacts: emergencyContacts.map(contact => ({
+                emergencyContacts: emergencyContacts.map(contact => ({  
                     name: contact.name || '',
                     phone: contact.phone || '',
                     relation: contact.relation || ''
@@ -1305,7 +1309,7 @@ const saveChanges = async () => {
         console.error('Save profile error:', error);
         notificationStore.error('Failed to update profile');
     } finally {
-        loading.value = false;
+        loading.value = false;  
     }
 };
 
