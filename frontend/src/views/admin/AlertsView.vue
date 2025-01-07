@@ -168,33 +168,29 @@
   };
   
   const createNewAlert = async () => {
-  try {
-    const alertData = {
-      message: newAlert.value.message,
-      type: newAlert.value.type,
-      priority: parseInt(newAlert.value.priority),
-      expiry_date: newAlert.value.expiryDate || null,
-      is_public: newAlert.value.isPublic === 'true'
-    };
+    try {
+      const alertData = {
+        message: newAlert.value.message,
+        type: newAlert.value.type,
+        priority: parseInt(newAlert.value.priority),
+        expiry_date: newAlert.value.expiryDate || null,
+        is_public: newAlert.value.isPublic === 'true'
+      };
 
-    const response = await alertStore.createAlert(alertData);
-    
-    if (response.success) {
-      showCreateModal.value = false;
-      resetForm();
-      notificationStore.success('Alert created successfully');
-      const alertsResponse = await alertStore.fetchAlerts();
-      if (alertsResponse?.success) {
-        alerts.value = alertsResponse.alerts || [];
+      const response = await alertStore.createAlert(alertData);
+      
+      if (response) {
+        showCreateModal.value = false;
+        resetForm();
+        const alertsResponse = await alertStore.fetchAlerts();
+        if (alertsResponse?.success) {
+          alerts.value = alertsResponse.alerts || [];
+        }
       }
-    } else {
-      throw new Error(response.message || 'Failed to create alert');
+    } catch (error) {
+      console.error('Create alert error:', error);
     }
-  } catch (error) {
-    console.error('Create alert error:', error);
-    notificationStore.error(error.message || 'Failed to create alert');
-  }
-};
+  };
   
   const toggleAlertStatus = async (alert) => {
     try {
