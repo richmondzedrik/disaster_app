@@ -4,6 +4,7 @@ const authController = require('../controllers/authController');
 const auth = require('../middleware/auth');
 const validation = require('../middleware/validation');
 const db = require('../db/connection');
+const User = require('../models/User');
 
 // Public routes
 router.post('/register', authController.register);
@@ -56,6 +57,35 @@ router.get('/debug/emergency-contacts', auth.authMiddleware, async (req, res) =>
         return res.status(500).json({
             success: false,
             message: 'Error fetching emergency contacts',
+            error: error.message
+        });
+    }
+});
+
+// Add this new route to verify emergency contacts storage
+router.get('/verify-emergency-contacts', auth.authMiddleware, async (req, res) => {
+    try {
+        // Get raw data from database
+        const [rawResult] = await db.execute(
+            'SELECT emergency_contacts FROM users WHERE id = ?',
+            [req.user.id]
+        );
+
+        // Get parsed data through User model
+        const user = await User.findById(req.user.id);
+
+        return res.json({
+            success: true,
+            raw_data: rawResult[0]?.emergency_contacts,
+            parsed_data: user?.emergencyContacts,
+            is_valid_json: rawResult[0]?.emergency_contacts ? 
+                JSON.parse(rawResult[0].emergency_contacts) : null
+        });
+    } catch (error) {
+        console.error('Emergency contacts verification error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error verifying emergency contacts',
             error: error.message
         });
     }

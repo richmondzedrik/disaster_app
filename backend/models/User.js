@@ -46,15 +46,27 @@ class User {
                 if (user.emergency_contacts) {
                     let parsedContacts;
                     
-                    if (typeof user.emergency_contacts === 'string') {
-                        parsedContacts = JSON.parse(user.emergency_contacts);
-                    } else {
-                        parsedContacts = user.emergency_contacts;
+                    try {
+                        if (typeof user.emergency_contacts === 'string') {
+                            parsedContacts = JSON.parse(user.emergency_contacts);
+                        } else {
+                            parsedContacts = user.emergency_contacts;
+                        }
+                        
+                        // Ensure it's an array and has required fields
+                        user.emergencyContacts = Array.isArray(parsedContacts) ? 
+                            parsedContacts.map(contact => ({
+                                name: contact.name || '',
+                                phone: contact.phone || '',
+                                relation: contact.relation || ''
+                            })) : [];
+                            
+                        console.log('Parsed emergencyContacts:', user.emergencyContacts);
+                    } catch (e) {
+                        console.error('Error parsing emergency contacts:', e);
+                        console.error('Raw value:', user.emergency_contacts);
+                        user.emergencyContacts = [];
                     }
-                    
-                    // Ensure it's an array
-                    user.emergencyContacts = Array.isArray(parsedContacts) ? parsedContacts : [];
-                    console.log('Parsed emergencyContacts:', user.emergencyContacts);
                 } else {
                     user.emergencyContacts = [];
                 }
@@ -101,14 +113,39 @@ class User {
 
     static async updateProfile(userId, profileData) {
         try {
+            // Ensure emergency contacts is a valid array
+            let emergencyContacts = [];
+            if (profileData.emergencyContacts) {
+                emergencyContacts = Array.isArray(profileData.emergencyContacts) 
+                    ? profileData.emergencyContacts
+                    : [];
+                    
+                // Validate each contact
+                emergencyContacts = emergencyContacts
+                    .filter(contact => contact && contact.name && contact.phone && contact.relation)
+                    .map(contact => ({
+                        name: contact.name.trim(),
+                        phone: contact.phone.trim(),
+                        relation: contact.relation.trim()
+                    }));
+            }
+
             // Format the data before updating
             const formattedData = {
                 username: profileData.username,
                 phone: profileData.phone,
                 location: profileData.location,
-                notifications: JSON.stringify(profileData.notifications || {}),
-                emergency_contacts: JSON.stringify(profileData.emergencyContacts || [])
+                // Only stringify if it's not already a string
+                notifications: typeof profileData.notifications === 'string' 
+                    ? profileData.notifications 
+                    : JSON.stringify(profileData.notifications || {}),
+                // Only stringify if it's not already a string
+                emergency_contacts: typeof emergencyContacts === 'string'
+                    ? emergencyContacts
+                    : JSON.stringify(emergencyContacts)
             };
+
+            console.log('Formatted emergency contacts:', formattedData.emergency_contacts);
 
             // Update user in database
             const [result] = await db.execute(
@@ -133,7 +170,7 @@ class User {
                 throw new Error('User not found');
             }
 
-            // Fetch and return updated user
+            // Fetch updated user and verify the data
             const [rows] = await db.execute(
                 `SELECT id, username, email, phone, location, notifications, 
                  emergency_contacts, role, email_verified, created_at, updated_at 
@@ -149,10 +186,35 @@ class User {
             
             // Parse JSON fields for response
             try {
-                user.notifications = JSON.parse(user.notifications || '{}');
-                user.emergencyContacts = JSON.parse(user.emergency_contacts || '[]');
+                // Handle notifications
+                user.notifications = typeof user.notifications === 'string'
+                    ? JSON.parse(user.notifications)
+                    : user.notifications || {};
+
+                // Handle emergency contacts
+                if (typeof user.emergency_contacts === 'string') {
+                    user.emergencyContacts = JSON.parse(user.emergency_contacts);
+                } else if (user.emergency_contacts) {
+                    user.emergencyContacts = user.emergency_contacts;
+                } else {
+                    user.emergencyContacts = [];
+                }
+                
+                // Ensure it's an array
+                if (!Array.isArray(user.emergencyContacts)) {
+                    user.emergencyContacts = [];
+                }
+                
+                // Log the parsed data for debugging
+                console.log('Updated user emergency contacts:', user.emergencyContacts);
+                
+                // Remove the snake_case version to avoid confusion
+                delete user.emergency_contacts;
+                
             } catch (e) {
                 console.error('Error parsing JSON fields:', e);
+                console.error('Raw notifications:', user.notifications);
+                console.error('Raw emergency_contacts:', user.emergency_contacts);
                 user.notifications = {};
                 user.emergencyContacts = [];
             }

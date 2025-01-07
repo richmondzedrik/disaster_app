@@ -1048,10 +1048,10 @@ const loadProfileData = async () => {
     if (loading.value) return;
 
     try {
-        loading.value = true;
+        loading.value = true; 
         const response = await userService.getProfile();
         
-        console.log('Raw Profile Response:', response); // Debug log
+        console.log('Raw Profile Response:', response);
 
         if (response?.success && response.user) {
             const userData = response.user;
@@ -1063,23 +1063,24 @@ const loadProfileData = async () => {
                 lastLogin: userData.lastLogin || new Date().toISOString()
             };
 
-            // Handle emergency contacts
+            // Handle emergency contacts with better error handling
             let emergencyContacts = [];
-            if (userData.emergency_contacts) {
+            if (userData.emergencyContacts) {
                 try {
-                    emergencyContacts = typeof userData.emergency_contacts === 'string' 
-                        ? JSON.parse(userData.emergency_contacts)
-                        : userData.emergency_contacts;
+                    emergencyContacts = Array.isArray(userData.emergencyContacts)
+                        ? userData.emergencyContacts
+                        : JSON.parse(userData.emergencyContacts);
+                        
+                    console.log('Parsed emergency contacts:', emergencyContacts);
                 } catch (e) {
                     console.error('Error parsing emergency contacts:', e);
+                    emergencyContacts = [];
                 }
-            } else if (userData.emergencyContacts) {
-                emergencyContacts = userData.emergencyContacts;
             }
-  
-            console.log('Parsed Emergency Contacts:', emergencyContacts); // Debug log
 
-            const newProfileData = {
+            // Update profile data with all fields
+            profileData.value = {
+                ...profileData.value,
                 username: userData.username || '',
                 email: userData.email || '',
                 phone: userData.phone || '',
@@ -1088,20 +1089,11 @@ const loadProfileData = async () => {
                     email: userData.notifications?.email ?? true,
                     push: userData.notifications?.push ?? true
                 },
-                emergencyContacts: Array.isArray(emergencyContacts) 
-                    ? emergencyContacts.map(contact => ({
-                        name: contact.name || '',
-                        phone: contact.phone || '',
-                        relation: contact.relation || ''
-                    }))
-                    : []
+                emergencyContacts: emergencyContacts
             };
 
-            console.log('New Profile Data:', newProfileData); // Debug log
-            
-            profileData.value = newProfileData;  
-            originalData.value = JSON.parse(JSON.stringify(newProfileData));
-            calculateSecurityScore();
+            // Store original data for change detection
+            originalData.value = JSON.parse(JSON.stringify(profileData.value));
         }
     } catch (error) {
         console.error('Load profile error:', error);
@@ -1264,6 +1256,7 @@ onMounted(() => {
         router.push('/login');
         return;
     }
+    console.log('Component mounted, loading profile data');
     loadProfileData();
 });
 
@@ -1411,23 +1404,34 @@ const closeEmergencyContactModal = () => {
 
 const saveEmergencyContact = () => {
     if (!validateEmergencyContactForm()) return;
+    
+    console.log('Saving emergency contact:', {
+        form: emergencyContactForm.value,
+        isEditing: editingContactIndex.value !== -1,
+        editIndex: editingContactIndex.value
+    });
 
     if (editingContactIndex.value === -1) {
         // Adding new contact
-        profileData.value.emergencyContacts.push({
-            name: emergencyContactForm.value.name.trim(),
-            phone: emergencyContactForm.value.phone,
-            relation: emergencyContactForm.value.relation
-        });
-    } else {
-        // Updating existing contact
-        profileData.value.emergencyContacts[editingContactIndex.value] = {
+        const newContact = {
             name: emergencyContactForm.value.name.trim(),
             phone: emergencyContactForm.value.phone,
             relation: emergencyContactForm.value.relation
         };
+        console.log('Adding new contact:', newContact);
+        profileData.value.emergencyContacts.push(newContact);
+    } else {
+        // Updating existing contact
+        const updatedContact = {
+            name: emergencyContactForm.value.name.trim(),
+            phone: emergencyContactForm.value.phone,
+            relation: emergencyContactForm.value.relation
+        };
+        console.log('Updating contact at index:', editingContactIndex.value, updatedContact);
+        profileData.value.emergencyContacts[editingContactIndex.value] = updatedContact;
     }
 
+    console.log('Updated contacts array:', profileData.value.emergencyContacts);
     closeEmergencyContactModal();
 };
 
@@ -1440,13 +1444,18 @@ watch(() => profileData.value, (newData) => {
 }, { deep: true });
 
 // Add this watch effect to debug emergency contacts loading
-watch(() => profileData.value?.emergencyContacts, (newContacts, oldContacts) => {
-    console.log('Emergency Contacts Changed:', {
-        new: newContacts,
-        old: oldContacts,
-        length: newContacts?.length || 0
+watch(() => profileData.value?.emergencyContacts, (newContacts) => {
+    console.log('Emergency contacts updated:', {
+        contacts: newContacts,
+        length: newContacts?.length || 0,
+        isArray: Array.isArray(newContacts),
+        values: newContacts?.map(c => ({
+            name: c.name,
+            phone: c.phone,
+            relation: c.relation
+        }))
     });
-}, { deep: true, immediate: true });
+}, { deep: true });
 
 // Add this right before the emergency contacts section renders
 console.log('Emergency Contacts in template:', profileData.value?.emergencyContacts);

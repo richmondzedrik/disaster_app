@@ -18,34 +18,38 @@ export const userService = {
             if (response.data?.user) {
                 const userData = response.data.user;
                 
-                // Parse emergency contacts - simplified and more robust handling
+                // Parse emergency contacts with better error handling
                 let emergencyContacts = [];
                 
                 try {
-                    if (userData.emergency_contacts) {
-                        emergencyContacts = typeof userData.emergency_contacts === 'string' 
-                            ? JSON.parse(userData.emergency_contacts)
-                            : userData.emergency_contacts;
+                    if (userData.emergencyContacts || userData.emergency_contacts) {
+                        const rawContacts = userData.emergencyContacts || userData.emergency_contacts;
+                        console.log('Raw contacts from API:', rawContacts);
+                        
+                        emergencyContacts = typeof rawContacts === 'string' 
+                            ? JSON.parse(rawContacts)
+                            : rawContacts;
+                            
+                        // Ensure proper structure
+                        emergencyContacts = Array.isArray(emergencyContacts) 
+                            ? emergencyContacts.map(contact => ({
+                                name: contact.name || '',
+                                phone: contact.phone || '',
+                                relation: contact.relation || ''
+                            }))
+                            : [];
                     }
                 } catch (e) {
                     console.error('Error parsing emergency contacts:', e);
+                    emergencyContacts = [];
                 }
-
-                // Ensure emergencyContacts is always an array with required fields
-                const formattedContacts = Array.isArray(emergencyContacts) 
-                    ? emergencyContacts.map(contact => ({
-                        name: contact.name || '',
-                        phone: contact.phone || '',
-                        relation: contact.relation || ''
-                    }))
-                    : [];
 
                 return {
                     success: true,
                     user: {
                         ...userData,
                         notifications: userData.notifications || { email: true, push: true },
-                        emergencyContacts: formattedContacts
+                        emergencyContacts: emergencyContacts
                     }
                 };
             }
