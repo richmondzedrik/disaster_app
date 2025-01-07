@@ -20,7 +20,7 @@ export const userService = {
             if (response.data?.user) {
                 const userData = response.data.user;
                 
-                // Handle emergency contacts parsing
+                // Parse emergency contacts
                 let emergencyContacts = [];
                 
                 if (userData.emergency_contacts) {
@@ -31,8 +31,6 @@ export const userService = {
                     } catch (e) {
                         console.error('Error parsing emergency contacts:', e);
                     }
-                } else if (userData.emergencyContacts) {
-                    emergencyContacts = userData.emergencyContacts;
                 }
 
                 console.log('Parsed Emergency Contacts:', emergencyContacts); // Debug log
@@ -51,7 +49,7 @@ export const userService = {
                 };
             }
             
-            return response.data; 
+            return response.data;
         } catch (error) {
             console.error('Get profile error:', error);
             throw error;

@@ -1063,10 +1063,19 @@ const loadProfileData = async () => {
                 lastLogin: userData.lastLogin || new Date().toISOString()
             };
 
-            // Ensure emergencyContacts is always an array
-            const emergencyContacts = Array.isArray(userData.emergencyContacts) 
-                ? userData.emergencyContacts 
-                : [];
+            // Handle emergency contacts
+            let emergencyContacts = [];
+            if (userData.emergency_contacts) {
+                try {
+                    emergencyContacts = typeof userData.emergency_contacts === 'string' 
+                        ? JSON.parse(userData.emergency_contacts)
+                        : userData.emergency_contacts;
+                } catch (e) {
+                    console.error('Error parsing emergency contacts:', e);
+                }
+            } else if (userData.emergencyContacts) {
+                emergencyContacts = userData.emergencyContacts;
+            }
 
             console.log('Parsed Emergency Contacts:', emergencyContacts); // Debug log
 
@@ -1079,11 +1088,13 @@ const loadProfileData = async () => {
                     email: userData.notifications?.email ?? true,
                     push: userData.notifications?.push ?? true
                 },
-                emergencyContacts: emergencyContacts.map(contact => ({
-                    name: contact.name || '',
-                    phone: contact.phone || '',
-                    relation: contact.relation || ''
-                }))
+                emergencyContacts: Array.isArray(emergencyContacts) 
+                    ? emergencyContacts.map(contact => ({
+                        name: contact.name || '',
+                        phone: contact.phone || '',
+                        relation: contact.relation || ''
+                    }))
+                    : []
             };
 
             console.log('New Profile Data:', newProfileData); // Debug log
@@ -1094,15 +1105,6 @@ const loadProfileData = async () => {
         }
     } catch (error) {
         console.error('Load profile error:', error);
-        // Initialize with empty data on error
-        profileData.value = {
-            username: '',
-            email: '',
-            phone: '',
-            location: '',
-            notifications: { email: true, push: true },
-            emergencyContacts: []
-        };
         notificationStore.error('Failed to load profile data');
     } finally {
         loading.value = false;
