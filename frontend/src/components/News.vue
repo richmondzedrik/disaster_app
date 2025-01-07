@@ -42,7 +42,7 @@
         <div v-if="!isAuthenticated" class="guest-notice">
           <div class="notice-content">
             <i class="fas fa-info-circle"></i>
-            <p>Sign in to interact with posts and create your own content</p>
+            <p>Welcome! Sign in to interact with posts and create your own content</p>
             <router-link to="/login" class="login-btn">
               <i class="fas fa-sign-in-alt"></i>
               Sign In
@@ -67,7 +67,7 @@
                 </span>
               </div>
             </div>
-            <div v-if="canEditPost(post)" class="post-actions">
+            <div v-if="isAuthenticated && canEditPost(post)" class="post-actions">
               <button @click="editPost(post)" class="action-btn">
                 <i class="fas fa-edit"></i>
               </button>
@@ -309,7 +309,6 @@ const loadPosts = async () => {
         comments: [],
         newComment: '',
         commentCount: parseInt(post.comment_count) || 0,
-        // Enhanced liked status handling
         liked: Boolean(post.liked),
         likes: parseInt(post.likes) || 0,
         likeLoading: false
@@ -773,8 +772,8 @@ const restoreLikedStates = () => {
 };
 
 onMounted(async () => {
+  await loadPosts();
   if (isAuthenticated.value) {
-    await loadPosts();
     restoreLikedStates();
   }
 });
@@ -1635,37 +1634,37 @@ onMounted(async () => {
 }
 
 .guest-notice {
-  background: linear-gradient(135deg, rgba(0, 209, 209, 0.1) 0%, rgba(64, 82, 214, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(0, 209, 209, 0.05) 0%, rgba(64, 82, 214, 0.05) 100%);
   border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  border: 1px solid rgba(0, 173, 173, 0.2);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(0, 173, 173, 0.1);
 }
 
 .notice-content {
   display: flex;
   align-items: center;
   gap: 1rem;
-  color: #005C5C;
+  color: #64748b;
 }
 
 .notice-content i {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   color: #00D1D1;
 }
 
 .login-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  margin-left: auto;
   padding: 0.5rem 1rem;
   background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
   color: white;
   border-radius: 8px;
   text-decoration: none;
   font-weight: 500;
-  margin-left: auto;
-  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
 }
 
 .login-btn:hover {
