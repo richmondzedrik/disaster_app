@@ -63,6 +63,12 @@ export const useAuthStore = defineStore('auth', () => {
                 
                 return response.data;
             }
+
+            // If the response indicates email doesn't exist
+            if (response.data?.error === 'email_not_found') {
+                throw new Error('No account found with this email. Please register first.');
+            }
+
             throw new Error(response.data?.message || 'Login failed');
         } catch (error) {
             console.error('Login error:', error);

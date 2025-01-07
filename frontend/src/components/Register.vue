@@ -23,7 +23,7 @@
                 'error': errors.username,
                 'success': usernameAvailable === true 
               }"
-            />
+            />   
             <span class="input-status" v-if="isCheckingUsername">
               <i class="fas fa-spinner fa-spin"></i>
             </span>

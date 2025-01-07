@@ -15,10 +15,12 @@
           <input 
             type="email" 
             id="email" 
-            v-model="email" 
-            required 
+            v-model="email"    
+            required   
             placeholder="Enter your email"
             :disabled="loading"
+            :maxlength="EMAIL_MAX_LENGTH"
+            pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
             :class="{ 'error': error && error.toLowerCase().includes('email') }"
           />
           <span class="error-message" v-if="error && error.toLowerCase().includes('email')">
@@ -39,6 +41,8 @@
               required 
               placeholder="Enter your password"
               :disabled="loading"
+              :minlength="PASSWORD_MIN_LENGTH"
+              :maxlength="PASSWORD_MAX_LENGTH"
               :class="{ 'error': error && error.toLowerCase().includes('password') }"
             />
             <i 
@@ -103,24 +107,53 @@ const loading = ref(false);
 const error = ref('');
 const showPassword = ref(false);
 
-// Add validation function
+// Add validation constants
+const EMAIL_MAX_LENGTH = 50;
+const PASSWORD_MIN_LENGTH = 6;
+const PASSWORD_MAX_LENGTH = 16;   
+const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+
+// Update validateForm function
 const validateForm = () => {
     error.value = '';
     
-    if (!email.value.trim() || !password.value.trim()) {
-        error.value = 'All fields are required';
+    // Email validations
+    if (!email.value.trim()) {   
+        error.value = 'Email is required';
+        notificationStore.warning('Please enter your email address');
         return false;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email.value.length > EMAIL_MAX_LENGTH) {
+        error.value = `Email must not exceed ${EMAIL_MAX_LENGTH} characters`;
+        notificationStore.warning('Email is too long');
+        return false;
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email.value.trim())) {
         error.value = 'Please enter a valid email address';
+        notificationStore.warning('Invalid email format');
+        return false;  
+    }
+
+    // Password validations
+    if (!password.value) {
+        error.value = 'Password is required';
+        notificationStore.warning('Please enter your password');
         return false;
     }
 
-    if (password.value.trim().length < 6) {
-        error.value = 'Password must be at least 6 characters';
+    if (password.value.length < PASSWORD_MIN_LENGTH) {
+        error.value = `Password must be at least ${PASSWORD_MIN_LENGTH} characters`;
+        notificationStore.warning('Password is too short');
         return false;
+    }
+
+    if (password.value.length > PASSWORD_MAX_LENGTH) {
+        error.value = `Password must not exceed ${PASSWORD_MAX_LENGTH} characters`;
+        notificationStore.warning('Password is too long');
+        return false;  
     }
 
     return true;
@@ -138,7 +171,7 @@ const handleSubmit = async () => {
             password: password.value.trim()
         });
 
-        if (response && response.success) {
+        if (response?.success) {
             const userData = response.user;
             
             if (!userData || !userData.role) {
@@ -146,19 +179,28 @@ const handleSubmit = async () => {
             }
 
             notificationStore.success('Login successful!');
-
-            if (userData.role === 'admin') {
-                await router.push('/admin/dashboard');
-            } else {
-                await router.push('/');
-            }
-        } else {
-            throw new Error(response?.message || 'Login failed');
+            await router.push(userData.role === 'admin' ? '/admin/dashboard' : '/');
         }
     } catch (err) {
-        console.error('Login error:', err);
-        error.value = err.response?.data?.message || err.message || 'Login failed. Please try again.';
-        notificationStore.error(error.value);
+        loading.value = false;
+        const errorMessage = err.response?.data?.message || err.message;
+        
+        // Handle specific error cases
+        if (errorMessage.toLowerCase().includes('no account found')) {
+            error.value = 'No account found with this email';
+            notificationStore.warning('Account not found. Please register first.');
+        } else if (errorMessage.toLowerCase().includes('password')) {
+            error.value = 'Invalid password';
+            notificationStore.error('Incorrect password');
+        } else if (errorMessage.toLowerCase().includes('verified')) {
+            error.value = 'Email not verified';
+            notificationStore.warning('Please verify your email before logging in');
+        } else {
+            error.value = errorMessage;
+            notificationStore.error('Login failed');
+        }
+        
+        return false;
     } finally {
         loading.value = false;
     }
@@ -190,7 +232,7 @@ onMounted(() => {
   background: white;
   padding: 2.5rem;
   border-radius: 20px;
-  box-shadow: 0 8px 24px rgba(0, 92, 92, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 92, 92, 0.08); 
   width: 100%;
   max-width: 450px;
   border: 1px solid rgba(0, 173, 173, 0.1);
