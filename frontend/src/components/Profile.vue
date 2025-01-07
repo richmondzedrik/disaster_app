@@ -941,10 +941,12 @@ const profileData = ref({
     username: '',
     email: '',
     phone: '',
+    location: '',
     notifications: {
         email: true,
         push: true
-    }
+    },
+    emergencyContacts: []
 });
 
 // Additional state
@@ -1055,6 +1057,8 @@ const loadProfileData = async () => {
     try {
         loading.value = true;
         const response = await userService.getProfile();
+        
+        console.log('Profile Response:', response); // Debug log
 
         if (response?.success && response.user) {
             const userData = response.user;
@@ -1066,13 +1070,6 @@ const loadProfileData = async () => {
                 lastLogin: userData.lastLogin || new Date().toISOString()
             };
 
-            // Ensure we handle both emergency_contacts and emergencyContacts fields
-            const emergencyContacts = Array.isArray(userData.emergency_contacts) 
-                ? userData.emergency_contacts 
-                : Array.isArray(userData.emergencyContacts) 
-                    ? userData.emergencyContacts 
-                    : [];
-
             const newProfileData = {
                 username: userData.username || '',
                 email: userData.email || '',
@@ -1082,13 +1079,17 @@ const loadProfileData = async () => {
                     email: userData.notifications?.email ?? true,
                     push: userData.notifications?.push ?? true
                 },
-                emergencyContacts: emergencyContacts.map(contact => ({  
-                    name: contact.name || '',
-                    phone: contact.phone || '',
-                    relation: contact.relation || ''
-                }))
+                emergencyContacts: Array.isArray(userData.emergencyContacts) 
+                    ? userData.emergencyContacts.map(contact => ({
+                        name: contact.name || '',
+                        phone: contact.phone || '',
+                        relation: contact.relation || ''
+                    }))
+                    : []
             };
 
+            console.log('Parsed Profile Data:', newProfileData); // Debug log
+            
             profileData.value = newProfileData;
             originalData.value = JSON.parse(JSON.stringify(newProfileData));
             calculateSecurityScore();
@@ -1420,4 +1421,16 @@ const saveEmergencyContact = () => {
 
     closeEmergencyContactModal();
 };
+
+watch(() => profileData.value.emergencyContacts, (newContacts) => {
+    console.log('Emergency Contacts Changed:', newContacts);
+}, { deep: true });
+
+// Add this after your existing watchers
+watch(() => profileData.value, (newData) => {
+    console.log('Profile Data Updated:', {
+        emergencyContacts: newData.emergencyContacts,
+        rawData: newData
+    });
+}, { deep: true });
 </script>

@@ -17,6 +17,18 @@ export const userService = {
 
             if (response.data?.user) {
                 const userData = response.data.user;
+                
+                // Parse emergency contacts
+                let emergencyContacts = userData.emergency_contacts || userData.emergencyContacts || [];
+                if (typeof emergencyContacts === 'string') {
+                    try {
+                        emergencyContacts = JSON.parse(emergencyContacts);
+                    } catch (e) {
+                        console.error('Error parsing emergency contacts:', e);
+                        emergencyContacts = [];
+                    }
+                }
+
                 return {
                     ...response.data,
                     user: {
@@ -26,7 +38,7 @@ export const userService = {
                                 JSON.parse(userData.notifications) : 
                                 userData.notifications) : 
                             { email: true, push: true },
-                        emergencyContacts: userData.emergencyContacts || userData.emergency_contacts || []
+                        emergencyContacts: Array.isArray(emergencyContacts) ? emergencyContacts : []
                     }
                 };
             }
@@ -48,7 +60,13 @@ export const userService = {
             const formattedData = {
                 ...data,
                 notifications: data.notifications,
-                emergency_contacts: data.emergencyContacts || []
+                emergency_contacts: Array.isArray(data.emergencyContacts) 
+                    ? data.emergencyContacts.map(contact => ({
+                        name: contact.name?.trim(),
+                        phone: contact.phone?.trim(),
+                        relation: contact.relation?.trim()
+                    }))
+                    : []
             };
 
             const response = await api.put('/auth/profile', formattedData, {
@@ -64,12 +82,17 @@ export const userService = {
             
             if (response.data?.user) {
                 const userData = response.data.user;
+                const emergencyContacts = userData.emergency_contacts || userData.emergencyContacts || [];
+                const parsedContacts = typeof emergencyContacts === 'string' 
+                    ? JSON.parse(emergencyContacts) 
+                    : emergencyContacts;
+
                 return {
                     ...response.data,
                     user: {
                         ...userData,
                         notifications: userData.notifications || { email: true, push: true },
-                        emergencyContacts: userData.emergencyContacts || userData.emergency_contacts || []
+                        emergencyContacts: parsedContacts
                     }
                 };
             }
@@ -77,9 +100,6 @@ export const userService = {
             return response.data;
         } catch (error) {
             console.error('Profile update error:', error);
-            if (error.response?.data?.message) {
-                throw new Error(error.response.data.message);
-            }
             throw error;
         }
     }, 500)
