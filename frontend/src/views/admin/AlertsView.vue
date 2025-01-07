@@ -195,14 +195,14 @@
 
       if (selectedDate < now) {
         notificationStore.error('Expiry date must be in the future');
-        return;  
+        return;
       }
 
       const alertData = {
         message: newAlert.value.message,
         type: newAlert.value.type,
         priority: parseInt(newAlert.value.priority),
-        expiry_date: newAlert.value.expiryDate,
+        expiryDate: newAlert.value.expiryDate ? new Date(newAlert.value.expiryDate).toISOString() : null,
         is_public: newAlert.value.isPublic === 'true'
       };
 
