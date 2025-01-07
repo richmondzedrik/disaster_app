@@ -320,7 +320,6 @@ const displayName = computed(() => {
   border-radius: 12px;
   font-size: 1rem;
   position: relative;
-  overflow: hidden;
 }
 
 .nav-link:hover {
