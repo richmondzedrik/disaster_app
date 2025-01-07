@@ -162,35 +162,56 @@
 
                 <!-- Emergency Contacts -->
                 <section class="profile-section">
-                    <h3><i class="fas fa-bell"></i> Emergency Contacts</h3>
-                    <div class="emergency-contacts">
-                        <div v-for="(contact, index) in profileData.emergencyContacts" 
-                             :key="index" 
-                             class="emergency-contact-item">
-                            <div class="contact-info">
-                                <input 
-                                    type="text" 
-                                    v-model="contact.name"
-                                    placeholder="Contact Name"
-                                    :disabled="loading"
-                                />
-                                <input 
-                                    type="tel" 
-                                    v-model="contact.phone"
-                                    placeholder="+63XXXXXXXXXX"
-                                    :disabled="loading"
-                                    @input="validateEmergencyContact(index)"
-                                />
-                            </div>
-                            <button @click="removeEmergencyContact(index)" 
-                                    class="remove-contact-btn"
-                                    :disabled="loading">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                    <h3>
+                        <i class="fas fa-phone-alt"></i> 
+                        Emergency Contacts
+                        <span class="contact-count">
+                            {{ profileData.emergencyContacts.length }}/3
+                        </span>
+                    </h3>
+                    <div class="emergency-contacts-list">
+                        <div v-if="profileData.emergencyContacts.length === 0" class="no-contacts">
+                            <i class="fas fa-user-plus"></i>
+                            <p>No emergency contacts added yet</p>
                         </div>
-                        <button @click="addEmergencyContact" 
-                                class="add-contact-btn"
-                                :disabled="loading || profileData.emergencyContacts.length >= 3">
+                        <div 
+                            v-else
+                            v-for="(contact, index) in profileData.emergencyContacts" 
+                            :key="index" 
+                            class="contact-card"
+                        >
+                            <div class="contact-info">
+                                <div class="contact-header">
+                                    <h4>{{ contact.name }}</h4>
+                                    <span class="relation-badge">{{ contact.relation }}</span>
+                                </div>
+                                <p class="phone-number">
+                                    <i class="fas fa-phone"></i>
+                                    {{ contact.phone }}
+                                </p>
+                            </div>
+                            <div class="contact-actions">
+                                <button 
+                                    class="edit-btn" 
+                                    @click="editEmergencyContact(index)"
+                                    :disabled="loading"
+                                >
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button 
+                                    class="delete-btn" 
+                                    @click="removeEmergencyContact(index)"
+                                    :disabled="loading"
+                                >
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button 
+                            class="add-contact-btn"
+                            @click="openEmergencyContactModal"
+                            :disabled="loading || profileData.emergencyContacts.length >= 3"
+                        >
                             <i class="fas fa-plus"></i>
                             Add Emergency Contact
                         </button>
@@ -215,6 +236,81 @@
         <!-- Password Change Modal -->
         <div v-if="showPasswordModal" class="modal">
             <!-- Modal content here (unchanged) -->
+        </div>
+
+        <!-- Emergency Contact Modal -->
+        <div v-if="showEmergencyContactModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-phone-alt"></i>
+                        {{ editingContactIndex === -1 ? 'Add' : 'Edit' }} Emergency Contact
+                    </h3>
+                    <button class="close-btn" @click="closeEmergencyContactModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="contactName">Contact Name</label>
+                        <input
+                            type="text"
+                            id="contactName"
+                            v-model="emergencyContactForm.name"
+                            placeholder="Enter contact name"
+                            :class="{ 'error': emergencyContactErrors.name }"
+                        />
+                        <span class="error-message" v-if="emergencyContactErrors.name">
+                            {{ emergencyContactErrors.name }}
+                        </span>
+                    </div>
+                    <div class="form-group">
+                        <label for="contactPhone">Phone Number</label>
+                        <input
+                            type="tel"
+                            id="contactPhone"
+                            v-model="emergencyContactForm.phone"
+                            placeholder="+63XXXXXXXXXX"
+                            :class="{ 'error': emergencyContactErrors.phone }"
+                        />
+                        <span class="error-message" v-if="emergencyContactErrors.phone">
+                            {{ emergencyContactErrors.phone }}
+                        </span>
+                    </div>
+                    <div class="form-group">
+                        <label for="contactRelation">Relationship</label>
+                        <select 
+                            id="contactRelation"
+                            v-model="emergencyContactForm.relation"
+                            :class="{ 'error': emergencyContactErrors.relation }"
+                        >
+                            <option value="">Select relationship</option>
+                            <option value="family">Family</option>
+                            <option value="friend">Friend</option>
+                            <option value="neighbor">Neighbor</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <span class="error-message" v-if="emergencyContactErrors.relation">
+                            {{ emergencyContactErrors.relation }}
+                        </span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button 
+                        class="btn btn-secondary" 
+                        @click="closeEmergencyContactModal"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        class="btn btn-primary" 
+                        @click="saveEmergencyContact"
+                        :disabled="!isEmergencyContactFormValid"
+                    >
+                        {{ editingContactIndex === -1 ? 'Add' : 'Save' }} Contact
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </template>
@@ -733,6 +829,114 @@
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.contact-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.relation-badge {
+    background: #e2e8f0;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    color: #4a5568;
+}
+
+.contact-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.phone-number {
+    color: #4a5568;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.contact-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.edit-btn, .delete-btn {
+    padding: 0.5rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.edit-btn {
+    background: #ebf8ff;
+    color: #3182ce;
+}
+
+.delete-btn {
+    background: #fff5f5;
+    color: #e53e3e;
+}
+
+.no-contacts {
+    text-align: center;
+    padding: 2rem;
+    color: #718096;
+}
+
+.no-contacts i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
 </style>
 
 <script setup>
@@ -1059,4 +1263,107 @@ const taskCompletionPercentage = computed(() => {
     const totalTasks = 10; // You can adjust this based on your total tasks
     return Math.round((userStats.value.completedTasks / totalTasks) * 100);
 });
+
+// Emergency contact management
+const showEmergencyContactModal = ref(false);
+const editingContactIndex = ref(-1);
+const emergencyContactForm = ref({
+    name: '',
+    phone: '',
+    relation: ''
+});
+const emergencyContactErrors = ref({
+    name: '',
+    phone: '',
+    relation: ''
+});
+
+const isEmergencyContactFormValid = computed(() => {
+    const phoneRegex = /^\+63[0-9]{10}$/;
+    return (
+        emergencyContactForm.value.name?.trim() &&
+        phoneRegex.test(emergencyContactForm.value.phone) &&
+        emergencyContactForm.value.relation
+    );
+});
+
+const validateEmergencyContactForm = () => {
+    const errors = {
+        name: '',
+        phone: '',
+        relation: ''
+    };
+
+    if (!emergencyContactForm.value.name?.trim()) {
+        errors.name = 'Name is required';
+    }
+
+    const phoneRegex = /^\+63[0-9]{10}$/;
+    if (!emergencyContactForm.value.phone) {
+        errors.phone = 'Phone number is required';
+    } else if (!phoneRegex.test(emergencyContactForm.value.phone)) {
+        errors.phone = 'Invalid Philippine phone number format';
+    }
+
+    if (!emergencyContactForm.value.relation) {
+        errors.relation = 'Relationship is required';
+    }
+
+    emergencyContactErrors.value = errors;
+    return !errors.name && !errors.phone && !errors.relation;
+};
+
+const openEmergencyContactModal = () => {
+    editingContactIndex.value = -1;
+    emergencyContactForm.value = {
+        name: '',
+        phone: '',
+        relation: ''
+    };
+    showEmergencyContactModal.value = true;
+};
+
+const editEmergencyContact = (index) => {
+    editingContactIndex.value = index;
+    const contact = profileData.value.emergencyContacts[index];
+    emergencyContactForm.value = { ...contact };
+    showEmergencyContactModal.value = true;
+};
+
+const closeEmergencyContactModal = () => {
+    showEmergencyContactModal.value = false;
+    editingContactIndex.value = -1;
+    emergencyContactForm.value = {
+        name: '',
+        phone: '',
+        relation: ''
+    };
+    emergencyContactErrors.value = {
+        name: '',
+        phone: '',
+        relation: ''
+    };
+};
+
+const saveEmergencyContact = () => {
+    if (!validateEmergencyContactForm()) return;
+
+    if (editingContactIndex.value === -1) {
+        // Adding new contact
+        profileData.value.emergencyContacts.push({
+            name: emergencyContactForm.value.name.trim(),
+            phone: emergencyContactForm.value.phone,
+            relation: emergencyContactForm.value.relation
+        });
+    } else {
+        // Updating existing contact
+        profileData.value.emergencyContacts[editingContactIndex.value] = {
+            name: emergencyContactForm.value.name.trim(),
+            phone: emergencyContactForm.value.phone,
+            relation: emergencyContactForm.value.relation
+        };
+    }
+
+    closeEmergencyContactModal();
+};
 </script> 
