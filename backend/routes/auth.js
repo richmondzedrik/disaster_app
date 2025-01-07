@@ -37,7 +37,7 @@ router.get('/test', (req, res) => {
 router.post('/verify-code', authController.verifyCode);
 
 // Add this new route to check raw emergency contacts
-router.get('/debug/emergency-contacts', auth.authenticateToken, async (req, res) => {
+router.get('/debug/emergency-contacts', auth.authMiddleware, async (req, res) => {
     try {
         const [rows] = await db.execute(
             'SELECT emergency_contacts FROM users WHERE id = ?',
