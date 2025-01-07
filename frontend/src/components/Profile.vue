@@ -1076,7 +1076,7 @@ const loadProfileData = async () => {
             } else if (userData.emergencyContacts) {
                 emergencyContacts = userData.emergencyContacts;
             }
-
+  
             console.log('Parsed Emergency Contacts:', emergencyContacts); // Debug log
 
             const newProfileData = {
@@ -1099,7 +1099,7 @@ const loadProfileData = async () => {
 
             console.log('New Profile Data:', newProfileData); // Debug log
             
-            profileData.value = newProfileData;
+            profileData.value = newProfileData;  
             originalData.value = JSON.parse(JSON.stringify(newProfileData));
             calculateSecurityScore();
         }
@@ -1447,4 +1447,7 @@ watch(() => profileData.value?.emergencyContacts, (newContacts, oldContacts) => 
         length: newContacts?.length || 0
     });
 }, { deep: true, immediate: true });
+
+// Add this right before the emergency contacts section renders
+console.log('Emergency Contacts in template:', profileData.value?.emergencyContacts);
 </script> 

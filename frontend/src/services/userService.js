@@ -15,36 +15,37 @@ export const userService = {
                 }
             });
 
-            console.log('Raw API Response:', response.data); // Debug log
-
             if (response.data?.user) {
                 const userData = response.data.user;
                 
-                // Parse emergency contacts
+                // Parse emergency contacts - simplified and more robust handling
                 let emergencyContacts = [];
                 
-                if (userData.emergency_contacts) {
-                    try {
+                try {
+                    if (userData.emergency_contacts) {
                         emergencyContacts = typeof userData.emergency_contacts === 'string' 
                             ? JSON.parse(userData.emergency_contacts)
                             : userData.emergency_contacts;
-                    } catch (e) {
-                        console.error('Error parsing emergency contacts:', e);
                     }
+                } catch (e) {
+                    console.error('Error parsing emergency contacts:', e);
                 }
 
-                console.log('Parsed Emergency Contacts:', emergencyContacts); // Debug log
+                // Ensure emergencyContacts is always an array with required fields
+                const formattedContacts = Array.isArray(emergencyContacts) 
+                    ? emergencyContacts.map(contact => ({
+                        name: contact.name || '',
+                        phone: contact.phone || '',
+                        relation: contact.relation || ''
+                    }))
+                    : [];
 
                 return {
                     success: true,
                     user: {
                         ...userData,
-                        notifications: userData.notifications ? 
-                            (typeof userData.notifications === 'string' ? 
-                                JSON.parse(userData.notifications) : 
-                                userData.notifications) : 
-                            { email: true, push: true },
-                        emergencyContacts: Array.isArray(emergencyContacts) ? emergencyContacts : []
+                        notifications: userData.notifications || { email: true, push: true },
+                        emergencyContacts: formattedContacts
                     }
                 };
             }
@@ -91,7 +92,7 @@ export const userService = {
                 const emergencyContacts = userData.emergency_contacts || userData.emergencyContacts || [];
                 const parsedContacts = typeof emergencyContacts === 'string' 
                     ? JSON.parse(emergencyContacts) 
-                    : emergencyContacts;
+                    : emergencyContacts;  
 
                 return {
                     ...response.data,
