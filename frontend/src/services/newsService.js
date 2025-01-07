@@ -108,7 +108,7 @@ export const newsService = {
             console.error('Error deleting post:', error);
             throw new Error(error.response?.data?.message || 'Failed to delete post');
         }
-    },
+    }, 
 
     async createPost(postData) {
         const response = await api.post('/admin/posts', postData);
@@ -145,15 +145,6 @@ export const newsService = {
         const response = await axios.put(`${API_URL}/news/posts/${id}`, formData, {
             headers,
             withCredentials: true
-        });
-        return response.data;
-    },
-
-    async deletePost(id) {
-        const headers = getHeaders();
-        const response = await axios.delete(`${API_URL}/news/posts/${id}`, {
-            headers,
-            withCredentials: true   
         });
         return response.data;
     },

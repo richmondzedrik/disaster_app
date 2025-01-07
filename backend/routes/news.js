@@ -101,11 +101,12 @@ router.put('/posts/:id', auth.authMiddleware, async (req, res) => {
 
 // Delete a post
 router.delete('/posts/:id', auth.authMiddleware, async (req, res) => {
+    const connection = await db.getConnection();
     try {
         const { id } = req.params;
         
         // Check if user is admin or post author
-        const [posts] = await db.execute(
+        const [posts] = await connection.query(
             'SELECT author_id FROM posts WHERE id = ?',
             [id]
         );
@@ -127,21 +128,46 @@ router.delete('/posts/:id', auth.authMiddleware, async (req, res) => {
             });
         }
 
-        const [result] = await db.execute(
-            'DELETE FROM posts WHERE id = ?',
-            [id]
-        );
+        // Use a transaction for deleting related records
+        await connection.beginTransaction();
 
-        res.json({
-            success: true,
-            message: 'Post deleted successfully'
-        });
+        try {
+            // Delete comments first
+            await connection.query(
+                'DELETE FROM comments WHERE post_id = ?',
+                [id]
+            );
+
+            // Then delete likes
+            await connection.query(
+                'DELETE FROM likes WHERE post_id = ?',
+                [id]
+            );
+
+            // Finally delete the post
+            await connection.query(
+                'DELETE FROM posts WHERE id = ?',
+                [id]
+            );
+
+            await connection.commit();
+
+            res.json({
+                success: true,
+                message: 'Post deleted successfully'
+            });
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        }
     } catch (error) {
         console.error('Error deleting post:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to delete post'
         });
+    } finally {
+        connection.release();
     }
 });
 
