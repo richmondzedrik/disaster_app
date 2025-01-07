@@ -84,12 +84,17 @@ const loadAlerts = async () => {
 };
 
 const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('en-US', {
+  if (!date) return 'No expiry';
+  const expiryDate = new Date(date);
+  if (isNaN(expiryDate.getTime())) return 'Invalid date';
+  
+  return expiryDate.toLocaleString('en-US', {
+    year: 'numeric',
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12: true
   });
 };
 

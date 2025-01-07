@@ -296,8 +296,8 @@ onMounted(async () => {
 const processedAlerts = computed(() => {
   return alerts.value.map(alert => {
     const now = new Date();
-    const expiryDate = new Date(alert.expiry_date);
-    const isExpired = expiryDate < now;
+    const expiryDate = alert.expiry_date ? new Date(alert.expiry_date) : null;
+    const isExpired = expiryDate && expiryDate < now;
     
     return {
       ...alert,
