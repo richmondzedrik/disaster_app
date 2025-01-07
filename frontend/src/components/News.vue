@@ -305,13 +305,22 @@ const loadPosts = async () => {
     const response = await newsService.getPublicPosts();
 
     if (response.success) {
+      // Store current liked states before updating posts
+      const currentLikedStates = {};
+      posts.value.forEach(post => {
+        if (post.liked) {
+          currentLikedStates[post.id] = true;
+        }
+      });
+
       posts.value = response.posts.map(post => ({
         ...post,
         showComments: false,
         comments: [],
         newComment: '',
         commentCount: parseInt(post.comment_count) || 0,
-        liked: Boolean(post.liked),
+        // Preserve liked state from current posts or use the response
+        liked: currentLikedStates[post.id] || Boolean(post.liked),
         likes: parseInt(post.likes) || 0,
         likeLoading: false
       }));
