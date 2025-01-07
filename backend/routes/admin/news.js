@@ -71,24 +71,36 @@ router.put('/posts/:id/approve', async (req, res) => {
 router.delete('/posts/:id', async (req, res) => {
     const connection = await db.getConnection();
     try {
-        // First, delete associated records
-        await connection.query('DELETE FROM comments WHERE post_id = ?', [req.params.id]);
-        await connection.query('DELETE FROM likes WHERE post_id = ?', [req.params.id]);
-        
-        // Then delete the post
-        const [result] = await connection.query('DELETE FROM posts WHERE id = ?', [req.params.id]);
+        // Start transaction
+        await connection.beginTransaction();
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Post not found'
+        try {
+            // First, delete associated records
+            await connection.query('DELETE FROM comments WHERE post_id = ?', [req.params.id]);
+            await connection.query('DELETE FROM likes WHERE post_id = ?', [req.params.id]);
+            
+            // Then delete the post
+            const [result] = await connection.query('DELETE FROM posts WHERE id = ?', [req.params.id]);
+
+            if (result.affectedRows === 0) {
+                await connection.rollback();
+                return res.status(404).json({
+                    success: false,
+                    message: 'Post not found'
+                });
+            }
+
+            // Commit the transaction
+            await connection.commit();
+
+            res.json({
+                success: true,
+                message: 'Post deleted successfully'
             });
+        } catch (error) {
+            await connection.rollback();
+            throw error;
         }
-
-        res.json({
-            success: true,
-            message: 'Post deleted successfully'
-        });
     } catch (error) {
         console.error('Error deleting post:', error);
         res.status(500).json({
