@@ -1,5 +1,6 @@
 <template>
-  <div class="home-container">
+  <AdminHome v-if="isAdmin" />
+  <div v-else class="home-container">
     <!-- Hero Section -->
     <section class="hero-section">
       <div class="hero-content">
@@ -126,12 +127,14 @@ import { useAuthStore } from '../stores/auth';
 import { useRouter } from 'vue-router';
 import { alertService } from '../services/alertService';
 import { newsService } from '../services/newsService';
+import AdminHome from './AdminHome.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
 const isLoggedIn = computed(() => authStore.isAuthenticated);
 const alerts = ref([]);
 const recentNews = ref([]);
+const isAdmin = computed(() => authStore.user?.role === 'admin');
 
 const formatDate = (dateString) => {
   try {
@@ -139,7 +142,7 @@ const formatDate = (dateString) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return 'Invalid date';
     
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-US', { 
       year: 'numeric',
       month: 'short',
       day: 'numeric'
