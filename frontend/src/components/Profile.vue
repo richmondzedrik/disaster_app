@@ -136,11 +136,11 @@
                         <i class="fas fa-phone-alt"></i>
                         Emergency Contacts
                         <span class="contact-count">
-                            {{ profileData.emergencyContacts.length }}/3
+                            {{ (profileData.emergencyContacts || []).length }}/3
                         </span>
                     </h3>
                     <div class="emergency-contacts-list">
-                        <div v-if="profileData.emergencyContacts.length === 0" class="no-contacts">
+                        <div v-if="!profileData.emergencyContacts || profileData.emergencyContacts.length === 0" class="no-contacts">
                             <i class="fas fa-user-plus"></i>
                             <p>No emergency contacts added yet</p>
                         </div>
@@ -955,13 +955,6 @@ const userStats = ref({
     completedTasks: 0
 });
 
-// Extend profileData
-profileData.value = {
-    ...profileData.value,
-    location: '',
-    emergencyContacts: []
-};
-
 // Form validation
 const isFormValid = ref(true);
 const validateForm = () => {
@@ -1058,7 +1051,7 @@ const loadProfileData = async () => {
         loading.value = true;
         const response = await userService.getProfile();
         
-        console.log('Profile Response:', response); // Debug log
+        console.log('Raw Profile Response:', response); // Debug log
 
         if (response?.success && response.user) {
             const userData = response.user;
@@ -1070,6 +1063,13 @@ const loadProfileData = async () => {
                 lastLogin: userData.lastLogin || new Date().toISOString()
             };
 
+            // Ensure emergencyContacts is always an array
+            const emergencyContacts = Array.isArray(userData.emergencyContacts) 
+                ? userData.emergencyContacts 
+                : [];
+
+            console.log('Parsed Emergency Contacts:', emergencyContacts); // Debug log
+
             const newProfileData = {
                 username: userData.username || '',
                 email: userData.email || '',
@@ -1079,16 +1079,14 @@ const loadProfileData = async () => {
                     email: userData.notifications?.email ?? true,
                     push: userData.notifications?.push ?? true
                 },
-                emergencyContacts: Array.isArray(userData.emergencyContacts) 
-                    ? userData.emergencyContacts.map(contact => ({
-                        name: contact.name || '',
-                        phone: contact.phone || '',
-                        relation: contact.relation || ''
-                    }))
-                    : []
+                emergencyContacts: emergencyContacts.map(contact => ({
+                    name: contact.name || '',
+                    phone: contact.phone || '',
+                    relation: contact.relation || ''
+                }))
             };
 
-            console.log('Parsed Profile Data:', newProfileData); // Debug log
+            console.log('New Profile Data:', newProfileData); // Debug log
             
             profileData.value = newProfileData;
             originalData.value = JSON.parse(JSON.stringify(newProfileData));
@@ -1096,6 +1094,15 @@ const loadProfileData = async () => {
         }
     } catch (error) {
         console.error('Load profile error:', error);
+        // Initialize with empty data on error
+        profileData.value = {
+            username: '',
+            email: '',
+            phone: '',
+            location: '',
+            notifications: { email: true, push: true },
+            emergencyContacts: []
+        };
         notificationStore.error('Failed to load profile data');
     } finally {
         loading.value = false;
@@ -1422,10 +1429,6 @@ const saveEmergencyContact = () => {
     closeEmergencyContactModal();
 };
 
-watch(() => profileData.value.emergencyContacts, (newContacts) => {
-    console.log('Emergency Contacts Changed:', newContacts);
-}, { deep: true });
-
 // Add this after your existing watchers
 watch(() => profileData.value, (newData) => {
     console.log('Profile Data Updated:', {
@@ -1433,4 +1436,13 @@ watch(() => profileData.value, (newData) => {
         rawData: newData
     });
 }, { deep: true });
-</script>
+
+// Add this watch effect to debug emergency contacts loading
+watch(() => profileData.value?.emergencyContacts, (newContacts, oldContacts) => {
+    console.log('Emergency Contacts Changed:', {
+        new: newContacts,
+        old: oldContacts,
+        length: newContacts?.length || 0
+    });
+}, { deep: true, immediate: true });
+</script> 

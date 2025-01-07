@@ -15,22 +15,30 @@ export const userService = {
                 }
             });
 
+            console.log('Raw API Response:', response.data); // Debug log
+
             if (response.data?.user) {
                 const userData = response.data.user;
                 
-                // Parse emergency contacts
-                let emergencyContacts = userData.emergency_contacts || userData.emergencyContacts || [];
-                if (typeof emergencyContacts === 'string') {
+                // Handle emergency contacts parsing
+                let emergencyContacts = [];
+                
+                if (userData.emergency_contacts) {
                     try {
-                        emergencyContacts = JSON.parse(emergencyContacts);
+                        emergencyContacts = typeof userData.emergency_contacts === 'string' 
+                            ? JSON.parse(userData.emergency_contacts)
+                            : userData.emergency_contacts;
                     } catch (e) {
                         console.error('Error parsing emergency contacts:', e);
-                        emergencyContacts = [];
                     }
+                } else if (userData.emergencyContacts) {
+                    emergencyContacts = userData.emergencyContacts;
                 }
 
+                console.log('Parsed Emergency Contacts:', emergencyContacts); // Debug log
+
                 return {
-                    ...response.data,
+                    success: true,
                     user: {
                         ...userData,
                         notifications: userData.notifications ? 
@@ -96,7 +104,7 @@ export const userService = {
                     }
                 };
             }
-            
+             
             return response.data;
         } catch (error) {
             console.error('Profile update error:', error);

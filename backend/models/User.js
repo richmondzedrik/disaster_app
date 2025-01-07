@@ -21,7 +21,7 @@ class User {
             const [rows] = await db.execute( 
                 `SELECT id, username, email, phone, location, notifications, 
                 emergency_contacts, role, email_verified, created_at, updated_at 
-                FROM users WHERE id = ?`,
+                FROM users WHERE id = ?`, 
                 [userId]
             );
 
@@ -34,11 +34,26 @@ class User {
             // Parse JSON fields
             try {
                 user.notifications = user.notifications ? JSON.parse(user.notifications) : {};
-                user.emergency_contacts = user.emergency_contacts ? JSON.parse(user.emergency_contacts) : [];
+                
+                // Parse emergency_contacts
+                if (user.emergency_contacts) {
+                    const contacts = typeof user.emergency_contacts === 'string' 
+                        ? JSON.parse(user.emergency_contacts)
+                        : user.emergency_contacts;
+                        
+                    user.emergencyContacts = Array.isArray(contacts) ? contacts : [];
+                } else {
+                    user.emergencyContacts = [];
+                }
+                
+                // Remove the snake_case version
+                delete user.emergency_contacts;
+                
+                console.log('Parsed User Data:', user); // Debug log
             } catch (e) {
                 console.error('Error parsing JSON fields:', e);
                 user.notifications = {};
-                user.emergency_contacts = [];
+                user.emergencyContacts = [];
             }
 
             return user;
@@ -73,7 +88,7 @@ class User {
 
     static async updateProfile(userId, profileData) {
         try {
-            // Format notifications and emergencyContacts
+            // Format the data before updating
             const formattedData = {
                 username: profileData.username,
                 phone: profileData.phone,
@@ -82,7 +97,7 @@ class User {
                 emergency_contacts: JSON.stringify(profileData.emergencyContacts || [])
             };
 
-            // Update the user in the database
+            // Update user in database
             const [result] = await db.execute(
                 `UPDATE users 
                  SET username = ?, 
@@ -106,7 +121,30 @@ class User {
             }
 
             // Fetch and return updated user
-            return await this.findById(userId);
+            const [rows] = await db.execute(
+                `SELECT id, username, email, phone, location, notifications, 
+                 emergency_contacts, role, email_verified, created_at, updated_at 
+                 FROM users WHERE id = ?`,
+                [userId]
+            );
+
+            if (!rows.length) {
+                throw new Error('User not found');
+            }
+
+            const user = rows[0];
+            
+            // Parse JSON fields for response
+            try {
+                user.notifications = JSON.parse(user.notifications || '{}');
+                user.emergencyContacts = JSON.parse(user.emergency_contacts || '[]');
+            } catch (e) {
+                console.error('Error parsing JSON fields:', e);
+                user.notifications = {};
+                user.emergencyContacts = [];
+            }
+
+            return user;
         } catch (error) {
             console.error('User.updateProfile error:', error);
             throw error;
@@ -121,7 +159,7 @@ class User {
 
             try {
                 // Delete user's related data first (if any)
-                // For example: refresh tokens, user preferences, etc.
+                // For example: refresh tokens, user preferences, etc.  
                 await connection.execute(
                     'DELETE FROM refresh_tokens WHERE user_id = ?',
                     [userId]
@@ -135,7 +173,7 @@ class User {
 
                 await connection.commit();
                 return result.affectedRows > 0;
-            } catch (error) {
+            } catch (error) { 
                 await connection.rollback();
                 throw error;
             } finally {
