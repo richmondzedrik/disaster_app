@@ -29,7 +29,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="alert in alerts" :key="alert.id">
+            <tr v-for="alert in processedAlerts" :key="alert.id">
               <td class="message-cell">{{ alert.message }}</td>
               <td>
                 <span :class="['type-badge', alert.type]">
@@ -44,9 +44,12 @@
               <td>
                 <button 
                   @click="toggleAlertStatus(alert)"
-                  :class="['status-badge', alert.is_active ? 'active' : 'inactive']"
+                  :class="['status-badge', 
+                          alert.status === 'Expired' ? 'expired' : 
+                          (alert.is_active ? 'active' : 'inactive')]"
+                  :disabled="alert.status === 'Expired'"
                 >
-                  {{ alert.is_active ? 'Active' : 'Inactive' }}
+                  {{ alert.status }}
                 </button>
               </td>
               <td>{{ formatDate(alert.expiry_date) }}</td>
@@ -157,13 +160,23 @@
   
   const formatDate = (date) => {
     if (!date) return 'No expiry';
-    return new Date(date).toLocaleString();
+    const expiryDate = new Date(date);
+    if (isNaN(expiryDate.getTime())) return 'Invalid date';
+    
+    return expiryDate.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
   };
   
   const formatPriority = (priority) => {
     const priorities = {
       0: 'Low',
-      1: 'Medium',
+      1: 'Medium', 
       2: 'High'
     };
     return priorities[priority] || priority;
@@ -182,7 +195,7 @@
 
       if (selectedDate < now) {
         notificationStore.error('Expiry date must be in the future');
-        return;
+        return;  
       }
 
       const alertData = {
@@ -278,6 +291,20 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
+});
+
+const processedAlerts = computed(() => {
+  return alerts.value.map(alert => {
+    const now = new Date();
+    const expiryDate = new Date(alert.expiry_date);
+    const isExpired = expiryDate < now;
+    
+    return {
+      ...alert,
+      is_active: isExpired ? false : alert.is_active,
+      status: isExpired ? 'Expired' : (alert.is_active ? 'Active' : 'Inactive')
+    };
+  });
 });
 
   </script>
@@ -593,4 +620,10 @@ onMounted(async () => {
   .table-container {
     position: relative;
   }
-  </style>
+  
+  .status-badge.expired { 
+    background: #f3f4f6; 
+    color: #9ca3af;
+    cursor: not-allowed;
+  }
+  </style>  

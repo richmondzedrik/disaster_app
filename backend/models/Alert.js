@@ -22,10 +22,26 @@ class Alert {
         const connection = await db.getConnection();
         try {
             const [rows] = await connection.execute(
-                `SELECT a.*, u.username as created_by_username 
+                `SELECT a.*, u.username as created_by_username,
+                        CASE 
+                            WHEN expiry_date IS NOT NULL AND expiry_date < NOW() THEN false
+                            ELSE is_active 
+                        END as is_active,
+                        CASE 
+                            WHEN expiry_date IS NOT NULL AND expiry_date < NOW() THEN 'Expired'
+                            WHEN is_active THEN 'Active'
+                            ELSE 'Inactive'
+                        END as status
                  FROM alerts a 
                  LEFT JOIN users u ON a.created_by = u.id 
-                 ORDER BY a.created_at DESC`
+                 ORDER BY 
+                    CASE 
+                        WHEN expiry_date IS NOT NULL AND expiry_date < NOW() THEN 0
+                        WHEN is_active THEN 1
+                        ELSE 2
+                    END,
+                    priority DESC,
+                    created_at DESC`
             );
             return rows;
         } finally {
@@ -105,7 +121,7 @@ class Alert {
     }
 
     static async getVerifiedUserEmails() {
-        const connection = await db.getConnection();
+        const connection = await db.getConnection();      
         try {
             const [rows] = await connection.execute(
                 'SELECT email FROM users WHERE email_verified = true'
