@@ -520,14 +520,19 @@ exports.updateProfile = async (req, res) => {
             });
         }
 
-        // Update profile with validated data
-        const updatedUser = await User.updateProfile(userId, {
+        // Format the data before updating
+        const profileData = {
             username,
             phone,
             location,
-            notifications,
-            emergencyContacts
-        });
+            notifications: typeof notifications === 'string' ? 
+                JSON.parse(notifications) : notifications,
+            emergencyContacts: typeof emergencyContacts === 'string' ? 
+                JSON.parse(emergencyContacts) : emergencyContacts
+        };
+
+        // Update profile with validated data
+        const updatedUser = await User.updateProfile(userId, profileData);
 
         // Return success response with updated user data
         res.json({
@@ -545,6 +550,13 @@ exports.updateProfile = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: 'User not found'
+            });
+        }
+        
+        if (error.message.includes('JSON')) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid data format'
             });
         }
         

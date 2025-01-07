@@ -7,7 +7,7 @@
                 <span>Saving changes...</span>
             </div>
         </div>
-        
+
         <div class="profile-content" :class="{ 'blur-content': loading }">
             <!-- Profile Header -->
             <div class="profile-header">
@@ -70,34 +70,17 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="username">Username</label>
-                            <input 
-                                type="text" 
-                                id="username"
-                                v-model.trim="profileData.username"
-                                :disabled="loading"
-                                placeholder="Enter username"
-                            />
+                            <input type="text" id="username" v-model.trim="profileData.username" :disabled="loading"
+                                placeholder="Enter username" />
                         </div>
                         <div class="form-group">
                             <label for="email">Email</label>
-                            <input 
-                                type="email" 
-                                id="email"
-                                v-model="profileData.email"
-                                disabled
-                                class="readonly"
-                            />
+                            <input type="email" id="email" v-model="profileData.email" disabled class="readonly" />
                         </div>
                         <div class="form-group">
                             <label for="phone">Phone Number</label>
-                            <input 
-                                type="tel" 
-                                id="phone"
-                                v-model="profileData.phone"
-                                :disabled="loading"
-                                placeholder="+63XXXXXXXXXX"
-                                @input="validatePhoneNumber"
-                            />
+                            <input type="tel" id="phone" v-model="profileData.phone" :disabled="loading"
+                                placeholder="+63XXXXXXXXXX" @input="validatePhoneNumber" />
                             <span class="input-hint" :class="{ error: phoneError }">
                                 {{ phoneError || 'Format: +63XXXXXXXXXX' }}
                             </span>
@@ -105,13 +88,8 @@
                         <div class="form-group">
                             <label for="location">Location</label>
                             <div class="location-input">
-                                <input 
-                                    type="text" 
-                                    id="location"
-                                    v-model="profileData.location"
-                                    :disabled="loading"
-                                    placeholder="Enter your location"
-                                />
+                                <input type="text" id="location" v-model="profileData.location" :disabled="loading"
+                                    placeholder="Enter your location" />
                                 <button @click="detectLocation" class="detect-location-btn" :disabled="loading">
                                     <i :class="['fas', loading ? 'fa-spinner fa-spin' : 'fa-map-marker-alt']"></i>
                                 </button>
@@ -125,20 +103,12 @@
                     <h3><i class="fas fa-bell"></i> Notification Preferences</h3>
                     <div class="notification-options">
                         <label class="toggle-switch">
-                            <input 
-                                type="checkbox" 
-                                v-model="profileData.notifications.email"
-                                :disabled="loading"
-                            />
+                            <input type="checkbox" v-model="profileData.notifications.email" :disabled="loading" />
                             <span class="toggle-slider"></span>
                             <span class="toggle-label">Email Notifications</span>
                         </label>
                         <label class="toggle-switch">
-                            <input 
-                                type="checkbox" 
-                                v-model="profileData.notifications.push"
-                                :disabled="loading"
-                            />
+                            <input type="checkbox" v-model="profileData.notifications.push" :disabled="loading" />
                             <span class="toggle-slider"></span>
                             <span class="toggle-label">Push Notifications</span>
                         </label>
@@ -163,7 +133,7 @@
                 <!-- Emergency Contacts -->
                 <section class="profile-section">
                     <h3>
-                        <i class="fas fa-phone-alt"></i> 
+                        <i class="fas fa-phone-alt"></i>
                         Emergency Contacts
                         <span class="contact-count">
                             {{ profileData.emergencyContacts.length }}/3
@@ -174,12 +144,8 @@
                             <i class="fas fa-user-plus"></i>
                             <p>No emergency contacts added yet</p>
                         </div>
-                        <div 
-                            v-else
-                            v-for="(contact, index) in profileData.emergencyContacts" 
-                            :key="index" 
-                            class="contact-card"
-                        >
+                        <div v-else v-for="(contact, index) in profileData.emergencyContacts" :key="index"
+                            class="contact-card">
                             <div class="contact-info">
                                 <div class="contact-header">
                                     <h4>{{ contact.name }}</h4>
@@ -191,27 +157,16 @@
                                 </p>
                             </div>
                             <div class="contact-actions">
-                                <button 
-                                    class="edit-btn" 
-                                    @click="editEmergencyContact(index)"
-                                    :disabled="loading"
-                                >
+                                <button class="edit-btn" @click="editEmergencyContact(index)" :disabled="loading">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button 
-                                    class="delete-btn" 
-                                    @click="removeEmergencyContact(index)"
-                                    :disabled="loading"
-                                >
+                                <button class="delete-btn" @click="removeEmergencyContact(index)" :disabled="loading">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </div>
                         </div>
-                        <button 
-                            class="add-contact-btn"
-                            @click="openEmergencyContactModal"
-                            :disabled="loading || profileData.emergencyContacts.length >= 3"
-                        >
+                        <button class="add-contact-btn" @click="openEmergencyContactModal"
+                            :disabled="loading || profileData.emergencyContacts.length >= 3">
                             <i class="fas fa-plus"></i>
                             Add Emergency Contact
                         </button>
@@ -220,14 +175,15 @@
 
                 <!-- Save Changes Button -->
                 <div class="save-changes-container">
-                    <button 
-                        @click="saveChanges" 
-                        class="save-changes-btn" 
-                        :class="{ 'loading': loading }"
-                        :disabled="loading || !isFormValid || !hasChanges"
-                    >
+                    <button @click="saveChanges" class="save-changes-btn" :class="{ 'loading': loading }"
+                        :disabled="isSaveDisabled">
                         <i :class="['fas', loading ? 'fa-spinner fa-spin' : 'fa-save']"></i>
-                        <span>{{ loading ? 'Saving...' : 'Save Changes' }}</span>
+                        <span>
+                            {{ loading ? 'Saving...' :
+                                !hasChanges ? 'No Changes' :
+                                    !isFormValid ? 'Invalid Form' :
+                            'Save Changes' }}  
+                        </span>
                     </button>
                 </div>
             </div>
@@ -253,37 +209,24 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="contactName">Contact Name</label>
-                        <input
-                            type="text"
-                            id="contactName"
-                            v-model="emergencyContactForm.name"
-                            placeholder="Enter contact name"
-                            :class="{ 'error': emergencyContactErrors.name }"
-                        />
+                        <input type="text" id="contactName" v-model="emergencyContactForm.name"
+                            placeholder="Enter contact name" :class="{ 'error': emergencyContactErrors.name }" />
                         <span class="error-message" v-if="emergencyContactErrors.name">
                             {{ emergencyContactErrors.name }}
                         </span>
                     </div>
                     <div class="form-group">
                         <label for="contactPhone">Phone Number</label>
-                        <input
-                            type="tel"
-                            id="contactPhone"
-                            v-model="emergencyContactForm.phone"
-                            placeholder="+63XXXXXXXXXX"
-                            :class="{ 'error': emergencyContactErrors.phone }"
-                        />
+                        <input type="tel" id="contactPhone" v-model="emergencyContactForm.phone"
+                            placeholder="+63XXXXXXXXXX" :class="{ 'error': emergencyContactErrors.phone }" />
                         <span class="error-message" v-if="emergencyContactErrors.phone">
                             {{ emergencyContactErrors.phone }}
                         </span>
                     </div>
                     <div class="form-group">
                         <label for="contactRelation">Relationship</label>
-                        <select 
-                            id="contactRelation"
-                            v-model="emergencyContactForm.relation"
-                            :class="{ 'error': emergencyContactErrors.relation }"
-                        >
+                        <select id="contactRelation" v-model="emergencyContactForm.relation"
+                            :class="{ 'error': emergencyContactErrors.relation }">
                             <option value="">Select relationship</option>
                             <option value="family">Family</option>
                             <option value="friend">Friend</option>
@@ -296,17 +239,11 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button 
-                        class="btn btn-secondary" 
-                        @click="closeEmergencyContactModal"
-                    >
+                    <button class="btn btn-secondary" @click="closeEmergencyContactModal">
                         Cancel
                     </button>
-                    <button 
-                        class="btn btn-primary" 
-                        @click="saveEmergencyContact"
-                        :disabled="!isEmergencyContactFormValid"
-                    >
+                    <button class="btn btn-primary" @click="saveEmergencyContact"
+                        :disabled="!isEmergencyContactFormValid">
                         {{ editingContactIndex === -1 ? 'Add' : 'Save' }} Contact
                     </button>
                 </div>
@@ -601,7 +538,7 @@
     .profile-stats {
         grid-template-columns: 1fr;
     }
-    
+
     .contact-info {
         grid-template-columns: 1fr;
     }
@@ -643,13 +580,22 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.2),
-        transparent
-    );
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.2),
+            transparent);
     transition: 0.5s;
+}
+
+.save-changes-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+    box-shadow: none;
+}
+
+.save-changes-btn:disabled::before {
+    display: none;
 }
 
 .save-changes-btn.loading {
@@ -677,19 +623,39 @@
 }
 
 @keyframes gradientMove {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
 }
 
 .notification {
@@ -736,6 +702,7 @@
         transform: translateX(100%);
         opacity: 0;
     }
+
     to {
         transform: translateX(0);
         opacity: 1;
@@ -747,6 +714,7 @@
         transform: translateX(0);
         opacity: 1;
     }
+
     to {
         transform: translateX(100%);
         opacity: 0;
@@ -820,14 +788,20 @@
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .modal {
@@ -890,6 +864,7 @@
     color: #4a5568;
 }
 
+
 .contact-header {
     display: flex;
     align-items: center;
@@ -909,7 +884,8 @@
     gap: 0.5rem;
 }
 
-.edit-btn, .delete-btn {
+.edit-btn,
+.delete-btn {
     padding: 0.5rem;
     border-radius: 6px;
     border: none;
@@ -987,57 +963,112 @@ profileData.value = {
 // Form validation
 const isFormValid = ref(true);
 const validateForm = () => {
-    const phoneRegex = /^\+63[0-9]{10}$/;
-    let valid = true;
+    let isValid = true;
+    const errors = [];
 
+    // Validate username
+    if (!profileData.value.username?.trim()) {
+        errors.push('Username is required');
+        isValid = false;
+    }
+
+    // Validate phone number
+    const phoneRegex = /^\+63[0-9]{10}$/;
     if (profileData.value.phone && !phoneRegex.test(profileData.value.phone)) {
-        valid = false;
+        errors.push('Invalid phone number format');
+        isValid = false;
     }
 
     // Validate emergency contacts
-    if (profileData.value.emergencyContacts) {
-        profileData.value.emergencyContacts.forEach(contact => {
-            if (contact.phone && !phoneRegex.test(contact.phone)) {
-                valid = false;
-            }
-        });
+    if (profileData.value.emergencyContacts?.length > 3) {
+        errors.push('Maximum of 3 emergency contacts allowed');
+        isValid = false;
     }
 
-    isFormValid.value = valid;
+    profileData.value.emergencyContacts?.forEach((contact, index) => {
+        if (contact.phone && !phoneRegex.test(contact.phone)) {
+            errors.push(`Invalid phone number for emergency contact ${index + 1}`);
+            isValid = false;
+        }
+    });
+
+    if (!isValid) {
+        errors.forEach(error => notificationStore.error(error));
+    }
+
+    isFormValid.value = isValid;
+    return isValid;
 };
 
 // Load profile data
 const originalData = ref(null);
-const hasChanges = ref(false);
-watch(
-    () => profileData.value,
-    (newVal) => {
-        if (originalData.value) {
-            hasChanges.value = JSON.stringify(newVal) !== JSON.stringify(originalData.value);
-            validateForm();
-        }
-    },
-    { deep: true }
-);
+const hasChanges = computed(() => {
+    if (!originalData.value) return false;
+    
+    const currentData = {
+        username: profileData.value.username?.trim() || '',
+        phone: profileData.value.phone?.trim() || '',
+        location: profileData.value.location?.trim() || '',
+        notifications: {
+            email: !!profileData.value.notifications?.email,
+            push: !!profileData.value.notifications?.push
+        },
+        emergencyContacts: (profileData.value.emergencyContacts || [])
+            .map(contact => ({
+                name: contact.name?.trim() || '',
+                phone: contact.phone?.trim() || '',
+                relation: contact.relation?.trim() || ''
+            }))
+            .filter(contact => contact.name && contact.phone && contact.relation)
+    };
+
+    const original = { 
+        username: originalData.value.username || '',
+        phone: originalData.value.phone || '',
+        location: originalData.value.location || '',
+        notifications: {
+            email: !!originalData.value.notifications?.email,
+            push: !!originalData.value.notifications?.push
+        },
+        emergencyContacts: (originalData.value.emergencyContacts || [])
+            .map(contact => ({
+                name: contact.name || '',
+                phone: contact.phone || '',
+                relation: contact.relation || ''
+            }))
+            .filter(contact => contact.name && contact.phone && contact.relation)
+    };
+
+    return JSON.stringify(currentData) !== JSON.stringify(original);
+});
+
+const isSaveDisabled = computed(() => {
+    return loading.value || 
+           !isFormValid.value || 
+           !hasChanges.value ||
+           profileData.value.emergencyContacts.some(contact => contact.error); 
+});
 
 const loadProfileData = async () => {
     if (loading.value) return;
-    
+
     try {
         loading.value = true;
         const response = await userService.getProfile();
-        
+
         if (response?.success && response.user) {
             const userData = response.user;
-            
+
             // Update userStats with actual values
             userStats.value = {
                 securityScore: 0,
                 completedTasks: userData.completedTasks || 0,
-                lastLogin: userData.lastLogin || new Date().toISOString() // Add lastLogin
+                lastLogin: userData.lastLogin || new Date().toISOString()
             };
-            
-            // Rest of your existing code...
+
+            // Handle emergency contacts properly
+            const emergencyContacts = userData.emergency_contacts || userData.emergencyContacts || [];
+
             const newProfileData = {
                 username: userData.username || '',
                 email: userData.email || '',
@@ -1047,7 +1078,11 @@ const loadProfileData = async () => {
                     email: userData.notifications?.email ?? true,
                     push: userData.notifications?.push ?? true
                 },
-                emergencyContacts: userData.emergencyContacts || []
+                emergencyContacts: emergencyContacts.map(contact => ({
+                    name: contact.name || '',
+                    phone: contact.phone || '',
+                    relation: contact.relation || ''
+                }))
             };
 
             profileData.value = newProfileData;
@@ -1079,7 +1114,7 @@ const passwordData = ref({
 
 const isPasswordFormValid = computed(() => {
     return passwordData.value.newPassword.length >= 8 &&
-           passwordData.value.newPassword === passwordData.value.confirmPassword;
+        passwordData.value.newPassword === passwordData.value.confirmPassword;
 });
 
 const handlePasswordChange = async () => {
@@ -1137,7 +1172,7 @@ const detectLocation = async () => {
             `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
         );
         const data = await response.json();
-        
+
         profileData.value.location = data.display_name;
         notificationStore.success('Location detected successfully');
     } catch (error) {
@@ -1174,18 +1209,18 @@ const validateEmergencyContact = (index) => {
 // Calculate security score
 const calculateSecurityScore = () => {
     let score = 0;
-    
+
     // Basic profile completion
     if (profileData.value.username) score += 20;
     if (profileData.value.phone) score += 20;
     if (profileData.value.location) score += 20;
-    
+
     // Emergency contacts
     score += (profileData.value.emergencyContacts.length * 10);
-    
+
     // Email verification
     if (user.value?.email_verified) score += 20;
-    
+
     userStats.value.securityScore = Math.min(score, 100);
 };
 
@@ -1195,7 +1230,7 @@ const formatDate = (dateString) => {
         if (!dateString) return 'No date';
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return 'Invalid date';
-        
+
         return date.toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
@@ -1207,7 +1242,7 @@ const formatDate = (dateString) => {
         console.error('Date formatting error:', error);
         return 'Invalid date';
     }
-};
+};  
 
 // Initialize component
 onMounted(() => {
@@ -1220,40 +1255,55 @@ onMounted(() => {
 
 // Save changes function
 const saveChanges = async () => {
-    if (loading.value || !isFormValid.value || !hasChanges.value) return;
+    if (loading.value || !isFormValid.value || !hasChanges.value) {
+        return;
+    }
 
     try {
         loading.value = true;
+
+        if (!validateForm()) {
+            loading.value = false;
+            return;
+        }
+
         const updateData = {
             username: profileData.value.username?.trim(),
             phone: profileData.value.phone?.trim(),
             location: profileData.value.location?.trim(),
             notifications: profileData.value.notifications || {},
-            emergencyContacts: profileData.value.emergencyContacts?.map(contact => ({
-                name: contact.name?.trim(),
-                phone: contact.phone?.trim()
-            })).filter(contact => contact.name && contact.phone) || []
+            emergencyContacts: profileData.value.emergencyContacts
+                ?.map(contact => ({
+                    name: contact.name?.trim(),
+                    phone: contact.phone?.trim(),
+                    relation: contact.relation?.trim()
+                }))
+                .filter(contact => contact.name && contact.phone && contact.relation) || []
         };
 
-        console.log('Sending update:', updateData);
         const response = await userService.updateProfile(updateData);
-        console.log('Update response:', response);
-
-        if (response?.success) {
-            // Update original data to prevent further changes until next load
-            originalData.value = JSON.parse(JSON.stringify(profileData.value));
-            
-            // Update auth store user data
-            if (response.user) {
-                authStore.updateUser(response.user);
-            }
-
-            notificationStore.success('Profile updated successfully');
-            calculateSecurityScore();
+        
+        // Instead of JSON parsing, directly assign the cleaned data
+        originalData.value = {
+            username: updateData.username,
+            phone: updateData.phone,
+            location: updateData.location,
+            notifications: { ...updateData.notifications },
+            emergencyContacts: updateData.emergencyContacts.map(contact => ({ ...contact }))
+        };
+        
+        if (response?.user) {
+            authStore.updateUser(response.user);
         }
+
+        notificationStore.success('Profile updated successfully');
+        
+        // Remove the loadProfileData call since we already have the updated data
+        // await loadProfileData();
+        
     } catch (error) {
         console.error('Save profile error:', error);
-        notificationStore.error(error.message || 'Failed to update profile');
+        notificationStore.error('Failed to update profile');
     } finally {
         loading.value = false;
     }
@@ -1265,7 +1315,7 @@ const taskCompletionPercentage = computed(() => {
 });
 
 // Emergency contact management
-const showEmergencyContactModal = ref(false);
+const showEmergencyContactModal = ref(false);   
 const editingContactIndex = ref(-1);
 const emergencyContactForm = ref({
     name: '',
@@ -1281,7 +1331,7 @@ const emergencyContactErrors = ref({
 const isEmergencyContactFormValid = computed(() => {
     const phoneRegex = /^\+63[0-9]{10}$/;
     return (
-        emergencyContactForm.value.name?.trim() &&
+        emergencyContactForm.value.name?.trim() && 
         phoneRegex.test(emergencyContactForm.value.phone) &&
         emergencyContactForm.value.relation
     );
@@ -1366,4 +1416,4 @@ const saveEmergencyContact = () => {
 
     closeEmergencyContactModal();
 };
-</script> 
+</script>

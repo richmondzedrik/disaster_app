@@ -16,13 +16,32 @@ class User {
         }
     }
 
-    static async findById(id) {
+    static async findById(userId) {
         try {
-            const [rows] = await db.execute(
-                'SELECT * FROM users WHERE id = ?',
-                [id]
+            const [rows] = await db.execute( 
+                `SELECT id, username, email, phone, location, notifications, 
+                emergency_contacts, role, email_verified, created_at, updated_at 
+                FROM users WHERE id = ?`,
+                [userId]
             );
-            return rows[0] || null;
+
+            if (rows.length === 0) {
+                return null;
+            }
+
+            const user = rows[0];
+            
+            // Parse JSON fields
+            try {
+                user.notifications = user.notifications ? JSON.parse(user.notifications) : {};
+                user.emergency_contacts = user.emergency_contacts ? JSON.parse(user.emergency_contacts) : [];
+            } catch (e) {
+                console.error('Error parsing JSON fields:', e);
+                user.notifications = {};
+                user.emergency_contacts = [];
+            }
+
+            return user;
         } catch (error) {
             console.error('Error in findById:', error);
             throw error;
@@ -47,87 +66,50 @@ class User {
                 userId: result.insertId
             };
         } catch (error) {
-            console.error('Error in create:', error);
+            console.error('Error in create:', error); 
             throw error;
         }
     }
 
-    static async updateProfile(userId, data) {
-        const connection = await db.getConnection();
+    static async updateProfile(userId, profileData) {
         try {
-            await connection.beginTransaction();
-
-            // Validate user exists first
-            const [userExists] = await connection.execute(
-                'SELECT id FROM users WHERE id = ?',
-                [userId]
-            );
-
-            if (!userExists.length) {
-                throw new Error('User not found');
-            }
-
-            // Prepare data for update
-            const updateData = {
-                username: data.username?.trim(),
-                phone: data.phone?.trim() || null,
-                location: data.location?.trim() || null,
-                notifications: JSON.stringify(data.notifications || {}),
-                emergency_contacts: JSON.stringify(data.emergencyContacts || [])
+            // Format notifications and emergencyContacts
+            const formattedData = {
+                username: profileData.username,
+                phone: profileData.phone,
+                location: profileData.location,
+                notifications: JSON.stringify(profileData.notifications || {}),
+                emergency_contacts: JSON.stringify(profileData.emergencyContacts || [])
             };
 
-            // Update user data
-            const [result] = await connection.execute(
+            // Update the user in the database
+            const [result] = await db.execute(
                 `UPDATE users 
                  SET username = ?, 
                      phone = ?, 
-                     location = ?,
+                     location = ?, 
                      notifications = ?,
                      emergency_contacts = ?
                  WHERE id = ?`,
                 [
-                    updateData.username,
-                    updateData.phone,
-                    updateData.location,
-                    updateData.notifications,
-                    updateData.emergency_contacts,
+                    formattedData.username,
+                    formattedData.phone,
+                    formattedData.location,
+                    formattedData.notifications,
+                    formattedData.emergency_contacts,
                     userId
                 ]
             );
 
             if (result.affectedRows === 0) {
-                throw new Error('Failed to update profile');
+                throw new Error('User not found');
             }
 
-            // Fetch updated user data
-            const [updatedUser] = await connection.execute(
-                `SELECT id, username, email, phone, location, notifications, 
-                        emergency_contacts, role, email_verified, created_at
-                 FROM users WHERE id = ?`,
-                [userId]
-            );
-
-            await connection.commit();
-
-            // Parse JSON fields and return consistent field names
-            return {
-                id: updatedUser[0].id,
-                username: updatedUser[0].username,
-                email: updatedUser[0].email,
-                phone: updatedUser[0].phone || '',
-                location: updatedUser[0].location || '',
-                notifications: JSON.parse(updatedUser[0].notifications || '{}'),
-                emergency_contacts: JSON.parse(updatedUser[0].emergency_contacts || '[]'),
-                role: updatedUser[0].role,
-                email_verified: updatedUser[0].email_verified,
-                created_at: updatedUser[0].created_at
-            };
-
+            // Fetch and return updated user
+            return await this.findById(userId);
         } catch (error) {
-            await connection.rollback();
+            console.error('User.updateProfile error:', error);
             throw error;
-        } finally {
-            connection.release();
         }
     }
 
@@ -242,7 +224,7 @@ class User {
         try {
             // Generate reset token
             const resetToken = crypto.randomBytes(32).toString('hex');
-            const hashedToken = crypto
+            const hashedToken = crypto  
                 .createHash('sha256')
                 .update(resetToken)
                 .digest('hex');
