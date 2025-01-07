@@ -184,7 +184,7 @@
   
   const minDateTime = computed(() => {
     const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());       
     return now.toISOString().slice(0, 16);
   });
   
@@ -205,8 +205,8 @@
         message: newAlert.value.message,
         type: newAlert.value.type,
         priority: parseInt(newAlert.value.priority),
-        expiry_date: formattedExpiryDate,
-        is_public: newAlert.value.isPublic === 'true'
+        expiryDate: formattedExpiryDate,
+        isPublic: newAlert.value.isPublic === 'true'
       };
 
       const response = await alertStore.createAlert(alertData);

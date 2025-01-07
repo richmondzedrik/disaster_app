@@ -12,14 +12,15 @@ exports.createAlert = async (req, res) => {
                 message: 'Message and type are required'
             });
         }
-        // Create alert
+
+        // Create alert with properly named expiry_date field
         const alert = await Alert.create({
             message,
             type,
             priority: priority || 0,
-            expiry_date: expiryDate,
+            expiry_date: expiryDate,  // This matches the database column name
             is_public: isPublic,
-            created_by: req.user.userId // from auth middleware
+            created_by: req.user.userId
         });
 
         return res.status(201).json({
