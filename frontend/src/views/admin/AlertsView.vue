@@ -195,14 +195,17 @@
 
       if (selectedDate < now) {
         notificationStore.error('Expiry date must be in the future');
-        return;
+        return;  
       }
+
+      // Format the date to MySQL datetime format
+      const formattedExpiryDate = selectedDate.toISOString().slice(0, 19).replace('T', ' ');
 
       const alertData = {
         message: newAlert.value.message,
         type: newAlert.value.type,
         priority: parseInt(newAlert.value.priority),
-        expiryDate: newAlert.value.expiryDate ? new Date(newAlert.value.expiryDate).toISOString() : null,
+        expiry_date: formattedExpiryDate,
         is_public: newAlert.value.isPublic === 'true'
       };
 
@@ -247,7 +250,7 @@
       console.error('Error deleting alert:', error);
       notificationStore.error('Failed to delete alert');
     }
-  };
+  }; 
   
   const resetForm = () => {
     const now = new Date();
