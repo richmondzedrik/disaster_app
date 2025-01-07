@@ -4,7 +4,7 @@
       <div class="register-header">
         <i class="fas fa-shield-alt header-icon"></i>
         <h2>Create Account</h2>
-        <p class="subtitle">Join SafeAlert to stay prepared and informed</p>
+        <p class="subtitle">Join AlertoAbra to stay prepared and informed</p>
       </div>
 
       <form @submit.prevent="handleSubmit">

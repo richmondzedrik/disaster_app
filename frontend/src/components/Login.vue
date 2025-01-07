@@ -4,7 +4,7 @@
       <div class="login-header">
         <i class="fas fa-shield-alt header-icon"></i>
         <h2>Welcome Back</h2>
-        <p class="subtitle">Sign in to continue to SafeAlert</p>
+        <p class="subtitle">Sign in to continue to AlertoAbra</p>
       </div>
       
       <form @submit.prevent="handleSubmit">

@@ -4,7 +4,7 @@
       <!-- Brand Logo -->
       <div class="nav-brand">
         <router-link to="/">
-          <i class="fas fa-shield-alt"></i> SafeAlert
+          <i class="fas fa-shield-alt"></i> AlertoAbra
         </router-link>
       </div>
 

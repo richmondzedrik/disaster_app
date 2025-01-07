@@ -4,7 +4,7 @@
       <div class="login-header">
         <i class="fas fa-shield-alt header-icon"></i>
         <h2>Admin Login</h2>
-        <p class="subtitle">Access SafeAlert Admin Panel</p>
+        <p class="subtitle">Access AlertoAbra Admin Panel</p>
       </div>
       
       <form @submit.prevent="handleSubmit">

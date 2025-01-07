@@ -3,7 +3,7 @@
         <div class="about-content">
             <div class="about-header">
                 <i class="fas fa-shield-alt header-icon"></i>
-                <h1>About SafeAlert</h1>
+                <h1>About AlertoAbra</h1>
             </div>
 
             <div class="mission-section">

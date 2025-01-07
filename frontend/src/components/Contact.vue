@@ -85,7 +85,7 @@
                     <i class="fas fa-envelope"></i>
                     <div>
                         <h3>Email</h3>
-                        <p>contact@safealert.com</p>
+                        <p>contact@AlertoAbra.com</p>
                     </div>
                 </div>
             </div>
