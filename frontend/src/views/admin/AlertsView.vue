@@ -3,7 +3,7 @@
       <div class="header">
         <div class="header-content">
           <h1>Alert Management</h1>
-          <p>Create and manage system-wide alerts and notifications</p>
+          <p>Create and manage system-wide alerts and notifications</p>   
         </div>
         <button @click="showCreateModal = true" class="create-btn">
           <i class="fas fa-plus"></i>
@@ -109,6 +109,8 @@
                   type="datetime-local" 
                   v-model="newAlert.expiryDate"
                   class="form-input"
+                  :min="minDateTime"
+                  required
                 >
               </div>
               <div class="form-group">
@@ -134,7 +136,7 @@
   </template>
   
   <script setup>
-  import { ref, onMounted, watch } from 'vue';
+  import { ref, onMounted, watch, computed } from 'vue';
   import { useAlertStore } from '@/stores/alert';
   import { useNotificationStore } from '@/stores/notification';
   import alertService from '@/services/alertService';
@@ -167,13 +169,27 @@
     return priorities[priority] || priority;
   };
   
+  const minDateTime = computed(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  });
+  
   const createNewAlert = async () => {
     try {
+      const selectedDate = new Date(newAlert.value.expiryDate);
+      const now = new Date();
+
+      if (selectedDate < now) {
+        notificationStore.error('Expiry date must be in the future');
+        return;
+      }
+
       const alertData = {
         message: newAlert.value.message,
         type: newAlert.value.type,
         priority: parseInt(newAlert.value.priority),
-        expiry_date: newAlert.value.expiryDate || null,
+        expiry_date: newAlert.value.expiryDate,
         is_public: newAlert.value.isPublic === 'true'
       };
 
@@ -221,11 +237,14 @@
   };
   
   const resetForm = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    
     newAlert.value = {
       message: '',
       type: 'info',
       priority: '0',
-      expiryDate: '',
+      expiryDate: now.toISOString().slice(0, 16),
       isPublic: true
     };
   };
@@ -234,7 +253,7 @@
     if (newAlerts && Array.isArray(newAlerts)) {
       alerts.value = newAlerts;
     }
-  }, { deep: true });
+  }, { deep: true });  
   
   // In the script setup section, update the onMounted function:
 
