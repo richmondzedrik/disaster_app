@@ -293,31 +293,40 @@ const testAllSystems = async () => {
 
 const testNotifications = async () => {
   try {
-    // Test like notification
+    // Test like notification by creating a real notification
     const likeTest = await api.post('/api/test/notifications/like', {
-      postId: 'test-post-id',
-      action: 'like'
+      userId: 'test-user',
+      postId: 'test-post',
+      type: 'like',
+      message: 'Test User liked your post'
     });
-
+  
     // Test new post notification
     const postTest = await api.post('/api/test/notifications/post', {
+      userId: 'test-user',
+      type: 'post',
       title: 'Test Post',
-      content: 'Test Content'
+      message: 'New emergency update posted'
     });
 
     // Test alert notification
     const alertTest = await api.post('/api/test/notifications/alert', {
-      type: 'emergency',
-      message: 'Test Alert'
+      userId: 'test-user',
+      type: 'alert',
+      alertType: 'emergency',
+      message: 'New emergency alert'
     });
 
+    // Verify notifications were created and can be retrieved
+    const verifyResponse = await api.get('/api/test/notifications/verify');
+
     return {
-      success: likeTest.data?.success && postTest.data?.success && alertTest.data?.success,
-      message: 'Notification system operational',
+      success: verifyResponse.data?.success,
+      message: verifyResponse.data?.message || 'Notification system operational',
       testResults: {
-        like: likeTest.data?.success || false,
-        newPost: postTest.data?.success || false,
-        alert: alertTest.data?.success || false
+        like: verifyResponse.data?.results?.like || false,
+        newPost: verifyResponse.data?.results?.post || false,
+        alert: verifyResponse.data?.results?.alert || false
       }
     };
   } catch (error) {

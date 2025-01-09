@@ -4,7 +4,7 @@ const db = require('../db/connection');
 const auth = require('../middleware/auth');
 
 // Test like notification
-router.post('/notifications/test/like', auth.authMiddleware, async (req, res) => {
+router.post('/test/notifications/like', auth.authMiddleware, async (req, res) => {
   try {
     const { userId, postId, message } = req.body;
     
@@ -18,7 +18,7 @@ router.post('/notifications/test/like', auth.authMiddleware, async (req, res) =>
       message: 'Like notification created',
       notificationId: result.insertId
     });
-  } catch (error) {
+  } catch (error) {     
     res.status(500).json({
       success: false,
       message: 'Failed to create like notification'
@@ -27,7 +27,7 @@ router.post('/notifications/test/like', auth.authMiddleware, async (req, res) =>
 });
 
 // Test post notification
-router.post('/notifications/test/post', auth.authMiddleware, async (req, res) => {
+router.post('/test/notifications/post', auth.authMiddleware, async (req, res) => {
   try {
     const { userId, title, message } = req.body;
     
@@ -37,7 +37,7 @@ router.post('/notifications/test/post', auth.authMiddleware, async (req, res) =>
     );
 
     res.json({
-      success: true,
+      success: true,  
       message: 'Post notification created',
       notificationId: result.insertId
     });
@@ -50,7 +50,7 @@ router.post('/notifications/test/post', auth.authMiddleware, async (req, res) =>
 });
 
 // Test alert notification
-router.post('/notifications/test/alert', auth.authMiddleware, async (req, res) => {
+router.post('/test/notifications/alert', auth.authMiddleware, async (req, res) => {
   try {
     const { userId, alertType, message } = req.body;
     
@@ -73,7 +73,7 @@ router.post('/notifications/test/alert', auth.authMiddleware, async (req, res) =
 });
 
 // Verify test notifications
-router.get('/notifications/test/verify', auth.authMiddleware, async (req, res) => {
+router.get('/test/notifications/verify', auth.authMiddleware, async (req, res) => {
   try {
     // Get test notifications created in the last minute
     const [notifications] = await db.execute(
