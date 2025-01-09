@@ -18,6 +18,7 @@ import AdminLayout from '@/layouts/AdminLayout.vue'
 import DashboardView from '@/views/admin/DashboardView.vue'
 import PostsView from '@/views/admin/PostsView.vue'
 import TestConnection from '../components/TestConnection.vue'
+import NotificationsView from '../views/NotificationsView.vue'
 
 const requireAuth = (to, from, next) => {
   const authStore = useAuthStore()
@@ -236,6 +237,12 @@ const routes = [
     path: '/test',
     name: 'test',
     component: TestConnection
+  },
+  {
+    path: '/notifications',
+    name: 'notifications',
+    component: NotificationsView,
+    meta: { requiresAuth: true }
   },
   {
     path: '/:pathMatch(.*)*',

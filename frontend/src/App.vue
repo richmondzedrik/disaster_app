@@ -97,9 +97,12 @@
                 Profile Settings
               </router-link>
               
-              <router-link to="/notifications" class="dropdown-item">
+              <router-link to="/notifications" class="dropdown-item notification-item">
                 <i class="fas fa-bell"></i>
                 Notifications
+                <span v-if="unreadNotifications > 0" class="notification-badge">
+                  {{ unreadNotifications }}
+                </span>
               </router-link>
               
               <div class="dropdown-divider"></div>
@@ -237,6 +240,43 @@ const displayName = computed(() => {
   if (!user.value) return 'Profile';
   if (isAdmin.value) return 'Admin';
   return user.value.name || user.value.username || 'Profile';
+});
+
+// Add this with other refs near the top
+const unreadNotifications = ref(0);
+
+// Add this function to fetch notification count
+const fetchUnreadNotifications = async () => {
+  try {
+    // This should be replaced with your actual API call
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/notifications/unread-count`, {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    });
+    const data = await response.json();
+    if (data.success) {
+      unreadNotifications.value = data.count;
+    }
+  } catch (error) {
+    console.error('Error fetching notification count:', error);
+  }
+};
+
+// Add this to your existing watch section
+watch(() => isAuthenticated.value, (newValue) => {
+  if (newValue) {
+    fetchUnreadNotifications();
+  } else {
+    unreadNotifications.value = 0;
+  }
+});
+
+// Add this to your existing onMounted
+onMounted(() => {
+  if (isAuthenticated.value) {
+    fetchUnreadNotifications();
+  }
 });
 </script>
 
@@ -636,5 +676,35 @@ const displayName = computed(() => {
 .nav-link {
   position: relative;
   padding-right: 2rem;
+}
+
+.notification-item {
+  position: relative;
+}
+
+.notification-badge {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #DC2626;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-item:hover .notification-badge {
+  background: #B91C1C;
+}
+
+.dropdown-item.notification-item {
+  padding-right: 3rem;
 }
 </style>
