@@ -81,6 +81,20 @@ async function up() {
                 FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
             )
         `);
+
+        // Add notifications table after the alerts table
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                user_id VARCHAR(255) NOT NULL,
+                type ENUM('like', 'post', 'alert') NOT NULL,
+                reference_id VARCHAR(255),
+                message TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
         
         await connection.commit();
         return true;
@@ -107,11 +121,12 @@ async function down() {
         await connection.execute('DROP TABLE IF EXISTS posts');
         await connection.execute('DROP TABLE IF EXISTS users');
         await connection.execute('DROP TABLE IF EXISTS checklist_items');
+        await connection.execute('DROP TABLE IF EXISTS notifications');
 
         await connection.commit();
         console.log('All tables dropped successfully'); 
     } catch (error) {
-        await connection.rollback();
+        await connection.rollback();  
         console.error('Migration rollback failed:', error);
         throw error;
     } finally {
