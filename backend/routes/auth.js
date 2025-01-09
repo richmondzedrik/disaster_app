@@ -92,7 +92,7 @@ router.get('/verify-emergency-contacts', auth.authMiddleware, async (req, res) =
                 parsed_data: null,
                 is_valid_json: false,
                 error: 'Invalid JSON format'
-            });
+            });   
         }
         
         return res.status(500).json({
@@ -136,18 +136,15 @@ router.get('/emergency-contacts', auth.authMiddleware, async (req, res) => {
         }
 
         let contacts = [];
-        try {
-            contacts = rows[0].emergency_contacts ? 
-                JSON.parse(rows[0].emergency_contacts) : 
-                [];
-        } catch (parseError) {
-            console.error('Error parsing emergency contacts:', parseError);
-            contacts = [];
+        if (rows[0].emergency_contacts) {
+            contacts = typeof rows[0].emergency_contacts === 'string' 
+                ? JSON.parse(rows[0].emergency_contacts)
+                : rows[0].emergency_contacts;
         }
 
         return res.json({
             success: true,
-            contacts: contacts
+            contacts: Array.isArray(contacts) ? contacts : []
         });
     } catch (error) {
         console.error('Get emergency contacts error:', error);
