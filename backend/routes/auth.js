@@ -37,7 +37,7 @@ router.get('/test', (req, res) => {
 // Add this route with your other auth routes
 router.post('/verify-code', authController.verifyCode);
 
-// Add this new route to check raw emergency contacts
+// Add this new route to check raw emergency contacts  
 router.get('/debug/emergency-contacts', auth.authMiddleware, async (req, res) => {
     try {
         const [rows] = await db.execute(
@@ -86,6 +86,45 @@ router.get('/verify-emergency-contacts', auth.authMiddleware, async (req, res) =
         return res.status(500).json({
             success: false,
             message: 'Error verifying emergency contacts',
+            error: error.message
+        });
+    }
+});
+  
+// Add this new route
+router.get('/emergency-contacts', auth.authMiddleware, async (req, res) => {
+    try {
+        const [rows] = await db.execute(
+            'SELECT emergency_contacts FROM users WHERE id = ?',
+            [req.user.id]
+        );
+
+        if (!rows || rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        let contacts = [];
+        try {
+            contacts = rows[0].emergency_contacts ? 
+                JSON.parse(rows[0].emergency_contacts) : 
+                [];
+        } catch (parseError) {
+            console.error('Error parsing emergency contacts:', parseError);
+            contacts = [];
+        }
+
+        return res.json({
+            success: true,
+            contacts: contacts
+        });
+    } catch (error) {
+        console.error('Get emergency contacts error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error fetching emergency contacts',
             error: error.message
         });
     }

@@ -132,13 +132,23 @@
 
                 <!-- Emergency Contacts -->
                 <section class="profile-section">
-                    <h3>
-                        <i class="fas fa-phone-alt"></i>
-                        Emergency Contacts
-                        <span class="contact-count">
-                            {{ (profileData.emergencyContacts || []).length }}/3
-                        </span>
-                    </h3>
+                    <div class="emergency-contacts-header">
+                        <h3>
+                            <i class="fas fa-phone-alt"></i>
+                            Emergency Contacts
+                            <span class="contact-count">
+                                {{ (profileData.emergencyContacts || []).length }}/3
+                            </span>
+                        </h3>
+                        <button 
+                            @click="loadEmergencyContactsFromDB" 
+                            class="refresh-contacts-btn" 
+                            :disabled="loading"
+                        >
+                            <i :class="['fas', loading ? 'fa-spinner fa-spin' : 'fa-sync-alt']"></i>
+                            Refresh Contacts
+                        </button>
+                    </div>
                     <div class="emergency-contacts-list">
                         <div v-if="!profileData.emergencyContacts || profileData.emergencyContacts.length === 0" class="no-contacts">
                             <i class="fas fa-user-plus"></i>
@@ -913,6 +923,35 @@
     font-size: 2rem;
     margin-bottom: 1rem;
 }
+
+.emergency-contacts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.refresh-contacts-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #00D1D1;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.refresh-contacts-btn:hover {
+    background: #00ADAD;
+}
+
+.refresh-contacts-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 </style>
 
 <script setup>
@@ -1536,6 +1575,42 @@ const saveProfile = async () => {
         console.error('Save profile error:', error);
         notificationStore.error('Failed to update profile');
         // Restore emergency contacts from original data if save fails
+        profileData.value.emergencyContacts = [...originalEmergencyContacts.value];
+    } finally { 
+        loading.value = false;
+    }
+};
+
+const loadEmergencyContactsFromDB = async () => {
+    if (loading.value) return;
+
+    try {
+        loading.value = true;
+        const response = await userService.getEmergencyContacts();
+        
+        if (response?.success) {
+            const contacts = Array.isArray(response.contacts) ? response.contacts : [];
+            
+            // Update the contacts with validation
+            profileData.value.emergencyContacts = contacts.filter(contact => 
+                contact && 
+                contact.name?.trim() && 
+                contact.phone?.trim() && 
+                contact.relation?.trim()
+            );
+            
+            // Store original state
+            originalEmergencyContacts.value = JSON.parse(JSON.stringify(profileData.value.emergencyContacts));
+            
+            notificationStore.success('Emergency contacts loaded successfully');
+        } else {
+            throw new Error(response?.message || 'Failed to load contacts');
+        }
+    } catch (error) {
+        console.error('Load emergency contacts error:', error);
+        notificationStore.error(error.message || 'Failed to load emergency contacts');
+        
+        // Reset to original state on error
         profileData.value.emergencyContacts = [...originalEmergencyContacts.value];
     } finally {
         loading.value = false;

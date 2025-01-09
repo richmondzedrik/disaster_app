@@ -51,7 +51,7 @@ export const userService = {
                         ...userData,
                         emergencyContacts
                     }
-                };
+                };  
             }
             
             return response.data;
@@ -113,5 +113,34 @@ export const userService = {
             console.error('Profile update error:', error);
             throw error;
         }
-    }, 500)
+    }, 500),
+
+    getEmergencyContacts: async function() {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('No authentication token found');
+            }
+
+            const response = await api.get('/auth/emergency-contacts', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            return {
+                success: response.data?.success || false,
+                contacts: Array.isArray(response.data?.contacts) ? 
+                    response.data.contacts.map(contact => ({
+                        name: contact.name?.trim() || '',
+                        phone: contact.phone?.trim() || '',
+                        relation: contact.relation?.trim() || ''
+                    })) : [],
+                message: response.data?.message
+            };
+        } catch (error) {
+            console.error('Get emergency contacts error:', error);
+            throw new Error(error.response?.data?.message || 'Failed to load emergency contacts');
+        }
+    }
 }; 
