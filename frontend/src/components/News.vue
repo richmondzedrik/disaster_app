@@ -246,15 +246,17 @@ const imageLoaded = ref(false);
 const user = computed(() => authStore.user);
 const isAuthenticated = computed(() => authStore.isAuthenticated);
 const canInteract = computed(() => {
-  return isAuthenticated.value && (authStore.user?.verified || authStore.user?.role === 'admin');
+  return isAuthenticated.value && (user.value?.email_verified || user.value?.role === 'admin');
 });
 
 const canCreatePost = computed(() => {
   return isAuthenticated.value && (
     authStore.user?.role === 'admin' ||
-    (authStore.user?.verified && authStore.user?.status === 'active')
+    (authStore.user?.email_verified && authStore.user?.status === 'active')
   );
 });
+
+
 const isAdmin = computed(() => user.value?.role === 'admin');
 const filteredPosts = computed(() => {
   let filtered = posts.value;
@@ -1792,3 +1794,4 @@ onMounted(async () => {
   }
 }
 </style>
+
