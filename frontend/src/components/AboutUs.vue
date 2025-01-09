@@ -3,12 +3,31 @@
         <div class="about-content">
             <div class="about-header">
                 <i class="fas fa-shield-alt header-icon"></i>
-                <h1>About AlertoAbra</h1>
+                <h1>About PDRRMC Abra</h1>
+            </div>
+
+            <div class="about-section">
+                <p>The Provincial Disaster Risk Reduction and Management Council (PDRRMC) of Abra office is situated in Old APH Compound, Abra-Ilocos Norte Road Calaba, Bangued, Abra. It was constructed under the leadership of Governor Eustaquio P. Bersamin and was inaugurated on October 8, 2015 in the service of Abrenios. Presently, the PDRRMC is being managed by the current Governor Dominic Valera and PDO/ PDRRMO Designate Mr. Arnel D. Valdez.</p>
             </div>
 
             <div class="mission-section">
                 <h2><i class="fas fa-bullseye"></i> Our Mission</h2>
-                <p>To provide real-time disaster alerts and emergency response information, helping communities stay safe and prepared during critical situations.</p>
+                <p>Our Mission is to provide timely and appropriate response in times of emergencies or disasters to:</p>
+                <ul>
+                    <li>Attain Zero-casualty.</li>
+                    <li>Capacitate constituents and establish/build effective, DRRM systems and infrastructure towards a safer Abra.</li>
+                    <li>Fully equip DRRM officers for disaster preparedness and effective response and management of calamity victims.</li>
+                    <li>Enable people to become proactive in times of calamities/emergencies of any form so that they can protect themselves to lessen the impact of calamities.</li>
+                    <li>To enable calamity/emergency victims to hasten their own rehabilitation with minimal outside support and assistance.</li>
+                </ul>
+            </div>
+
+            <div class="vision-section">
+                <h2><i class="fas fa-eye"></i> Our Vision</h2>
+                <ul>
+                    <li>A proactive and resilient province/DRRM office capable and ready to respond to any and all kinds of risks and disasters emergencies to attain zero casualty and manage the rehabilitation of all victims of calamities.</li>
+                    <li>Abra is envisioned to be a disaster risk resilient province through an able prepared and well-equipped Abra local disaster risk reduction and management office.</li>
+                </ul>
             </div>
 
             <div class="features-section">
@@ -228,5 +247,41 @@ h2 i {
     h1 {
         font-size: 2rem;
     }
+}
+
+.about-section {
+    margin-bottom: 3rem;
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    line-height: 1.6;
+}
+
+.vision-section {
+    margin-bottom: 3rem;
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.mission-section ul,
+.vision-section ul {
+    list-style-type: none;
+    padding-left: 1.5rem;
+}
+
+.mission-section li,
+.vision-section li {
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.mission-section li:before,
+.vision-section li:before {
+    content: "•";
+    color: #00D1D1;
+    font-weight: bold;
+    position: absolute;
+    left: -1.5rem;
 }
 </style> 
