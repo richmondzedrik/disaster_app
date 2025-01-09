@@ -29,6 +29,7 @@ async function up() {
                 notifications JSON,
                 location VARCHAR(255) NULL,
                 emergency_contacts JSON NULL DEFAULT ('[]'),
+                last_login TIMESTAMP NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) 

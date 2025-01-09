@@ -20,7 +20,8 @@ class User {
         try {
             const [rows] = await db.execute(
                 `SELECT id, username, email, phone, location, notifications, 
-                emergency_contacts, role, email_verified, created_at, updated_at 
+                emergency_contacts, role, email_verified, created_at, updated_at,
+                last_login 
                 FROM users WHERE id = ?`,
                 [userId]
             );
@@ -63,6 +64,11 @@ class User {
             } catch (e) {
                 console.error('Error parsing emergency contacts:', e);
                 user.emergencyContacts = [];
+            }
+
+            // Ensure last_login is properly formatted
+            if (user.last_login) {
+                user.last_login = new Date(user.last_login).toISOString();
             }
 
             return user;

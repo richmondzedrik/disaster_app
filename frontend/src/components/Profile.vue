@@ -954,7 +954,7 @@ const profileData = ref({
 const userStats = ref({
     securityScore: 0,
     completedTasks: 0,
-    lastLogin: user.value?.last_login || null
+    lastLogin: null
 });
 
 // Form validation
@@ -1072,13 +1072,20 @@ const loadProfileData = async () => {
                     : []
             };
 
-            // Update stats
-            userStats.value.lastLogin = userData.last_login;
-            calculateSecurityScore();
-            await updateTaskCompletion();
+            // Update user stats with last_login from user data
+            userStats.value = {
+                ...userStats.value,
+                lastLogin: userData.last_login || null,
+                completedTasks: userStats.value.completedTasks,
+                securityScore: userStats.value.securityScore
+            };
 
             // Store original data for change detection
             originalData.value = JSON.parse(JSON.stringify(profileData.value));
+            
+            // Calculate security score after data is loaded
+            calculateSecurityScore();
+            await updateTaskCompletion();
         }
     } catch (error) {
         console.error('Load profile error:', error);
@@ -1218,12 +1225,25 @@ const calculateSecurityScore = () => {
 
 // Format date utility
 const formatDate = (dateString) => {
+    if (!dateString) return 'Never';
+    
     try {
-        if (!dateString) return 'No date';
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return 'Invalid date';
 
-        return date.toLocaleDateString('en-US', {
+        // If date is today, show time only
+        const today = new Date();
+        const isToday = date.toDateString() === today.toDateString();
+        
+        if (isToday) {
+            return date.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Otherwise show full date and time
+        return date.toLocaleString('en-US', {
             year: 'numeric',
             month: 'short',
             day: 'numeric',
@@ -1232,7 +1252,7 @@ const formatDate = (dateString) => {
         });
     } catch (error) {
         console.error('Date formatting error:', error);
-        return 'Invalid date';
+        return 'Never';
     }
 };  
 
