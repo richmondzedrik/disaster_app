@@ -274,20 +274,33 @@ const filteredPosts = computed(() => {
 const showAddPostModal = ref(false);
 const isLoggedIn = computed(() => authStore.isLoggedIn);
 
-const createPost = async (postData) => {
+const createPost = async () => {
   try {
     loading.value = true;
-    const response = await newsService.createPost(postData);
+    const formData = new FormData();
+    formData.append('title', postForm.value.title);
+    formData.append('content', postForm.value.content);
+    if (imageFile.value) {
+      formData.append('image', imageFile.value);
+    }
+
+    const response = await newsService.createPost(formData);
     if (response.success) {
-      notificationStore.success('Post created successfully and pending approval');
-      showAddPostModal.value = false;
+      notificationStore.success('Post created successfully');
+      // Send email notifications
+      await newsService.notifySubscribers({
+        postId: response.post.id,
+        title: postForm.value.title,
+        content: postForm.value.content.substring(0, 150) + '...',
+        author: user.value.username
+      });
+      showPostModal.value = false;
+      resetForm();
       await loadPosts();
-    } else {
-      throw new Error(response.message || 'Failed to create post');
     }
   } catch (error) {
     console.error('Error creating post:', error);
-    notificationStore.error('Failed to create post');
+    notificationStore.error(error.message || 'Failed to create post');
   } finally {
     loading.value = false;
   }

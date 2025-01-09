@@ -340,5 +340,15 @@ export const newsService = {
                 posts: []
             };
         }
+    },
+
+    async notifySubscribers(postData) {
+        try {
+            const response = await api.post('/api/news/notify-subscribers', postData);
+            return response.data;
+        } catch (error) {
+            console.error('Error notifying subscribers:', error);
+            throw error;
+        }
     }
 };

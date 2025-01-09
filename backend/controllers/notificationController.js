@@ -1,77 +1,46 @@
-const pool = require('../config/database');
-const { validateToken } = require('../middleware/auth');
+const User = require('../models/User');
+const { sendEmail } = require('../utils/email');
 
-const notificationController = {
-  // Get user notifications
-  async getUserNotifications(req, res) {
-    try {
-      const userId = req.user.id;
-      const [notifications] = await pool.execute(
-        `SELECT * FROM notifications 
-         WHERE user_id = ? 
-         ORDER BY created_at DESC`,
-        [userId]
-      );
-      
-      res.json({ success: true, notifications });
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      res.status(500).json({ success: false, message: 'Failed to fetch notifications' });
-    }
-  },
+const notifyNewPost = async (req, res) => {
+  try {
+    const { postId, title, content, author } = req.body;
+    
+    // Get all users with notifications enabled
+    const [users] = await db.execute(
+      'SELECT email FROM users WHERE notifications = true AND email_verified = true'
+    );
 
-  // Mark all notifications as read  
-  async markAllAsRead(req, res) {
-    try {
-      const userId = req.user.id;
-      await pool.execute(
-        `UPDATE notifications 
-         SET is_read = true 
-         WHERE user_id = ?`,
-        [userId]
-      );
-      
-      res.json({ success: true, message: 'All notifications marked as read' });
-    } catch (error) {
-      console.error('Error marking notifications as read:', error);
-      res.status(500).json({ success: false, message: 'Failed to mark notifications as read' });
-    }
-  },
+    // Send emails to all subscribers
+    const emailPromises = users.map(user => {
+      const emailContent = {
+        to: user.email,
+        subject: 'New Post on AlertoAbra: ' + title,
+        html: `
+          <h2>New Post from ${author}</h2>
+          <h3>${title}</h3>
+          <p>${content}</p>
+          <p>Click below to read the full post:</p>
+          <a href="${process.env.FRONTEND_URL}/news" 
+             style="padding: 10px 20px; background: #00D1D1; color: white; 
+                    text-decoration: none; border-radius: 5px;">
+            Read More
+          </a>
+        `
+      };
+      return sendEmail(emailContent);
+    });
 
-  // Delete a notification
-  async deleteNotification(req, res) {
-    try {
-      const { id } = req.params;
-      const userId = req.user.id;
-      
-      await pool.execute(
-        `DELETE FROM notifications 
-         WHERE id = ? AND user_id = ?`,
-        [id, userId]
-      );
-      
-      res.json({ success: true, message: 'Notification deleted' });
-    } catch (error) {
-      console.error('Error deleting notification:', error);
-      res.status(500).json({ success: false, message: 'Failed to delete notification' });
-    }
-  },
-
-  // Clear all notifications
-  async clearAll(req, res) {
-    try {
-      const userId = req.user.id;
-      await pool.execute(
-        'DELETE FROM notifications WHERE user_id = ?',
-        [userId]
-      );
-      
-      res.json({ success: true, message: 'All notifications cleared' });
-    } catch (error) {
-      console.error('Error clearing notifications:', error);
-      res.status(500).json({ success: false, message: 'Failed to clear notifications' });
-    }
+    await Promise.all(emailPromises);
+    res.json({ success: true, message: 'Notifications sent successfully' });
+  } catch (error) {
+    console.error('Error sending notifications:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to send notifications' 
+    });
   }
 };
 
-module.exports = notificationController;
+module.exports = {
+  notifyNewPost
+};

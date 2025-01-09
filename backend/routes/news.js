@@ -6,6 +6,7 @@ const db = require('../db/connection');
 const fs = require('fs');
 const path = require('path');
 const cloudinary = require('../config/cloudinary');        
+const notificationController = require('../controllers/notificationController');
 
 // Configure upload directory
 const uploadDir = path.join(__dirname, '../public/uploads');
@@ -758,5 +759,7 @@ router.post('/test-upload', auth.authMiddleware, upload.single('image'), async (
     });
   }
 });
+
+router.post('/notify-subscribers', authenticateToken, notificationController.notifyNewPost);
 
 module.exports = router;

@@ -74,17 +74,18 @@ class User {
         }
     }
 
-    static async create(userData) {
+    static async create(userData) {   
         try {
-            const hashedPassword = await bcrypt.hash(userData.password, 10);
+            const hashedPassword = await bcrypt.hash(userData.password, 10);  
             
             const [result] = await db.execute(
-                'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
+                'INSERT INTO users (username, email, password, role, notifications) VALUES (?, ?, ?, ?, ?)',
                 [
                     userData.username, 
                     userData.email, 
                     hashedPassword, 
-                    userData.role || 'user'
+                    userData.role || 'user',
+                    true  // Enable notifications by default
                 ]
             );
 
@@ -115,7 +116,7 @@ class User {
                         relation: contact.relation.trim()
                     }));
             }
-
+               
             // Format the data before updating
             const formattedData = {
                 username: profileData.username,
