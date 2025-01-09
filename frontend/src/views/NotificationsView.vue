@@ -30,13 +30,13 @@
           v-for="notification in sortedNotifications" 
           :key="notification.id"
           class="notification-item"
-          :class="[notification.type, { unread: !notification.read }]"
+          :class="[`type-${notification.type}`, { unread: !notification.is_read }]"
         >
           <div class="notification-content">
             <i :class="getIconClass(notification.type)"></i>
-            <div class="notification-details">
+            <div class="notification-details"> 
               <p class="notification-message">{{ notification.message }}</p>
-              <span class="notification-time">{{ formatTime(notification.timestamp) }}</span>
+              <span class="notification-time">{{ formatTime(notification.created_at) }}</span>
             </div>
           </div>
           <button @click="removeNotification(notification.id)" class="delete-btn">
@@ -44,7 +44,7 @@
           </button>
         </div>
       </TransitionGroup>
-    </div>
+    </div>  
   </div>
 </template>
 
@@ -52,6 +52,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useNotificationStore } from '../stores/notification';
 import { storeToRefs } from 'pinia';
+import axios from 'axios';
 
 const notificationStore = useNotificationStore();
 const { notifications } = storeToRefs(notificationStore);
@@ -67,9 +68,9 @@ const hasUnread = computed(() => {
 
 const getIconClass = (type) => {
   switch (type) {
-    case 'success': return 'fas fa-check-circle';
-    case 'error': return 'fas fa-exclamation-circle';
-    case 'warning': return 'fas fa-exclamation-triangle';
+    case 'like': return 'fas fa-heart';
+    case 'post': return 'fas fa-newspaper';
+    case 'alert': return 'fas fa-bell';
     default: return 'fas fa-info-circle';
   }
 };
@@ -79,23 +80,46 @@ const formatTime = (timestamp) => {
   return date.toLocaleString();
 };
 
-const removeNotification = (id) => {
-  notificationStore.removeNotification(id);
+const removeNotification = async (id) => {
+  try {
+    await axios.delete(`/api/notifications/${id}`);
+    notificationStore.removeNotification(id);
+  } catch (error) {
+    console.error('Failed to delete notification:', error);
+  }
 };
 
-const markAllAsRead = () => {
-  notificationStore.markAllAsRead();
+const markAllAsRead = async () => {
+  try {
+    await axios.put('/api/notifications/mark-all-read');
+    notificationStore.markAllAsRead();
+  } catch (error) {
+    console.error('Failed to mark all as read:', error);
+  }
 };
 
-const clearAll = () => {
-  notificationStore.clearAll();
+const clearAll = async () => {
+  try {
+    await axios.delete('/api/notifications');
+    notificationStore.clearAll();
+  } catch (error) {
+    console.error('Failed to clear notifications:', error);
+  }
+};
+
+const fetchNotifications = async () => {
+  try {
+    const response = await axios.get('/api/notifications');
+    notificationStore.$patch({ notifications: response.data });
+  } catch (error) {
+    console.error('Failed to fetch notifications:', error);
+  } finally {
+    loading.value = false;
+  }
 };
 
 onMounted(() => {
-  // Simulate loading notifications
-  setTimeout(() => {
-    loading.value = false;
-  }, 500);
+  fetchNotifications();
 });
 </script>
 
@@ -116,7 +140,7 @@ onMounted(() => {
 .header-actions {
   display: flex;
   gap: 1rem;
-}
+} 
 
 .action-btn {
   display: flex;
@@ -230,6 +254,15 @@ onMounted(() => {
 .notification-item.unread {
   background: #f8fafc;
   border-left: 4px solid #2563EB;
+}
+
+.notification-item.type-like i { color: #EC4899; }
+.notification-item.type-post i { color: #3B82F6; }
+.notification-item.type-alert i { color: #EF4444; }
+
+.notification-item.unread {
+  background: #f8fafc;
+  border-left: 4px solid #3B82F6;
 }
 
 @media (max-width: 640px) {
