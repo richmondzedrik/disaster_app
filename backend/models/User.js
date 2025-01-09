@@ -20,8 +20,7 @@ class User {
         try {
             const [rows] = await db.execute(
                 `SELECT id, username, email, phone, location, notifications, 
-                emergency_contacts, role, email_verified, created_at, updated_at,
-                last_login 
+                emergency_contacts, role, email_verified, created_at, updated_at
                 FROM users WHERE id = ?`,
                 [userId]
             );
@@ -30,45 +29,32 @@ class User {
 
             const user = rows[0];
             
-            // Parse emergency contacts with better error handling
+            // Parse JSON fields
             try {
-                if (user.emergency_contacts) {
-                    // If it's a string, parse it
-                    if (typeof user.emergency_contacts === 'string') {
-                        user.emergencyContacts = JSON.parse(user.emergency_contacts);
-                    } else {
-                        // If it's already an object, use it directly
-                        user.emergencyContacts = user.emergency_contacts;
-                    }
-                    
-                    // Ensure it's an array
-                    if (!Array.isArray(user.emergencyContacts)) {
-                        user.emergencyContacts = [];
-                    }
-                    
-                    // Validate each contact
-                    user.emergencyContacts = user.emergencyContacts
-                        .filter(contact => contact && contact.name && contact.phone && contact.relation)
-                        .map(contact => ({
-                            name: contact.name.trim(),
-                            phone: contact.phone.trim(),
-                            relation: contact.relation.trim()
-                        }));
+                // Handle notifications
+                user.notifications = typeof user.notifications === 'string'
+                    ? JSON.parse(user.notifications)
+                    : user.notifications || {};
+
+                // Handle emergency contacts
+                if (typeof user.emergency_contacts === 'string') {
+                    user.emergencyContacts = JSON.parse(user.emergency_contacts);
+                } else if (user.emergency_contacts) {
+                    user.emergencyContacts = user.emergency_contacts;
                 } else {
                     user.emergencyContacts = [];
                 }
-                
-                // Remove the snake_case version
-                delete user.emergency_contacts;
-                
-            } catch (e) {
-                console.error('Error parsing emergency contacts:', e);
-                user.emergencyContacts = [];
-            }
 
-            // Ensure last_login is properly formatted
-            if (user.last_login) {
-                user.last_login = new Date(user.last_login).toISOString();
+                // Set default last_login
+                user.last_login = user.updated_at;
+
+                // Remove snake_case version
+                delete user.emergency_contacts;
+
+            } catch (e) {
+                console.error('Error parsing JSON fields:', e);
+                user.notifications = {};
+                user.emergencyContacts = [];
             }
 
             return user;
