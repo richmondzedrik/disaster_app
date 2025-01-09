@@ -237,19 +237,18 @@ exports.login = async (req, res) => {
             expiresAt
         });
 
+        // Ensure email_verified status is included and properly typed
+        const userData = {
+            ...user,
+            email_verified: Boolean(user.email_verified)
+        };
+
         // Return success response with tokens and user data
         res.json({
             success: true,
             accessToken: `Bearer ${accessToken}`,
             refreshToken,
-            user: {
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                role: user.role,
-                email_verified: user.email_verified,
-                is_admin: user.role === 'admin'
-            }
+            user: userData
         });
     } catch (error) {
         console.error('Login error:', error);

@@ -252,10 +252,9 @@ const canInteract = computed(() => {
 const canCreatePost = computed(() => {
   return isAuthenticated.value && (
     authStore.user?.role === 'admin' ||
-    (authStore.user?.email_verified && authStore.user?.status === 'active')
+    (authStore.user?.email_verified && authStore.user?.status !== 'inactive')
   );
 });
-
 
 const isAdmin = computed(() => user.value?.role === 'admin');
 const filteredPosts = computed(() => {
@@ -275,7 +274,15 @@ const filteredPosts = computed(() => {
 
 const showAddPostModal = ref(false);
 const isLoggedIn = computed(() => authStore.isLoggedIn);
-
+const resetForm = () => {
+  postForm.value = {
+    title: '',
+    content: ''
+  };
+  imageFile.value = null;
+  imagePreview.value = null;
+  editingPost.value = null;
+};
 const createPost = async () => {
   if (!canCreatePost.value) {
     notificationStore.error('You do not have permission to create posts');
@@ -779,6 +786,19 @@ onMounted(async () => {
   await loadPosts();
   if (isAuthenticated.value) {
     restoreLikedStates();
+  }
+});
+
+// Add this to the News component
+onMounted(() => {
+  if (authStore.user) {
+    console.log('User status check:', {
+      email_verified: authStore.user.email_verified,
+      isAuthenticated: isAuthenticated.value,
+      userStatus: authStore.user?.status,
+      role: authStore.user?.role,
+      canCreate: canCreatePost.value
+    });
   }
 });
 

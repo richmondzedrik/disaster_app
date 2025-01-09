@@ -274,6 +274,10 @@ export const useAuthStore = defineStore('auth', () => {
         }
     };
 
+    const isVerified = computed(() => {
+        return user.value?.email_verified === true || user.value?.email_verified === 1;
+    });
+
     return {
         user,
         accessToken,
@@ -290,5 +294,6 @@ export const useAuthStore = defineStore('auth', () => {
         checkUsername,
         checkEmail,
         handleAdminAuth,
+        isVerified
     }
 }) 
