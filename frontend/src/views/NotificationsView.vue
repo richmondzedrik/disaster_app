@@ -84,12 +84,14 @@ const formatTime = (timestamp) => {
 
 const removeNotification = async (id) => {
   try {
-    await axios.delete(`https://disaster-app-backend.onrender.com/api/notifications/${id}`, {
+    const baseUrl = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
+    await axios.delete(`${baseUrl}/api/notifications/${id}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
     notificationStore.removeNotification(id);
+    notificationStore.success('Notification removed');
   } catch (error) {
     console.error('Failed to delete notification:', error);
     notificationStore.error('Failed to delete notification');
@@ -98,12 +100,14 @@ const removeNotification = async (id) => {
 
 const markAllAsRead = async () => {
   try {
-    await axios.put(`https://disaster-app-backend.onrender.com/api/notifications/mark-all-read`, {}, {
+    const baseUrl = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
+    await axios.put(`${baseUrl}/api/notifications/mark-all-read`, {}, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
     notificationStore.markAllAsRead();
+    notificationStore.success('All notifications marked as read');
   } catch (error) {
     console.error('Failed to mark all as read:', error);
     notificationStore.error('Failed to mark notifications as read');
@@ -112,12 +116,14 @@ const markAllAsRead = async () => {
 
 const clearAll = async () => {
   try {
-    await axios.delete(`https://disaster-app-backend.onrender.com/api/notifications/clear-all`, {
+    const baseUrl = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
+    await axios.delete(`${baseUrl}/api/notifications/clear`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
     notificationStore.clearAll();
+    notificationStore.success('All notifications cleared');
   } catch (error) {
     console.error('Failed to clear notifications:', error);
     notificationStore.error('Failed to clear notifications');
@@ -126,12 +132,16 @@ const clearAll = async () => {
 
 const fetchNotifications = async () => {
   try {
-    const response = await axios.get(`https://disaster-app-backend.onrender.com/api/notifications/user`, {
+    const response = await axios.get(`${import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com'}/api/notifications/user`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
-    notificationStore.$patch({ notifications: response.data || [] });
+    if (response.data?.notifications) {
+      notificationStore.$patch({ notifications: response.data.notifications });
+    } else {
+      notificationStore.$patch({ notifications: [] });
+    }
   } catch (error) {
     console.error('Failed to fetch notifications:', error);
     notificationStore.error('Failed to fetch notifications');
