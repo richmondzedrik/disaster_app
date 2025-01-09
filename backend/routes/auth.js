@@ -94,6 +94,14 @@ router.get('/verify-emergency-contacts', auth.authMiddleware, async (req, res) =
 // Add this new route
 router.get('/emergency-contacts', auth.authMiddleware, async (req, res) => {
     try {
+        // Check auth token
+        if (!req.headers.authorization) {
+            return res.status(401).json({
+                success: false,
+                message: 'No authentication token provided'
+            });
+        }
+
         // Ensure user exists in request
         if (!req.user?.id) {
             return res.status(401).json({
