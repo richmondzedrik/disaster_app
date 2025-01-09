@@ -49,19 +49,38 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useNotificationStore } from '../stores/notification';
 import { storeToRefs } from 'pinia';
 import axios from 'axios';
+import { useAuthStore } from '../stores/auth';
 
 const notificationStore = useNotificationStore();
 const { notifications } = storeToRefs(notificationStore);
 const loading = ref(true); 
+const loadingError = ref(false);
+const loadingAttempts = ref(0);
+const maxRetries = 3;
+
+const authStore = useAuthStore();
+const refreshInterval = ref(null);
 
 const sortedNotifications = computed(() => {
-  return [...notifications.value].sort((a, b) => 
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
+  return [...notifications.value].sort((a, b) => {
+    try {
+      const dateA = new Date(a.created_at);
+      const dateB = new Date(b.created_at);
+      
+      if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+        return 0; // Keep original order for invalid dates
+      }
+      
+      return dateB.getTime() - dateA.getTime();
+    } catch (err) {
+      console.error('Error sorting notifications:', err);
+      return 0;      
+    }
+  });
 });
 
 const hasUnread = computed(() => {
@@ -81,8 +100,18 @@ const getIconClass = (type) => {
 };
 
 const formatTime = (timestamp) => {
+  if (!timestamp) return 'Unknown date';
   const date = new Date(timestamp);
-  return date.toLocaleString();
+  if (isNaN(date.getTime())) return 'Invalid date';
+  
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',   
+    hour12: true
+  });
 };
 
 const removeNotification = async (id) => {
@@ -134,37 +163,114 @@ const clearAll = async () => {
 };
 
 const fetchNotifications = async () => {
+  if (loadingAttempts.value >= maxRetries) {
+    loadingAttempts.value = 0; // Reset attempts
+  }
+  
+  loading.value = true;
   try {
     const baseUrl = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
-    const response = await axios.get(`${baseUrl}/notifications/user`, {
+    const response = await axios.get(`${baseUrl}/api/notifications/user`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
 
     if (response.data?.notifications) {
-      // Transform notifications to match the test format
-      const transformedNotifications = response.data.notifications.map(notification => ({
-        ...notification,
-        type: notification.type || 'info',
-        message: notification.message,
-        is_read: Boolean(notification.is_read),
-        created_at: notification.created_at || new Date().toISOString()  
-      }));
+      const transformedNotifications = response.data.notifications
+        .map(notification => {
+          try {
+            return {
+              ...notification,
+              type: notification.type?.toLowerCase() || 'info',
+              message: notification.message || 'No message',
+              is_read: Boolean(notification.is_read),
+              created_at: notification.created_at 
+                ? new Date(notification.created_at).toISOString()   
+                : new Date().toISOString()
+            };
+          } catch (err) {
+            console.error('Error transforming notification:', err);
+            return null;
+          }
+        })
+        .filter(Boolean);
+      
       notificationStore.$patch({ notifications: transformedNotifications });
+      loadingError.value = false;
+      loadingAttempts.value = 0; // Reset attempts on success
     } else {
-      notificationStore.$patch({ notifications: [] });
+      throw new Error('No notifications data received');
     }
   } catch (error) {
     console.error('Failed to fetch notifications:', error);
+    loadingError.value = true;
     notificationStore.error('Failed to fetch notifications');
   } finally {
     loading.value = false;
   }
 };
 
+watch(() => authStore.isAuthenticated, (newValue) => {
+  if (newValue) {
+    fetchNotifications();
+    // Start auto-refresh when authenticated
+    refreshInterval.value = setInterval(fetchNotifications, 30000); // Refresh every 30 seconds
+  } else {
+    // Clear interval when logged out
+    if (refreshInterval.value) {
+      clearInterval(refreshInterval.value);
+      refreshInterval.value = null;
+    }
+    notificationStore.$patch({ notifications: [] });    
+  }
+});
+
+watch(loading, async (isLoading, oldValue) => {
+  if (isLoading && !oldValue) {
+    // Reset error state when starting new load
+    loadingError.value = false;
+    loadingAttempts.value++;
+    
+    // Set a timeout to check if loading takes too long
+    const timeoutId = setTimeout(() => {
+      if (loading.value) {
+        loadingError.value = true;
+        loading.value = false;
+        notificationStore.error('Loading notifications timed out. Please try again.');
+        
+        // Retry loading if under max attempts
+        if (loadingAttempts.value < maxRetries) {
+          fetchNotifications();
+        }
+      }
+    }, 10000); // 10 second timeout
+
+    // Clear timeout if loading completes
+    watch(() => loading.value, (newLoadingState) => {
+      if (!newLoadingState) {
+        clearTimeout(timeoutId);
+      }
+    }, { immediate: true, once: true });
+  }
+});
+
+// Add watcher for loading errors
+watch(loadingError, (hasError) => {
+  if (hasError && loadingAttempts.value >= maxRetries) {
+    notificationStore.error('Failed to load notifications after multiple attempts');
+  }
+});
+
 onMounted(() => {
   fetchNotifications();
+});
+
+onUnmounted(() => {
+  if (refreshInterval.value) {
+    clearInterval(refreshInterval.value);
+    refreshInterval.value = null;
+  }
 });
 </script>
 
@@ -307,7 +413,7 @@ onMounted(() => {
 .notification-item.type-info i { color: #2563EB; }
 .notification-item.type-warning i { color: #CA8A04; }
 .notification-item.type-error i { color: #DC2626; }
-
+  
 .notification-item.unread {
   background: #f8fafc;
   border-left: 4px solid #3B82F6;
