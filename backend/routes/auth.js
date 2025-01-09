@@ -94,11 +94,20 @@ router.get('/verify-emergency-contacts', auth.authMiddleware, async (req, res) =
 // Add this new route
 router.get('/emergency-contacts', auth.authMiddleware, async (req, res) => {
     try {
+        // Ensure user exists in request
+        if (!req.user?.id) {
+            return res.status(401).json({
+                success: false,
+                message: 'User not authenticated'
+            });
+        }
+
+        // Get user data directly from database
         const [rows] = await db.execute(
             'SELECT emergency_contacts FROM users WHERE id = ?',
             [req.user.id]
         );
-
+        
         if (!rows || rows.length === 0) {
             return res.status(404).json({
                 success: false,
