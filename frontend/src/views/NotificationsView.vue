@@ -56,14 +56,16 @@ import axios from 'axios';
 
 const notificationStore = useNotificationStore();
 const { notifications } = storeToRefs(notificationStore);
-const loading = ref(true);
+const loading = ref(true); 
 
 const sortedNotifications = computed(() => {
-  return [...notifications.value].sort((a, b) => b.timestamp - a.timestamp);
+  return [...notifications.value].sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 });
 
 const hasUnread = computed(() => {
-  return notifications.value.some(notification => !notification.read);
+  return notifications.value.some(notification => !notification.is_read);
 });
 
 const getIconClass = (type) => {
@@ -82,37 +84,57 @@ const formatTime = (timestamp) => {
 
 const removeNotification = async (id) => {
   try {
-    await axios.delete(`/api/notifications/${id}`);
+    await axios.delete(`https://disaster-app-backend.onrender.com/api/notifications/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
     notificationStore.removeNotification(id);
   } catch (error) {
     console.error('Failed to delete notification:', error);
+    notificationStore.error('Failed to delete notification');
   }
 };
 
 const markAllAsRead = async () => {
   try {
-    await axios.put('/api/notifications/mark-all-read');
+    await axios.put(`https://disaster-app-backend.onrender.com/api/notifications/mark-all-read`, {}, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
     notificationStore.markAllAsRead();
   } catch (error) {
     console.error('Failed to mark all as read:', error);
+    notificationStore.error('Failed to mark notifications as read');
   }
 };
 
 const clearAll = async () => {
   try {
-    await axios.delete('/api/notifications');
+    await axios.delete(`https://disaster-app-backend.onrender.com/api/notifications/clear-all`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
     notificationStore.clearAll();
   } catch (error) {
     console.error('Failed to clear notifications:', error);
+    notificationStore.error('Failed to clear notifications');
   }
 };
 
 const fetchNotifications = async () => {
   try {
-    const response = await axios.get('/api/notifications');
-    notificationStore.$patch({ notifications: response.data });
+    const response = await axios.get(`https://disaster-app-backend.onrender.com/api/notifications/user`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    notificationStore.$patch({ notifications: response.data || [] });
   } catch (error) {
     console.error('Failed to fetch notifications:', error);
+    notificationStore.error('Failed to fetch notifications');
   } finally {
     loading.value = false;
   }
