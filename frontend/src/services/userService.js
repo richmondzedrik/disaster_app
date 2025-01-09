@@ -18,25 +18,26 @@ export const userService = {
             if (response.data?.user) {
                 const userData = response.data.user;
                 
-                // Parse emergency contacts with better error handling
+                // Handle emergency contacts parsing
                 let emergencyContacts = [];
-                
                 try {
                     if (userData.emergencyContacts || userData.emergency_contacts) {
                         const rawContacts = userData.emergencyContacts || userData.emergency_contacts;
-                        console.log('Raw contacts from API:', rawContacts);
                         
+                        // Parse if string, otherwise use directly
                         emergencyContacts = typeof rawContacts === 'string' 
                             ? JSON.parse(rawContacts)
                             : rawContacts;
-                            
-                        // Ensure proper structure
-                        emergencyContacts = Array.isArray(emergencyContacts) 
-                            ? emergencyContacts.map(contact => ({
-                                name: contact.name || '',
-                                phone: contact.phone || '',
-                                relation: contact.relation || ''
-                            }))
+                        
+                        // Validate structure
+                        emergencyContacts = Array.isArray(emergencyContacts)
+                            ? emergencyContacts
+                                .filter(contact => contact && contact.name && contact.phone && contact.relation)
+                                .map(contact => ({
+                                    name: contact.name.trim(),
+                                    phone: contact.phone.trim(),
+                                    relation: contact.relation.trim()
+                                }))
                             : [];
                     }
                 } catch (e) {
@@ -48,8 +49,7 @@ export const userService = {
                     success: true,
                     user: {
                         ...userData,
-                        notifications: userData.notifications || { email: true, push: true },
-                        emergencyContacts: emergencyContacts
+                        emergencyContacts
                     }
                 };
             }

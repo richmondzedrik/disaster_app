@@ -25,59 +25,43 @@ class User {
                 [userId]
             );
 
-            if (rows.length === 0) {
-                return null;
-            }
+            if (rows.length === 0) return null;
 
             const user = rows[0];
             
-            // Parse JSON fields with better error handling
+            // Parse emergency contacts with better error handling
             try {
-                // Parse notifications
-                user.notifications = user.notifications ? 
-                    (typeof user.notifications === 'string' ? 
-                        JSON.parse(user.notifications) : 
-                        user.notifications) : 
-                    {};
-
-                // Parse emergency_contacts with detailed logging
-                console.log('Raw emergency_contacts:', user.emergency_contacts);
-                
                 if (user.emergency_contacts) {
-                    let parsedContacts;
+                    // If it's a string, parse it
+                    if (typeof user.emergency_contacts === 'string') {
+                        user.emergencyContacts = JSON.parse(user.emergency_contacts);
+                    } else {
+                        // If it's already an object, use it directly
+                        user.emergencyContacts = user.emergency_contacts;
+                    }
                     
-                    try {
-                        if (typeof user.emergency_contacts === 'string') {
-                            parsedContacts = JSON.parse(user.emergency_contacts);
-                        } else {
-                            parsedContacts = user.emergency_contacts;
-                        }
-                        
-                        // Ensure it's an array and has required fields
-                        user.emergencyContacts = Array.isArray(parsedContacts) ? 
-                            parsedContacts.map(contact => ({
-                                name: contact.name || '',
-                                phone: contact.phone || '',
-                                relation: contact.relation || ''
-                            })) : [];
-                            
-                        console.log('Parsed emergencyContacts:', user.emergencyContacts);
-                    } catch (e) {
-                        console.error('Error parsing emergency contacts:', e);
-                        console.error('Raw value:', user.emergency_contacts);
+                    // Ensure it's an array
+                    if (!Array.isArray(user.emergencyContacts)) {
                         user.emergencyContacts = [];
                     }
+                    
+                    // Validate each contact
+                    user.emergencyContacts = user.emergencyContacts
+                        .filter(contact => contact && contact.name && contact.phone && contact.relation)
+                        .map(contact => ({
+                            name: contact.name.trim(),
+                            phone: contact.phone.trim(),
+                            relation: contact.relation.trim()
+                        }));
                 } else {
                     user.emergencyContacts = [];
                 }
-
+                
                 // Remove the snake_case version
                 delete user.emergency_contacts;
-
+                
             } catch (e) {
-                console.error('Error parsing JSON fields:', e);
-                console.error('Raw emergency_contacts value:', user.emergency_contacts);
-                user.notifications = {};
+                console.error('Error parsing emergency contacts:', e);
                 user.emergencyContacts = [];
             }
 

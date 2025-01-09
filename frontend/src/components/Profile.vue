@@ -923,6 +923,7 @@ import { useNotificationStore } from '../stores/notification';
 import { userService } from '../services/userService';
 import { authService } from '../services/auth';
 import { debounce } from 'lodash';
+import { checklistService } from '../services/checklistService';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -947,12 +948,13 @@ const profileData = ref({
         push: true
     },
     emergencyContacts: []
-});
+});  
 
 // Additional state
 const userStats = ref({
     securityScore: 0,
-    completedTasks: 0
+    completedTasks: 0,
+    lastLogin: user.value?.last_login || null
 });
 
 // Form validation
@@ -1048,37 +1050,13 @@ const loadProfileData = async () => {
     if (loading.value) return;
 
     try {
-        loading.value = true; 
+        loading.value = true;
         const response = await userService.getProfile();
         
-        console.log('Raw Profile Response:', response);
-
         if (response?.success && response.user) {
             const userData = response.user;
-
-            // Update userStats with actual values
-            userStats.value = {
-                securityScore: 0,
-                completedTasks: userData.completedTasks || 0,
-                lastLogin: userData.lastLogin || new Date().toISOString()
-            };
-
-            // Handle emergency contacts with better error handling
-            let emergencyContacts = [];
-            if (userData.emergencyContacts) {
-                try {
-                    emergencyContacts = Array.isArray(userData.emergencyContacts)
-                        ? userData.emergencyContacts
-                        : JSON.parse(userData.emergencyContacts);
-                        
-                    console.log('Parsed emergency contacts:', emergencyContacts);
-                } catch (e) {
-                    console.error('Error parsing emergency contacts:', e);
-                    emergencyContacts = [];
-                }
-            }
-
-            // Update profile data with all fields
+            
+            // Update profile data
             profileData.value = {
                 ...profileData.value,
                 username: userData.username || '',
@@ -1089,8 +1067,15 @@ const loadProfileData = async () => {
                     email: userData.notifications?.email ?? true,
                     push: userData.notifications?.push ?? true
                 },
-                emergencyContacts: emergencyContacts
+                emergencyContacts: Array.isArray(userData.emergencyContacts) 
+                    ? [...userData.emergencyContacts] 
+                    : []
             };
+
+            // Update stats
+            userStats.value.lastLogin = userData.last_login;
+            calculateSecurityScore();
+            await updateTaskCompletion();
 
             // Store original data for change detection
             originalData.value = JSON.parse(JSON.stringify(profileData.value));
@@ -1180,7 +1165,7 @@ const detectLocation = async () => {
         const data = await response.json();
 
         profileData.value.location = data.display_name;
-        notificationStore.success('Location detected successfully');
+        notificationStore.success('Location detected successfully');  
     } catch (error) {
         notificationStore.error('Failed to detect location');
     } finally {
@@ -1217,15 +1202,16 @@ const calculateSecurityScore = () => {
     let score = 0;
 
     // Basic profile completion
-    if (profileData.value.username) score += 20;
-    if (profileData.value.phone) score += 20;
-    if (profileData.value.location) score += 20;
+    if (profileData.value.username) score += 15;
+    if (profileData.value.phone) score += 15;
+    if (profileData.value.location) score += 15;
 
-    // Emergency contacts
-    score += (profileData.value.emergencyContacts.length * 10);
+    // Emergency contacts (10 points each, max 30)
+    const contactsScore = Math.min(profileData.value.emergencyContacts.length * 10, 30);
+    score += contactsScore;
 
     // Email verification
-    if (user.value?.email_verified) score += 20;
+    if (user.value?.email_verified) score += 25;
 
     userStats.value.securityScore = Math.min(score, 100);
 };
@@ -1459,4 +1445,39 @@ watch(() => profileData.value?.emergencyContacts, (newContacts) => {
 
 // Add this right before the emergency contacts section renders
 console.log('Emergency Contacts in template:', profileData.value?.emergencyContacts);
-</script> 
+
+// Add this after your existing setup code
+watch(
+    () => user.value,
+    (newUser) => {
+        if (newUser?.emergencyContacts) {
+            profileData.value.emergencyContacts = [...newUser.emergencyContacts];
+            console.log('Emergency contacts updated from user:', profileData.value.emergencyContacts);
+        }
+    },
+    { immediate: true, deep: true }
+);
+
+// Add this function to update task completion
+const updateTaskCompletion = async () => {
+    try {
+        const response = await checklistService.loadProgress();
+        if (response?.success) {
+            userStats.value.completedTasks = response.items?.filter(item => item.completed)?.length || 0;
+        }
+    } catch (error) {
+        console.error('Error fetching task completion:', error);
+        userStats.value.completedTasks = 0;
+    }
+};
+// Add these watchers after your existing watchers
+watch([
+    () => profileData.value.username,
+    () => profileData.value.phone,
+    () => profileData.value.location,
+    () => profileData.value.emergencyContacts,
+    () => user.value?.email_verified
+], () => {
+    calculateSecurityScore();
+}, { deep: true });
+</script>      
