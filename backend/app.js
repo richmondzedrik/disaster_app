@@ -10,6 +10,7 @@ const userRoutes = require('./routes/users');
 const checklistRoutes = require('./routes/checklist');
 const newsRoutes = require('./routes/news');
 const adminNewsRoutes = require('./routes/admin/news');
+const notificationTestRoutes = require('./routes/notificationTests');
 
 const app = express();
 
@@ -87,8 +88,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/news', newsRoutes);
 app.use('/api/alerts', require('./routes/alerts'));
 app.use('/auth', authRoutes);
+app.use('/api/test', notificationTestRoutes);
 
-// Route debugging endpoint in development
+// Route debugging endpoint in development         
 if (process.env.NODE_ENV !== 'production') {
     app.get('/api/debug-routes', (req, res) => {
         const routes = [];
