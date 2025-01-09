@@ -178,7 +178,7 @@
     <div v-if="showPostModal" class="modal-overlay">
       <div class="modal-content">
         <h2>{{ editingPost ? 'Edit Post' : 'Create Post' }}</h2>
-        <form @submit.prevent="submitPost">
+        <form @submit.prevent="createPost">
           <div class="form-group">
             <label for="title">Title</label>
             <input type="text" id="title" v-model="postForm.title" required>
@@ -275,25 +275,36 @@ const showAddPostModal = ref(false);
 const isLoggedIn = computed(() => authStore.isLoggedIn);
 
 const createPost = async () => {
+  if (!canCreatePost.value) {
+    notificationStore.error('You do not have permission to create posts');
+    return;
+  }
+
   try {
     loading.value = true;
     const formData = new FormData();
-    formData.append('title', postForm.value.title);
-    formData.append('content', postForm.value.content);
+    formData.append('title', postForm.value.title.trim());
+    formData.append('content', postForm.value.content.trim());
+    
     if (imageFile.value) {
       formData.append('image', imageFile.value);
     }
 
     const response = await newsService.createPost(formData);
+    
     if (response.success) {
-      notificationStore.success('Post created successfully');
-      // Send email notifications
-      await newsService.notifySubscribers({
-        postId: response.post.id,
-        title: postForm.value.title,
-        content: postForm.value.content.substring(0, 150) + '...',
-        author: user.value.username
-      });
+      notificationStore.success(response.message);
+      
+      // Only send notifications if post is approved (admin created it)
+      if (response.post.status === 'approved') {
+        await newsService.notifySubscribers({
+          postId: response.post.id,
+          title: postForm.value.title,
+          content: postForm.value.content.substring(0, 150) + '...',
+          author: user.value.username
+        });
+      }
+      
       showPostModal.value = false;
       resetForm();
       await loadPosts();
@@ -303,6 +314,8 @@ const createPost = async () => {
     notificationStore.error(error.message || 'Failed to create post');
   } finally {
     loading.value = false;
+    imageFile.value = null;
+    imagePreview.value = null;
   }
 };
 
@@ -378,41 +391,6 @@ const removeImage = () => {
   // Reset the file input
   const input = document.getElementById('image');
   if (input) input.value = '';
-};
-
-const submitPost = async () => {
-  if (!canCreatePost.value) {
-    notificationStore.error('You do not have permission to create posts');
-    return;
-  }
-
-  try {
-    loading.value = true;
-    const formData = new FormData();
-    formData.append('title', postForm.value.title.trim());
-    formData.append('content', postForm.value.content.trim());
-
-    if (imageFile.value) {
-      formData.append('image', imageFile.value);
-    }
-
-    const response = await newsService.createPost(formData);
-
-    if (response.success) {
-      notificationStore.success('Post created successfully and pending approval');
-      closeModal();
-      await loadPosts();
-    } else {
-      throw new Error(response.message || 'Failed to create post');
-    }
-  } catch (err) {
-    console.error('Create post error:', err);
-    notificationStore.error(err.message || 'Failed to create post');
-  } finally {
-    loading.value = false;
-    imageFile.value = null;
-    imagePreview.value = null;
-  }
 };
 
 const editPost = (post) => {

@@ -287,11 +287,9 @@ router.post('/posts', auth.authMiddleware, upload.single('image'), async (req, r
         let imageUrl = null;
         
         if (req.file) {
-            // Convert buffer to base64
             const b64 = Buffer.from(req.file.buffer).toString('base64');
             const dataURI = `data:${req.file.mimetype};base64,${b64}`;
             
-            // Upload to Cloudinary
             const cloudinaryResponse = await cloudinary.uploader.upload(dataURI, {
                 resource_type: 'auto',
                 folder: 'disaster-app/news'
@@ -300,9 +298,12 @@ router.post('/posts', auth.authMiddleware, upload.single('image'), async (req, r
             imageUrl = cloudinaryResponse.secure_url;
         }
         
+        // Set status based on user role
+        const status = req.user.role === 'admin' ? 'approved' : 'pending';
+        
         const [result] = await db.execute(
             'INSERT INTO posts (title, content, author_id, status, image_url) VALUES (?, ?, ?, ?, ?)',
-            [title, content, req.user.userId, 'pending', imageUrl]
+            [title, content, req.user.userId, status, imageUrl]
         );
 
         if (!result.insertId) {
@@ -320,14 +321,14 @@ router.post('/posts', auth.authMiddleware, upload.single('image'), async (req, r
 
         res.json({
             success: true,
-            message: 'Post created successfully and pending approval',
+            message: status === 'approved' ? 'Post created successfully' : 'Post created successfully and pending approval',
             post: posts[0]
         });
     } catch (error) {
         console.error('Error creating post:', error);
         res.status(500).json({
             success: false,
-            message: error.message || 'Failed to create post'
+            message: 'Failed to create post'
         });
     }
 });
