@@ -8,9 +8,12 @@ router.post('/test/notifications/like', auth.authMiddleware, async (req, res) =>
   try {
     const { userId, postId, message } = req.body;
     
+    // Convert string 'test-user' to actual user ID if testing
+    const actualUserId = userId === 'test-user' ? req.user.userId : userId;
+    
     const [result] = await db.execute(
-      'INSERT INTO notifications (user_id, type, reference_id, message, created_at) VALUES (?, ?, ?, ?, NOW())',
-      [userId, 'like', postId, message]
+      'INSERT INTO notifications (user_id, type, reference_id, message) VALUES (?, ?, ?, ?)',
+      [actualUserId, 'like', postId, message]
     );
 
     res.json({
@@ -18,10 +21,12 @@ router.post('/test/notifications/like', auth.authMiddleware, async (req, res) =>
       message: 'Like notification created',
       notificationId: result.insertId
     });
-  } catch (error) {     
+  } catch (error) {
+    console.error('Like notification error:', error);     
     res.status(500).json({
       success: false,
-      message: 'Failed to create like notification'
+      message: 'Failed to create like notification',
+      error: error.message
     });
   }
 });
