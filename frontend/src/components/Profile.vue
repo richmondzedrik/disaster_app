@@ -1,14 +1,36 @@
 <template>
     <div class="profile-container">
+        <!-- Initial Loading Skeleton -->
+        <div v-if="initialLoading" class="profile-skeleton">
+            <div class="skeleton-header">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-info">
+                    <div class="skeleton-text"></div>
+                    <div class="skeleton-badge"></div>
+                </div>
+            </div>
+            <div class="skeleton-stats">
+                <div class="skeleton-stat"></div>
+                <div class="skeleton-stat"></div>
+                <div class="skeleton-stat"></div>
+            </div>
+            <div class="skeleton-content">
+                <div class="skeleton-section"></div>
+                <div class="skeleton-section"></div>
+                <div class="skeleton-section"></div>
+            </div>
+        </div>
+
         <!-- Loading Overlay -->
-        <div v-if="loading" class="loading-overlay">
+        <div v-if="saveLoading" class="loading-overlay">
             <div class="loading-spinner">
                 <i class="fas fa-circle-notch fa-spin"></i>
                 <span>Saving changes...</span>
             </div>
         </div>
 
-        <div class="profile-content" :class="{ 'blur-content': loading }">
+        <!-- Main Content -->
+        <div v-if="!initialLoading" class="profile-content" :class="{ 'blur-content': saveLoading }">
             <!-- Profile Header -->
             <div class="profile-header">
                 <div class="profile-avatar">
@@ -21,7 +43,7 @@
                         </span>
                     </div>
                 </div>
-                <div class="profile-stats">
+                <div class="profile-stats">   
                     <div class="stat-item">
                         <i class="fas fa-shield-alt"></i>
                         <div class="stat-info">
@@ -952,6 +974,89 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+.profile-skeleton {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0, 92, 92, 0.08);
+    overflow: hidden;
+    border: 1px solid rgba(0, 173, 173, 0.1);
+}
+
+.skeleton-header {
+    background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+    padding: 3rem 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.skeleton-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    animation: pulse 1.5s infinite;
+}
+
+.skeleton-info {
+    flex: 1;
+}
+
+.skeleton-text {
+    height: 24px;
+    width: 200px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    animation: pulse 1.5s infinite;
+}
+
+.skeleton-badge {
+    height: 20px;
+    width: 120px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    animation: pulse 1.5s infinite;
+}
+
+.skeleton-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    padding: 2rem;
+}
+
+.skeleton-stat {
+    height: 80px;
+    background: #f0f0f0;
+    border-radius: 12px;
+    animation: pulse 1.5s infinite;
+}
+
+.skeleton-content {
+    padding: 2rem;
+}
+
+.skeleton-section {
+    height: 200px;
+    background: #f0f0f0;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 0.8;
+    }
+    100% {
+        opacity: 0.6;
+    }
+}
 </style>
 
 <script setup>
@@ -975,6 +1080,9 @@ const showPasswordModal = ref(false);
 const passwordLoading = ref(false);
 const phoneError = ref('');
 
+// Add this new ref for save operation loading
+const saveLoading = ref(false);
+  
 // User data management
 const user = computed(() => authStore.user);
 const profileData = ref({
@@ -1085,22 +1193,33 @@ const isSaveDisabled = computed(() => {
            profileData.value.emergencyContacts.some(contact => contact.error); 
 });
 
+
 const originalEmergencyContacts = ref([]);
+
+const initialLoading = ref(true);
 
 const loadProfileData = async () => {
     if (loading.value) return;
 
     try {
-        loading.value = true;
+        initialLoading.value = true;
         const response = await userService.getProfile();
         
         if (response?.success && response.user) {
             const userData = response.user;
             
+            // Load emergency contacts
+            try {
+                const contactsResponse = await userService.getEmergencyContacts();
+                if (contactsResponse?.success) {
+                    userData.emergencyContacts = contactsResponse.contacts;
+                }
+            } catch (error) {
+                console.error('Error loading emergency contacts:', error);
+            }
+            
             // Store original emergency contacts
-            originalEmergencyContacts.value = Array.isArray(userData.emergencyContacts) 
-                ? JSON.parse(JSON.stringify(userData.emergencyContacts))
-                : [];
+            originalEmergencyContacts.value = JSON.parse(JSON.stringify(userData.emergencyContacts || []));
 
             // Update profile data
             profileData.value = {
@@ -1110,13 +1229,7 @@ const loadProfileData = async () => {
                 phone: userData.phone || '',
                 location: userData.location || '',
                 notifications: userData.notifications || { email: true, push: true },
-                emergencyContacts: originalEmergencyContacts.value
-            };
-
-            // Update stats
-            userStats.value = {
-                ...userStats.value,
-                lastLogin: userData.last_login || null
+                emergencyContacts: userData.emergencyContacts || []
             };
 
             // Store original data for change detection
@@ -1125,12 +1238,10 @@ const loadProfileData = async () => {
     } catch (error) {
         console.error('Load profile error:', error);
         notificationStore.error('Failed to load profile data');
-        // Restore emergency contacts from original data if load fails
-        profileData.value.emergencyContacts = [...originalEmergencyContacts.value];
     } finally {
-        loading.value = false;
+        initialLoading.value = false;
     }
-};
+};  
 
 // Phone validation
 const validatePhoneNumber = () => {
@@ -1221,16 +1332,18 @@ const detectLocation = async () => {
 const addEmergencyContact = () => {
     if (profileData.value.emergencyContacts.length < 3) {
         profileData.value.emergencyContacts.push({
-            name: '',
+            name: '',  
             phone: ''
         });
     }
 };
 
 const removeEmergencyContact = (index) => {
-    profileData.value.emergencyContacts.splice(index, 1);
+    if (confirm('Are you sure you want to delete this emergency contact? This action cannot be undone.')) {
+        profileData.value.emergencyContacts.splice(index, 1);
+        notificationStore.warning('Emergency contact removed');
+    }
 };
-
 const validateEmergencyContact = (index) => {
     const contact = profileData.value.emergencyContacts[index];
     const phoneRegex = /^\+63[0-9]{10}$/;
@@ -1303,17 +1416,21 @@ onMounted(() => {
     loadProfileData();
 });
 
+onMounted(async () => {
+    await loadProfileData();
+});   
+
 // Save changes function
 const saveChanges = async () => {
-    if (loading.value || !isFormValid.value || !hasChanges.value) {
+    if (saveLoading.value || !isFormValid.value || !hasChanges.value) {
         return;
     }
 
     try {
-        loading.value = true;
+        saveLoading.value = true;
 
         if (!validateForm()) {
-            loading.value = false;
+            saveLoading.value = false;
             return;
         }
 
@@ -1333,7 +1450,6 @@ const saveChanges = async () => {
 
         const response = await userService.updateProfile(updateData);
         
-        // Instead of JSON parsing, directly assign the cleaned data
         originalData.value = {
             username: updateData.username,
             phone: updateData.phone,
@@ -1348,21 +1464,53 @@ const saveChanges = async () => {
 
         notificationStore.success('Profile updated successfully');
         
-        // Remove the loadProfileData call since we already have the updated data
-        // await loadProfileData();
-        
     } catch (error) {
         console.error('Save profile error:', error);
         notificationStore.error('Failed to update profile');
     } finally {
-        loading.value = false;  
+        saveLoading.value = false;
     }
 };
 
 const taskCompletionPercentage = computed(() => {
-    const totalTasks = 10; // You can adjust this based on your total tasks
-    return Math.round((userStats.value.completedTasks / totalTasks) * 100);
+    // Define required tasks
+    const requiredTasks = [
+        !!profileData.value.username,
+        !!profileData.value.phone,
+        !!profileData.value.location,
+        !!user.value?.email_verified, 
+        profileData.value.emergencyContacts?.length > 0,
+        !!localStorage.getItem('checklistProgress')
+    ];
+
+    // Count completed tasks
+    const completedTasks = requiredTasks.filter(task => task).length;
+    
+    // Calculate percentage
+    const totalTasks = requiredTasks.length;
+    
+    // Return percentage without setting userStats
+    return Math.round((completedTasks / totalTasks) * 100);
 });
+
+// Add this computed property for completed tasks count
+const completedTasksCount = computed(() => {
+    const requiredTasks = [
+        !!profileData.value.username,
+        !!profileData.value.phone,
+        !!profileData.value.location,
+        !!user.value?.email_verified, 
+        profileData.value.emergencyContacts?.length > 0,
+        !!localStorage.getItem('checklistProgress')
+    ];
+    return requiredTasks.filter(task => task).length;
+});
+
+// Update the watcher to use the computed value
+watch([profileData, () => user.value?.email_verified], () => {
+    userStats.value.completedTasks = completedTasksCount.value;
+    calculateSecurityScore();
+}, { deep: true });
 
 // Emergency contact management
 const showEmergencyContactModal = ref(false);   
@@ -1583,37 +1731,24 @@ const saveProfile = async () => {
 
 const loadEmergencyContactsFromDB = async () => {
     if (loading.value) return;
-
+    
     try {
-        loading.value = true;
         const response = await userService.getEmergencyContacts();
         
         if (response?.success) {
-            const contacts = Array.isArray(response.contacts) ? response.contacts : [];
-            
-            // Update the contacts with validation
-            profileData.value.emergencyContacts = contacts.filter(contact => 
-                contact && 
-                contact.name?.trim() && 
-                contact.phone?.trim() && 
-                contact.relation?.trim()
-            );
-            
-            // Store original state
-            originalEmergencyContacts.value = JSON.parse(JSON.stringify(profileData.value.emergencyContacts));
-            
-            notificationStore.success('Emergency contacts loaded successfully');
-        } else {
-            throw new Error(response?.message || 'Failed to load contacts');
+            // Update both current and original data to prevent change detection
+            const contacts = response.contacts || [];
+            profileData.value.emergencyContacts = contacts;
+            originalEmergencyContacts.value = JSON.parse(JSON.stringify(contacts));
+            originalData.value = {
+                ...originalData.value,
+                emergencyContacts: JSON.parse(JSON.stringify(contacts))
+            };
+            notificationStore.success('Emergency contacts refreshed');
         }
     } catch (error) {
-        console.error('Load emergency contacts error:', error);
-        notificationStore.error(error.message || 'Failed to load emergency contacts');
-        
-        // Reset to original state on error
-        profileData.value.emergencyContacts = [...originalEmergencyContacts.value];
-    } finally {
-        loading.value = false;
+        console.error('Error refreshing emergency contacts:', error);
+        notificationStore.error('Failed to refresh emergency contacts');
     }
 };
 </script>         
