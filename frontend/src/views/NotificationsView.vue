@@ -69,10 +69,13 @@ const hasUnread = computed(() => {
 });
 
 const getIconClass = (type) => {
-  switch (type) {
+  switch (type?.toLowerCase()) {
     case 'like': return 'fas fa-heart';
     case 'post': return 'fas fa-newspaper';
     case 'alert': return 'fas fa-bell';
+    case 'info': return 'fas fa-info-circle';
+    case 'warning': return 'fas fa-exclamation-triangle';
+    case 'error': return 'fas fa-exclamation-circle';
     default: return 'fas fa-info-circle';
   }
 };
@@ -132,13 +135,23 @@ const clearAll = async () => {
 
 const fetchNotifications = async () => {
   try {
-    const response = await axios.get(`${import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com'}/api/notifications/user`, {
+    const baseUrl = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
+    const response = await axios.get(`${baseUrl}/notifications/user`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
+
     if (response.data?.notifications) {
-      notificationStore.$patch({ notifications: response.data.notifications });
+      // Transform notifications to match the test format
+      const transformedNotifications = response.data.notifications.map(notification => ({
+        ...notification,
+        type: notification.type || 'info',
+        message: notification.message,
+        is_read: Boolean(notification.is_read),
+        created_at: notification.created_at || new Date().toISOString()  
+      }));
+      notificationStore.$patch({ notifications: transformedNotifications });
     } else {
       notificationStore.$patch({ notifications: [] });
     }
@@ -291,6 +304,9 @@ onMounted(() => {
 .notification-item.type-like i { color: #EC4899; }
 .notification-item.type-post i { color: #3B82F6; }
 .notification-item.type-alert i { color: #EF4444; }
+.notification-item.type-info i { color: #2563EB; }
+.notification-item.type-warning i { color: #CA8A04; }
+.notification-item.type-error i { color: #DC2626; }
 
 .notification-item.unread {
   background: #f8fafc;
