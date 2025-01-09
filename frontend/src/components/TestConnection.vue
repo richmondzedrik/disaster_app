@@ -25,7 +25,7 @@
               <li>Emergency Alert (High Priority)</li>
               <li>Warning Alert (Medium Priority)</li>
             </ul>
-          </div>
+          </div>    
         </div>
 
         <div class="service-details">
@@ -91,6 +91,20 @@
         <StatusItem title="Auth API" :status="status.auth" />
         <StatusItem title="Admin API" :status="status.admin" />
       </div>
+
+      <!-- Notification Services -->
+      <div class="status-group">
+        <h4>Notification Services</h4>
+        <StatusItem title="Notification System" :status="status.notifications" />
+        <div v-if="status.notifications?.success" class="test-data">
+          <strong>Test Results:</strong>
+          <ul>
+            <li>Like Notification: {{ status.notifications.testResults?.like ? '✓' : '✗' }}</li>
+            <li>New Post Notification: {{ status.notifications.testResults?.newPost ? '✓' : '✗' }}</li>
+            <li>Alert Notification: {{ status.notifications.testResults?.alert ? '✓' : '✗' }}</li>
+          </ul>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -112,7 +126,8 @@ const status = ref({
   admin: null,
   adminAlerts: null,
   imageUpload: null,
-  adminAlertOps: null
+  adminAlertOps: null,
+  notifications: null
 });
 
 const hasResults = computed(() => 
@@ -259,11 +274,62 @@ const testAllSystems = async () => {
     const adminAlertOpsTest = await alertService.testAdminAlertOperations();
     status.value.adminAlertOps = adminAlertOpsTest;
 
+    // Test notification system
+    const notificationTest = await testNotifications();
+    status.value.notifications = {
+      ...notificationTest,
+      message: notificationTest.success 
+        ? 'Notification system operational'
+        : notificationTest.message
+    };
+
   } catch (error) {
     console.error('Test all systems error:', error);
     notificationStore.error('Failed to complete system tests');
   } finally {
     loading.value = false;
+  }
+};
+
+const testNotifications = async () => {
+  try {
+    // Test like notification
+    const likeTest = await api.post('/api/test/notifications/like', {
+      postId: 'test-post-id',
+      action: 'like'
+    });
+
+    // Test new post notification
+    const postTest = await api.post('/api/test/notifications/post', {
+      title: 'Test Post',
+      content: 'Test Content'
+    });
+
+    // Test alert notification
+    const alertTest = await api.post('/api/test/notifications/alert', {
+      type: 'emergency',
+      message: 'Test Alert'
+    });
+
+    return {
+      success: likeTest.data?.success && postTest.data?.success && alertTest.data?.success,
+      message: 'Notification system operational',
+      testResults: {
+        like: likeTest.data?.success || false,
+        newPost: postTest.data?.success || false,
+        alert: alertTest.data?.success || false
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Notification system test failed',
+      testResults: {
+        like: false,
+        newPost: false,
+        alert: false
+      }
+    };
   }
 };
 </script>
