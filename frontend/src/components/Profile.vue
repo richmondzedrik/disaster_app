@@ -1046,6 +1046,8 @@ const isSaveDisabled = computed(() => {
            profileData.value.emergencyContacts.some(contact => contact.error); 
 });
 
+const originalEmergencyContacts = ref([]);
+
 const loadProfileData = async () => {
     if (loading.value) return;
 
@@ -1056,6 +1058,11 @@ const loadProfileData = async () => {
         if (response?.success && response.user) {
             const userData = response.user;
             
+            // Store original emergency contacts
+            originalEmergencyContacts.value = Array.isArray(userData.emergencyContacts) 
+                ? JSON.parse(JSON.stringify(userData.emergencyContacts))
+                : [];
+
             // Update profile data
             profileData.value = {
                 ...profileData.value,
@@ -1063,33 +1070,24 @@ const loadProfileData = async () => {
                 email: userData.email || '',
                 phone: userData.phone || '',
                 location: userData.location || '',
-                notifications: {
-                    email: userData.notifications?.email ?? true,
-                    push: userData.notifications?.push ?? true
-                },
-                emergencyContacts: Array.isArray(userData.emergencyContacts) 
-                    ? [...userData.emergencyContacts] 
-                    : []
+                notifications: userData.notifications || { email: true, push: true },
+                emergencyContacts: originalEmergencyContacts.value
             };
 
-            // Update user stats with last_login from user data
+            // Update stats
             userStats.value = {
                 ...userStats.value,
-                lastLogin: userData.last_login || null,
-                completedTasks: userStats.value.completedTasks,
-                securityScore: userStats.value.securityScore
+                lastLogin: userData.last_login || null
             };
 
             // Store original data for change detection
             originalData.value = JSON.parse(JSON.stringify(profileData.value));
-            
-            // Calculate security score after data is loaded
-            calculateSecurityScore();
-            await updateTaskCompletion();
         }
     } catch (error) {
         console.error('Load profile error:', error);
         notificationStore.error('Failed to load profile data');
+        // Restore emergency contacts from original data if load fails
+        profileData.value.emergencyContacts = [...originalEmergencyContacts.value];
     } finally {
         loading.value = false;
     }
@@ -1500,4 +1498,47 @@ watch([
 ], () => {
     calculateSecurityScore();
 }, { deep: true });
-</script>      
+
+// Add this watcher to ensure emergency contacts persistence
+watch(
+    () => profileData.value.emergencyContacts,
+    (newContacts) => {
+        if (Array.isArray(newContacts)) {
+            // Deep clone to prevent reference issues
+            originalEmergencyContacts.value = JSON.parse(JSON.stringify(newContacts));
+        }
+    },
+    { deep: true }
+);
+
+// Modify the saveProfile function to include emergency contacts validation
+const saveProfile = async () => {
+    if (loading.value) return;
+
+    try {
+        loading.value = true;
+        
+        // Validate emergency contacts before saving
+        const validContacts = profileData.value.emergencyContacts.filter(
+            contact => contact && contact.name && contact.phone && contact.relation
+        );
+
+        const response = await userService.updateProfile({
+            ...profileData.value,
+            emergencyContacts: validContacts
+        });
+
+        if (response?.success) {
+            originalEmergencyContacts.value = JSON.parse(JSON.stringify(validContacts));
+            notificationStore.success('Profile updated successfully');
+        }
+    } catch (error) {
+        console.error('Save profile error:', error);
+        notificationStore.error('Failed to update profile');
+        // Restore emergency contacts from original data if save fails
+        profileData.value.emergencyContacts = [...originalEmergencyContacts.value];
+    } finally {
+        loading.value = false;
+    }
+};
+</script>         

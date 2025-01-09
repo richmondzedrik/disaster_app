@@ -12,7 +12,7 @@ class User {
             return rows[0] || null;
         } catch (error) {
             console.error('Error in findByEmail:', error);
-            throw error;
+            throw error;  
         }
     }
 
@@ -20,7 +20,8 @@ class User {
         try {
             const [rows] = await db.execute(
                 `SELECT id, username, email, phone, location, notifications, 
-                emergency_contacts, role, email_verified, created_at, updated_at
+                emergency_contacts, role, email_verified, created_at, updated_at,
+                COALESCE(last_login, updated_at) as last_login
                 FROM users WHERE id = ?`,
                 [userId]
             );
@@ -29,24 +30,33 @@ class User {
 
             const user = rows[0];
             
-            // Parse JSON fields
             try {
                 // Handle notifications
                 user.notifications = typeof user.notifications === 'string'
                     ? JSON.parse(user.notifications)
                     : user.notifications || {};
 
-                // Handle emergency contacts
-                if (typeof user.emergency_contacts === 'string') {
-                    user.emergencyContacts = JSON.parse(user.emergency_contacts);
-                } else if (user.emergency_contacts) {
-                    user.emergencyContacts = user.emergency_contacts;
+                // Handle emergency contacts - ensure proper parsing
+                if (user.emergency_contacts) {
+                    const contacts = typeof user.emergency_contacts === 'string'
+                        ? JSON.parse(user.emergency_contacts)
+                        : user.emergency_contacts;
+                    
+                    user.emergencyContacts = Array.isArray(contacts) 
+                        ? contacts.map(contact => ({
+                            name: contact.name?.trim() || '',
+                            phone: contact.phone?.trim() || '',
+                            relation: contact.relation?.trim() || ''
+                        }))
+                        : [];
                 } else {
                     user.emergencyContacts = [];
                 }
 
-                // Set default last_login
-                user.last_login = user.updated_at;
+                // Format last_login
+                if (user.last_login) {
+                    user.last_login = new Date(user.last_login).toISOString();
+                }
 
                 // Remove snake_case version
                 delete user.emergency_contacts;
