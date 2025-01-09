@@ -61,7 +61,7 @@ export const useAuthStore = defineStore('auth', () => {
                 // Set axios default header
                 api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
                 
-                return response.data;
+                return response.data;  
             }
 
             // If the response indicates email doesn't exist
@@ -183,13 +183,19 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('user', JSON.stringify(updatedUser));
     };
 
-    const handleAuthError = () => {
-        user.value = null
-        accessToken.value = null
-        isAuthenticated.value = false
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-    }
+    const handleAuthError = (error) => {
+        // Only logout for specific auth errors
+        if (error?.response?.data?.code === 'TOKEN_EXPIRED' || 
+            error?.response?.data?.code === 'INVALID_AUTH') {
+            user.value = null;
+            accessToken.value = null;
+            isAuthenticated.value = false;
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            return true;
+        }
+        return false;
+    };
 
     const isAdmin = computed(() => user.value?.role === 'admin')
 

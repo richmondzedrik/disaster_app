@@ -29,7 +29,9 @@ const authMiddleware = async (req, res, next) => {
                 });
             }
 
+            // Set both userId and id for compatibility
             req.user = {
+                id: decoded.userId,
                 userId: decoded.userId,
                 username: users[0].username,
                 role: users[0].role,
@@ -41,7 +43,8 @@ const authMiddleware = async (req, res, next) => {
             if (error.name === 'TokenExpiredError') {
                 return res.status(401).json({
                     success: false,
-                    message: 'Session expired'
+                    message: 'Session expired',
+                    code: 'TOKEN_EXPIRED'
                 });
             }
             throw error;
@@ -50,7 +53,8 @@ const authMiddleware = async (req, res, next) => {
         console.error('Auth middleware error:', error);
         return res.status(401).json({
             success: false,
-            message: 'Invalid authentication'
+            message: 'Invalid authentication',
+            code: 'INVALID_AUTH'
         });
     }
 };

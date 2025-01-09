@@ -68,11 +68,11 @@ router.get('/verify-emergency-contacts', auth.authMiddleware, async (req, res) =
         // Get raw data from database
         const [rawResult] = await db.execute(
             'SELECT emergency_contacts FROM users WHERE id = ?',
-            [req.user.id]
+            [req.user.id || req.user.userId]
         );
 
         // Get parsed data through User model
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id || req.user.userId);
 
         return res.json({
             success: true,
@@ -83,6 +83,18 @@ router.get('/verify-emergency-contacts', auth.authMiddleware, async (req, res) =
         });
     } catch (error) {
         console.error('Emergency contacts verification error:', error);
+        
+        // Don't send 500 status for parsing errors
+        if (error instanceof SyntaxError) {
+            return res.json({
+                success: true,
+                raw_data: null,
+                parsed_data: null,
+                is_valid_json: false,
+                error: 'Invalid JSON format'
+            });
+        }
+        
         return res.status(500).json({
             success: false,
             message: 'Error verifying emergency contacts',
@@ -95,7 +107,7 @@ router.get('/verify-emergency-contacts', auth.authMiddleware, async (req, res) =
 router.get('/emergency-contacts', auth.authMiddleware, async (req, res) => {
     try {
         // Check auth token
-        if (!req.headers.authorization) {
+        if (!req.headers.authorization) {  
             return res.status(401).json({
                 success: false,
                 message: 'No authentication token provided'
