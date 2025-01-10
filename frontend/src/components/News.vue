@@ -8,6 +8,10 @@
           <i class="fas fa-plus"></i>
           Create Post
         </button>
+        <button v-if="isAdmin" @click="testEmailNotifications" class="test-email-btn">
+          <i class="fas fa-envelope"></i>
+          Test Email
+        </button>
       </div>
 
       <div v-if="isAdmin" class="admin-controls">
@@ -288,6 +292,8 @@ const filteredPosts = computed(() => {
   return filtered.filter(post => post.status === 'approved');
 });
 
+
+
 const showAddPostModal = ref(false);
 const isLoggedIn = computed(() => authStore.isLoggedIn);
 const resetForm = () => {
@@ -455,6 +461,7 @@ const deletePost = async (postId) => {
     loading.value = false;
   }
 };
+
 
 const processedPosts = computed(() => {
   return posts.value.map(post => ({
@@ -826,6 +833,20 @@ onMounted(() => {
     });
   }
 });
+
+const testEmailNotifications = async () => {
+  try {
+    const response = await newsService.testEmail(user.value.email);
+    if (response.success) {
+      notificationStore.success('Test email sent successfully. Please check your inbox.');
+    } else {
+      throw new Error(response.message || 'Failed to send test email');
+    }
+  } catch (error) {
+    console.error('Test email error:', error);
+    notificationStore.error('Failed to send test email');
+  }
+};
 
 </script>
 
@@ -1900,6 +1921,23 @@ onMounted(() => {
 
 .skeleton-text.long {
   width: 100%;
+}
+
+.test-email-btn {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+}
+
+.test-email-btn:hover {
+  background: #45a049;
 }
 </style>
 

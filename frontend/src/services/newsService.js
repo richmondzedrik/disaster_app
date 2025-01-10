@@ -382,5 +382,26 @@ export const newsService = {
             console.error('Error sending notification:', error);
             throw error;
         }
+    },
+
+    async testEmail(email) {
+        try {
+            const headers = getHeaders();
+            const response = await axios.post(`${API_URL}/api/notifications/test-email`, { email }, {
+                headers,
+                withCredentials: true,
+                timeout: 30000
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Test email error:', error);
+            if (error.response?.status === 404) {
+                return {
+                    success: false,
+                    message: 'Test email endpoint not found'
+                };
+            }
+            throw error;
+        }
     }
 };
