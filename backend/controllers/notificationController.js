@@ -11,8 +11,18 @@ const notifyNewPost = async (req, res) => {
       'SELECT email FROM users WHERE notifications = true AND email_verified = true'
     );
 
+    console.log('Found subscribers:', users); // Debug log
+
+    if (!users || users.length === 0) {
+      return res.json({ 
+        success: false, 
+        message: 'No subscribers found' 
+      });
+    }
+
     // Send emails to all subscribers
     const emailPromises = users.map(user => {
+      console.log('Sending email to:', user.email); // Debug log
       const emailContent = {
         to: user.email,
         subject: 'New Post on AlertoAbra: ' + title,
@@ -28,11 +38,19 @@ const notifyNewPost = async (req, res) => {
           </a>
         `
       };
-      return sendEmail(emailContent);
+      return sendEmail(emailContent).catch(err => {
+        console.error('Email send error:', err);
+        return null;
+      });
     });
 
-    await Promise.all(emailPromises);
-    res.json({ success: true, message: 'Notifications sent successfully' });
+    const results = await Promise.all(emailPromises);
+    const successCount = results.filter(Boolean).length;
+
+    res.json({ 
+      success: true, 
+      message: `Notifications sent successfully to ${successCount} subscribers` 
+    });
   } catch (error) {
     console.error('Error sending notifications:', error);
     res.status(500).json({ 
