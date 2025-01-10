@@ -322,23 +322,31 @@ const createPost = async () => {
     }
 
     const response = await newsService.createPost(formData);
-    console.log('Post creation response:', response); // Add this log
+    console.log('Post creation response:', response);
     
     if (response.success) {
       notificationStore.success(response.message);
       
       // Send email notifications to subscribers
       if (response.post.status === 'approved') {
-        console.log('Sending notifications for approved post:', response.post); // Add this log
+        console.log('Sending notifications for approved post:', response.post);
         try {
+          // First send notification to subscribers
           const notificationResponse = await newsService.notifySubscribers({
             postId: response.post.id,
             title: postForm.value.title,
             content: postForm.value.content.substring(0, 150) + '...',
             author: user.value.username
           });
-          console.log('Notification response:', notificationResponse); // Add this log
-          notificationStore.success('Notifications sent to subscribers');
+          console.log('Notification response:', notificationResponse);
+          
+          // Then send a test email to the post creator
+          const testEmailResponse = await newsService.testEmail(user.value.email);
+          if (testEmailResponse.success) {
+            notificationStore.success('Post created and notifications sent successfully');
+          } else {
+            console.warn('Test email failed:', testEmailResponse.message);
+          }
         } catch (notifyError) {
           console.error('Error sending notifications:', notifyError);
           notificationStore.error('Post created but failed to send notifications');
@@ -857,7 +865,7 @@ const testEmailNotifications = async () => {
   justify-content: flex-end;
 }
 
-.add-post-btn {
+.add-post-btn {  
   background-color: #00ADA9;
   color: white;
   border: none;
