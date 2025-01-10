@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const { sendEmail } = require('../utils/email');
+const db = require('../db/connection');
 
 const notifyNewPost = async (req, res) => {
   try {

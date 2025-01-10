@@ -11,7 +11,7 @@
       </div>
 
       <div v-if="isAdmin" class="admin-controls">
-        <div class="filter-controls">
+        <div class="filter-controls">     
           <button v-for="status in ['all', 'pending', 'approved']" :key="status" @click="postStatus = status"
             :class="['filter-btn', { active: postStatus === status }]">
             {{ status.charAt(0).toUpperCase() + status.slice(1) }}
@@ -316,18 +316,27 @@ const createPost = async () => {
     }
 
     const response = await newsService.createPost(formData);
+    console.log('Post creation response:', response); // Add this log
     
     if (response.success) {
       notificationStore.success(response.message);
       
-      // Only send notifications if post is approved (admin created it)
+      // Send email notifications to subscribers
       if (response.post.status === 'approved') {
-        await newsService.notifySubscribers({
-          postId: response.post.id,
-          title: postForm.value.title,
-          content: postForm.value.content.substring(0, 150) + '...',
-          author: user.value.username
-        });
+        console.log('Sending notifications for approved post:', response.post); // Add this log
+        try {
+          const notificationResponse = await newsService.notifySubscribers({
+            postId: response.post.id,
+            title: postForm.value.title,
+            content: postForm.value.content.substring(0, 150) + '...',
+            author: user.value.username
+          });
+          console.log('Notification response:', notificationResponse); // Add this log
+          notificationStore.success('Notifications sent to subscribers');
+        } catch (notifyError) {
+          console.error('Error sending notifications:', notifyError);
+          notificationStore.error('Post created but failed to send notifications');
+        }
       }
       
       showPostModal.value = false;

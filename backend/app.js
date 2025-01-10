@@ -11,6 +11,7 @@ const checklistRoutes = require('./routes/checklist');
 const newsRoutes = require('./routes/news');
 const adminNewsRoutes = require('./routes/admin/news');
 const notificationTestRoutes = require('./routes/notificationTests');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 

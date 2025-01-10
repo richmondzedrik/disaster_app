@@ -336,7 +336,7 @@ export const newsService = {
         } catch (error) {
             console.error('Error fetching posts:', error);
             return {
-                success: false,
+                success: false,  
                 posts: []
             };
         }
@@ -344,10 +344,31 @@ export const newsService = {
 
     async notifySubscribers(postData) {
         try {
-            const response = await api.post('/api/news/notify-subscribers', postData);
+            const headers = getHeaders();
+            const response = await axios.post(`${API_URL}/api/news/notify-subscribers`, postData, {
+                headers,
+                withCredentials: true,
+                timeout: 15000
+            });
             return response.data;
         } catch (error) {
             console.error('Error notifying subscribers:', error);
+            if (error.response?.status === 500) {
+                return {
+                    success: false,
+                    message: 'Server error while sending notifications'
+                };
+            }
+            throw error;
+        }
+    },
+
+    async sendNewPostNotification(postData) {
+        try {
+            const response = await api.post('/news/notify', postData);
+            return response.data;
+        } catch (error) {
+            console.error('Error sending notification:', error);
             throw error;
         }
     }
