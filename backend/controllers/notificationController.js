@@ -57,7 +57,7 @@ const notifyNewPost = async (req, res) => {
         // Create notification record
         await db.execute(
           'INSERT INTO notifications (user_id, type, message, created_at) VALUES (?, ?, ?, NOW())',
-          [user.id, 'post_created', `New post created: ${title}`]
+          [user.id, 'post', `New post created: ${title}`]
         );
 
         return { success: true, email: user.email };
