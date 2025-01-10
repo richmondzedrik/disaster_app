@@ -24,7 +24,7 @@ import 'leaflet-routing-machine';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const map = ref(null);
 const userMarker = ref(null);
@@ -120,7 +120,12 @@ const calculateTime = (distanceInMeters) => {
 
 const loadMarkers = async () => {
     try {
-        const response = await axios.get(`${API_URL}/api/markers`);
+        const token = authStore.token;
+        const response = await axios.get(`${API_URL}/api/markers`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
         if (response.data.success) {
             response.data.markers.forEach(markerData => {
                 createMarkerFromData(markerData);
@@ -154,15 +159,49 @@ const createMarkerFromData = (markerData) => {
                 </div>
             `;
             
-            // Add route button and remove button (similar to createMarker function)
-            // ... (keep the existing route button code)
+            // Add route button
+            const routeButton = document.createElement('button');
+            routeButton.className = 'route-btn';
+            routeButton.textContent = 'Show Route';
+            routeButton.onclick = () => {
+                if (routingControl) {
+                    map.value.removeControl(routingControl);
+                    routingControl = null;
+                    routeButton.textContent = 'Show Route';
+                } else {
+                    routingControl = L.Routing.control({
+                        waypoints: [
+                            L.latLng(userLatLng.lat, userLatLng.lng),
+                            L.latLng(markerLatLng.lat, markerLatLng.lng)
+                        ],
+                        router: L.Routing.osrmv1({
+                            serviceUrl: 'https://router.project-osrm.org/route/v1'
+                        }),
+                        lineOptions: {
+                            styles: [{ color: '#00D1D1', weight: 4 }]
+                        },
+                        addWaypoints: false,
+                        draggableWaypoints: false,
+                        fitSelectedRoutes: true,
+                        showAlternatives: false
+                    }).addTo(map.value);
+                    routeButton.textContent = 'Hide Route';
+                }
+            };
+            popupContent.appendChild(routeButton);
             
+            // Add remove button if user created the marker
             if (authStore.user?.id === markerData.created_by) {
                 const removeButton = document.createElement('button');
                 removeButton.textContent = 'Remove Marker';
                 removeButton.onclick = async () => {
                     try {
-                        await axios.delete(`${API_URL}/api/markers/${markerData.id}`);
+                        const token = authStore.token;
+                        await axios.delete(`${API_URL}/api/markers/${markerData.id}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
                         if (routingControl) {
                             map.value.removeControl(routingControl);
                         }
@@ -170,6 +209,7 @@ const createMarkerFromData = (markerData) => {
                         markers.value = markers.value.filter(m => m !== marker);
                     } catch (error) {
                         console.error('Error removing marker:', error);
+                        alert('Failed to remove marker');
                     }
                 };
                 popupContent.appendChild(removeButton);
@@ -183,23 +223,43 @@ const createMarkerFromData = (markerData) => {
 };
 
 const createMarker = async (latlng) => {
+    if (!authStore.isAuthenticated) {
+        alert('Please login to add markers');
+        return;
+    }
+
     const title = prompt('Enter marker title:');
     const description = prompt('Enter marker description:');
     
     if (title) {
         try {
-            const response = await axios.post(`${API_URL}/api/markers`, {
-                title,
-                description,
-                latitude: latlng.lat,
-                longitude: latlng.lng
-            });
+            const token = authStore.token;
+            const response = await axios.post(
+                `${API_URL}/api/markers`,
+                {
+                    title,
+                    description,
+                    latitude: latlng.lat,
+                    longitude: latlng.lng
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
             
             if (response.data.success) {
                 createMarkerFromData(response.data.marker);
             }
         } catch (error) {
             console.error('Error saving marker:', error);
+            if (error.response?.status === 401) {
+                alert('Please login to add markers');
+            } else {
+                alert('Failed to save marker. Please try again.');
+            }
         }
     }
 };
@@ -349,6 +409,7 @@ const startLocationTracking = () => {
 let locationWatchId = null;
 
 onMounted(() => {
+    console.log('Auth status:', authStore.isAuthenticated, 'Token:', authStore.token);
     initMap();
     locationWatchId = startLocationTracking();
     loadMarkers();

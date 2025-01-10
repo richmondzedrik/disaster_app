@@ -3,6 +3,14 @@ const router = express.Router();
 const db = require('../db/connection');
 const auth = require('../middleware/auth');
 
+router.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'https://disasterapp.netlify.app');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    next();
+});
+
 // Get all markers
 router.get('/', async (req, res) => {
     try {
@@ -18,6 +26,7 @@ router.get('/', async (req, res) => {
 
 // Add new marker
 router.post('/', auth.authMiddleware, async (req, res) => {
+    console.log('Received marker request:', req.body);
     try {
         const { title, description, latitude, longitude } = req.body;
         const [result] = await db.execute(
