@@ -345,31 +345,25 @@ export const newsService = {
     async notifySubscribers(postData) {
         try {
             const headers = getHeaders();
-            const response = await axios.post(`${API_URL}/news/notify-subscribers`, postData, {
+            const response = await axios.post(`${API_URL}/api/news/notify-subscribers`, {
+                postId: postData.postId,
+                title: postData.title,
+                content: postData.content,
+                author: postData.author
+            }, {
                 headers,
                 withCredentials: true,
                 timeout: 30000,
                 retries: 2,
                 validateStatus: status => status < 500
             });
+            console.log('Notification response:', response.data);
             return response.data;
         } catch (error) {
             console.error('Error notifying subscribers:', error);
-            if (error.code === 'ERR_NETWORK') {
-                return {
-                    success: false,
-                    message: 'Network error while sending notifications. Please check your connection.'
-                };
-            }
-            if (error.response?.status === 500) {
-                return {
-                    success: false,
-                    message: 'Server error while sending notifications'
-                };
-            }
             return {
                 success: false,
-                message: 'Failed to send notifications'
+                message: error.response?.data?.message || 'Failed to send notifications'
             };
         }
     },
@@ -428,6 +422,25 @@ export const newsService = {
             return {
                 success: false,
                 message: 'Failed to send test email: ' + (error.response?.data?.message || error.message)
+            };
+        }
+    },
+
+    async testNotificationSystem() {
+        try {
+            const headers = getHeaders();
+            const response = await axios.post(`${API_URL}/test-notification-system`, {}, {
+                headers,
+                withCredentials: true,
+                timeout: 10000
+            });
+            console.log('Test notification system response:', response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Test notification system error:', error);
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Test notification system failed'
             };
         }
     }

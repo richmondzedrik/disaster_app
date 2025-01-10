@@ -326,8 +326,6 @@ const createPost = async () => {
     console.log('Post creation response:', response);
     
     if (response.success) {
-      notificationStore.success('Post created successfully');
-      
       try {
         // Send notifications to subscribers using newsService
         const notificationResponse = await newsService.notifySubscribers({
@@ -340,18 +338,25 @@ const createPost = async () => {
         console.log('Post notification response:', notificationResponse);
 
         if (!notificationResponse.success) {
-          throw new Error(notificationResponse.message || 'Failed to send notifications');
+          // Still show post creation success but with warning about notifications
+          notificationStore.success('Post created successfully');
+          notificationStore.warning('Post notifications could not be sent');
+          console.error('Notification error:', notificationResponse.message);
+        } else {
+          notificationStore.success('Post created and notifications sent successfully');
         }
-
-        notificationStore.success('Post created and notifications sent');
       } catch (notifyError) {
+        // Handle notification error but don't fail the whole operation
         console.error('Notification error:', notifyError);
-        notificationStore.warning('Post created but notification email may not have been sent');
+        notificationStore.success('Post created successfully');
+        notificationStore.warning('Post notifications could not be sent');
       }
 
       showPostModal.value = false;
       resetForm();
       await loadPosts();
+    } else {
+      throw new Error(response.message || 'Failed to create post');
     }
   } catch (error) {
     console.error('Error creating post:', error);
@@ -833,17 +838,18 @@ onMounted(() => {
   }
 });
 
-const testEmailNotifications = async () => {
+const testNotificationSystem = async () => {
   try {
-    const response = await newsService.testEmail(user.value.email);
+    const response = await newsService.testNotificationSystem();
     if (response.success) {
-      notificationStore.success('Test email sent successfully. Please check your inbox.');
+      notificationStore.success('Notification system test completed successfully');
+      console.log('Test details:', response.details);
     } else {
-      throw new Error(response.message || 'Failed to send test email');
+      throw new Error(response.message);
     }
   } catch (error) {
-    console.error('Test email error:', error);
-    notificationStore.error('Failed to send test email');
+    console.error('Test notification system error:', error);
+    notificationStore.error('Failed to test notification system');
   }
 };
 
