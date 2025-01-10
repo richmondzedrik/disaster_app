@@ -127,15 +127,17 @@ export const newsService = {
     // Keep existing methods
     async createPost(formData) {
         const headers = {
-          ...getHeaders(),
-          'Content-Type': 'multipart/form-data'
+            ...getHeaders(),
+            'Content-Type': 'multipart/form-data'
         };
+        
         const response = await axios.post(`${API_URL}/news/posts`, formData, {
-          headers,
-          withCredentials: true
+            headers,
+            withCredentials: true,
+            timeout: 15000
         });
         return response.data;
-      },
+    },
 
     async updatePost(id, formData) {
         const headers = {

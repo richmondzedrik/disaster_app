@@ -87,13 +87,14 @@ async function up() {
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS notifications (
                 id INT PRIMARY KEY AUTO_INCREMENT,
-                user_id VARCHAR(255) NOT NULL,
-                type ENUM('like', 'post', 'alert') NOT NULL,
+                user_id INT NOT NULL,
+                type ENUM('like', 'post', 'alert', 'post_created') NOT NULL,
                 reference_id VARCHAR(255),
                 message TEXT NOT NULL,
                 is_read BOOLEAN DEFAULT false,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         `);
         
