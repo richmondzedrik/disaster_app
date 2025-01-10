@@ -12,6 +12,7 @@ const newsRoutes = require('./routes/news');
 const adminNewsRoutes = require('./routes/admin/news');
 const notificationTestRoutes = require('./routes/notificationTests');
 const notificationRoutes = require('./routes/notifications');
+const markersRoutes = require('./routes/markers');
 
 const app = express();
 
@@ -90,6 +91,7 @@ app.use('/news', newsRoutes);
 app.use('/api/alerts', require('./routes/alerts'));
 app.use('/auth', authRoutes);
 app.use('/api', notificationTestRoutes);
+app.use('/api/markers', markersRoutes);
 
 // Route debugging endpoint in development         
 if (process.env.NODE_ENV !== 'production') {
