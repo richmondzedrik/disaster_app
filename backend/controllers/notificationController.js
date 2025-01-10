@@ -39,17 +39,36 @@ const notifyNewPost = async (req, res) => {
           to: user.email,
           subject: `New Post Created: ${title}`,
           html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px;">
-              <h1>New Post Created</h1>
-              <h2>${title}</h2>
-              <p>Author: ${author}</p>
-              <p>${content}</p>
-              <p>View the post on our platform:</p>
-              <a href="${process.env.FRONTEND_URL}/news" 
-                 style="padding: 10px 20px; background: #00D1D1; color: white; 
-                        text-decoration: none; border-radius: 5px;">
-                View Post
-              </a>
+            <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 12px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <img src="${process.env.FRONTEND_URL}/logo.png" alt="Logo" style="max-width: 150px; margin-bottom: 20px;">
+                <h1 style="color: #2c3e50; margin: 0; font-size: 24px;">New Post Alert! 📢</h1>
+              </div>
+              
+              <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                <h2 style="color: #00D1D1; margin-top: 0; margin-bottom: 15px; font-size: 20px;">${title}</h2>
+                
+                <div style="color: #666; margin-bottom: 15px; font-size: 14px;">
+                  <span style="color: #4052D6;">Author:</span> ${author}
+                </div>
+                
+                <div style="color: #2c3e50; line-height: 1.6; margin-bottom: 25px; border-left: 3px solid #00D1D1; padding-left: 15px;">
+                  ${content.length > 300 ? content.substring(0, 300) + '...' : content}
+                </div>
+                
+                <a href="${process.env.FRONTEND_URL}/news/post/${postId}" 
+                   style="display: inline-block; padding: 12px 25px; background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%); 
+                          color: white; text-decoration: none; border-radius: 6px; font-weight: bold; 
+                          box-shadow: 0 2px 4px rgba(0,209,209,0.2);">
+                  Read Full Post
+                </a>
+              </div>
+              
+              <div style="text-align: center; color: #666; font-size: 12px;">
+                <p>You received this email because you're subscribed to post notifications.</p>
+                <p>To unsubscribe, visit your <a href="${process.env.FRONTEND_URL}/profile" 
+                   style="color: #00D1D1; text-decoration: none;">notification settings</a>.</p>
+              </div>
             </div>
           `
         });

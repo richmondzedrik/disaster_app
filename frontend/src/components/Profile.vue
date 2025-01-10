@@ -73,14 +73,21 @@
 
             <!-- Verification Alert -->
             <div v-if="!user?.email_verified" class="verification-alert">
-                <i class="fas fa-exclamation-triangle"></i>
-                <div>
-                    <h3>Verify Your Email</h3>
-                    <p>Please verify your email to access all features.</p>
+                <div class="alert-content">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div class="alert-text">
+                        <h3>Verify Your Email</h3>
+                        <p>Please verify your email to access all features.</p>
+                    </div>
                 </div>
-                <button @click="sendVerificationCode" :disabled="verificationLoading" class="verify-btn">
+                <button 
+                    @click="sendVerificationCode" 
+                    :disabled="verificationLoading" 
+                    class="verify-btn"
+                    :class="{ 'loading': verificationLoading }"
+                >
                     <i :class="['fas', verificationLoading ? 'fa-spinner fa-spin' : 'fa-envelope']"></i>
-                    {{ verificationLoading ? 'Sending...' : 'Verify Now' }}
+                    <span>{{ verificationLoading ? 'Sending...' : 'Verify Now' }}</span>
                 </button>
             </div>
 
@@ -346,12 +353,81 @@
 .verification-alert {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    justify-content: space-between;
+    gap: 2rem;
     background: linear-gradient(to right, rgba(0, 209, 209, 0.05), rgba(64, 82, 214, 0.05));
     border-left: 4px solid #00D1D1;
-    padding: 1.25rem 1.75rem;
+    padding: 1.5rem 2rem;
     margin: 2rem;
     border-radius: 0 12px 12px 0;
+    box-shadow: 0 2px 8px rgba(0, 209, 209, 0.05);
+}
+
+.alert-content {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex: 1;
+}
+
+.alert-text {
+    flex: 1;
+}
+
+.alert-text h3 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+}
+
+.alert-text p {
+    margin: 0;
+    color: #64748b;
+}
+
+.verify-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 140px;
+}
+
+.verify-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 209, 209, 0.2);
+}
+
+.verify-btn:disabled {
+    background: linear-gradient(135deg, #a8d5d5 0%, #9ba3d6 100%);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.verify-btn.loading {
+    opacity: 0.8;
+}
+
+@media (max-width: 640px) {
+    .verification-alert {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+        padding: 1.25rem;
+        margin: 1rem;
+    }
+
+    .verify-btn {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 .profile-sections {
@@ -1056,6 +1132,47 @@
     100% {
         opacity: 0.6;
     }
+}
+
+/* Add these styles for the improved verify button */
+.verify-btn {
+    background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 209, 209, 0.1);
+}
+
+.verify-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 209, 209, 0.2);
+}
+
+.verify-btn:disabled {
+    background: linear-gradient(135deg, #a8d5d5 0%, #9ba3d6 100%);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.verify-btn.loading {
+    background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
+    opacity: 0.8;
+}
+
+.verify-btn i {
+    font-size: 1rem;
+    transition: transform 0.3s ease;
+}
+
+.verify-btn:hover:not(:disabled) i {
+    transform: scale(1.1);
 }
 </style>
 
