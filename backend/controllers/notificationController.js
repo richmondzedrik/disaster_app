@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const { sendEmail } = require('../utils/email');
+const emailService = require('../services/emailService');
 const db = require('../db/connection');
 
 const notifyNewPost = async (req, res) => {
@@ -14,7 +14,7 @@ const notifyNewPost = async (req, res) => {
         success: false,
         message: 'Missing required fields for notification',
         details: { postId, title, content, author }
-      });
+      });      
     }
 
     // Get all users with notifications enabled
@@ -35,8 +35,7 @@ const notifyNewPost = async (req, res) => {
     // Send emails with better error handling
     const emailResults = await Promise.allSettled(users.map(async user => {
       try {
-        // Using the working email template from test endpoint
-        await sendEmail({
+        await emailService.sendEmail({
           to: user.email,
           subject: `New Post Created: ${title}`,
           html: `
