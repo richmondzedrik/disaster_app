@@ -1,62 +1,59 @@
 <template>
-  <nav class="admin-nav">
-    <div class="admin-profile">
-      <div class="profile-image">
-        <i class="fas fa-user-shield"></i> 
-      </div>
-      <div class="profile-info">
-        <p class="profile-name">{{ userName }}</p>
-        <span class="profile-role">Administrator</span>
-      </div>
-    </div>
+  <div>
+    <button class="mobile-menu-btn" @click="toggleMobileMenu" v-if="isMobileView">
+      <i :class="isMobileMenuOpen ? 'fas fa-times' : 'fas fa-bars'"></i>
+      <span>Menu</span>
+    </button>
+    
+    <nav class="admin-nav" :class="{ 'active': isMobileMenuOpen }">
+      <div class="admin-nav-content">
+        <div class="admin-profile">
+          <div class="profile-image">
+            <i class="fas fa-user-shield"></i> 
+          </div>
+          <div class="profile-info">
+            <p class="profile-name">{{ userName }}</p>
+            <span class="profile-role">Administrator</span>
+          </div>
+        </div>   
 
-    <ul class="nav-links"> 
-      <li>
-        <router-link to="/admin/dashboard" active-class="active">
-          <i class="fas fa-tachometer-alt"></i>
-          <span>Dashboard</span>
-          <span class="nav-indicator"></span>
-        </router-link>
-      </li>
-      <li>
-        <router-link to="/admin/users" active-class="active">
-          <i class="fas fa-users"></i>
-          <span>Users</span>
-          <span class="nav-indicator"></span>
-        </router-link>
-      </li>
-      <li>
-        <router-link to="/admin/posts" active-class="active">
-          <i class="fas fa-newspaper"></i>
-          <span>Posts</span>
-          <span class="nav-indicator"></span>
-        </router-link>
-      </li>
-      <li>
-        <router-link to="/admin/alerts" active-class="active">
-          <i class="fas fa-bell"></i>
-          <span>Alerts</span>
-          <span class="nav-indicator"></span>
-        </router-link>
-      </li>
-    </ul>
+        <ul class="nav-links"> 
+          <li v-for="(link, index) in navLinks" :key="index">
+            <router-link :to="link.path" active-class="active" @click="handleNavClick">
+              <i :class="link.icon"></i>
+              <span>{{ link.name }}</span>
+              <span class="nav-indicator"></span>
+            </router-link>
+          </li>
+        </ul>
 
-    <div class="nav-footer">
-      <button @click="handleLogout" class="logout-btn">
-        <i class="fas fa-sign-out-alt"></i>
-        <span>Logout</span>
-      </button>
-    </div>
-  </nav>
+        <div class="nav-footer">
+          <button @click="handleLogout" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+  </div>           
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
 
 const authStore = useAuthStore();
 const router = useRouter();
+const isMobileView = ref(false);
+const isMobileMenuOpen = ref(false);
+
+const navLinks = [
+  { path: '/admin/dashboard', icon: 'fas fa-tachometer-alt', name: 'Dashboard' },
+  { path: '/admin/users', icon: 'fas fa-users', name: 'Users' },
+  { path: '/admin/posts', icon: 'fas fa-newspaper', name: 'Posts' },
+  { path: '/admin/alerts', icon: 'fas fa-bell', name: 'Alerts' }
+];
 
 const userName = computed(() => {
   return authStore.user?.name || authStore.user?.username || 'Admin';
@@ -66,23 +63,137 @@ const handleLogout = async () => {
   await authStore.logout();
   router.push('/login');
 };
+  
+const toggleMobileMenu = () => {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value;
+  document.body.style.overflow = isMobileMenuOpen.value ? 'hidden' : '';
+};
+
+const handleResize = () => {
+  if (window.innerWidth > 768 && isMobileMenuOpen.value) {
+    isMobileMenuOpen.value = false;
+    document.body.style.overflow = '';
+  }
+};
+
+const handleNavClick = () => {
+  if (isMobileView.value) {
+    isMobileMenuOpen.value = false;
+    document.body.style.overflow = '';
+    document.body.classList.remove('menu-open');
+  }
+};
+
+const checkMobileView = () => {
+  isMobileView.value = window.innerWidth <= 768;
+  if (!isMobileView.value) {
+    isMobileMenuOpen.value = false;
+    document.body.style.overflow = '';
+    
+    // Reset display style when not in mobile view
+    const adminNav = document.querySelector('.admin-nav');
+    if (adminNav) {
+      adminNav.style.display = '';
+    }
+  }
+};
+
+onMounted(() => {
+  checkMobileView();
+  window.addEventListener('resize', handleResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
+});
 </script>
 
 <style scoped>
 .admin-nav {
   background: #1a1a1a;
   width: 280px;
-  height: 100vh;
-  padding: 1.5rem;
-  color: white;
-  display: flex;
-  flex-direction: column;
+  height: calc(100vh - 80px);
   position: fixed;
   left: 0;
   top: 80px;
+  padding: 1.5rem;
+  color: white;
   overflow-y: auto;
-  z-index: 100;   
-  height: calc(100vh - 80px);
+  z-index: 100;
+}
+
+.mobile-menu-btn {
+  display: none;
+  align-items: center;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  cursor: pointer;
+  position: fixed;
+  top: 85px;
+  right: 1rem;
+  z-index: 1001;
+  box-shadow: 0 4px 15px rgba(0, 209, 209, 0.3);
+  transition: all 0.3s ease;
+}
+
+.mobile-menu-btn i {
+  font-size: 1.25rem;
+}
+
+.mobile-menu-btn span {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.mobile-menu-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 209, 209, 0.4);
+  background: linear-gradient(135deg, #00E6E6 0%, #4052D6 100%);
+}
+
+.mobile-menu-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 10px rgba(0, 209, 209, 0.3);
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .admin-nav {
+    width: 100%;
+    height: calc(100vh - 80px);
+    padding: 1rem;
+    position: fixed;
+    top: 80px;
+    left: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    background: #1a1a1a;
+    z-index: 1000;
+  }
+
+  .admin-nav.active {
+    transform: translateX(0);
+  }
+
+  .admin-nav-content {
+    background: #1a1a1a;
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  .nav-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin: 1rem 0;
+  }
 }
 
 /* Add a custom scrollbar for the navigation */
@@ -100,7 +211,7 @@ const handleLogout = async () => {
 }
 
 .admin-nav::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.3);   
 }
 
 .nav-header {
@@ -251,29 +362,5 @@ const handleLogout = async () => {
 .logout-btn:hover {
   background: #ef4444;
   color: white;
-}
-
-@media (max-width: 768px) {
-  .admin-nav {
-    width: 100%;
-    height: auto;
-    position: relative;
-    padding: 1rem;
-  }
-  
-  .nav-links {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.5rem;
-  }
-  
-  .nav-links li {
-    width: calc(50% - 0.5rem);
-  }
-  
-  .nav-footer {
-    margin-top: 1rem;
-  }
 }
 </style>

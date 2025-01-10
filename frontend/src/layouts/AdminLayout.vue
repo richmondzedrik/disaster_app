@@ -38,6 +38,10 @@ import AdminNav from '@/components/admin/AdminNav.vue';
 @media (max-width: 768px) {
   .admin-content {
     margin-left: 0;
+    padding: 0;
+  }
+
+  .content-wrapper {
     padding: 1rem;
   }
 }
