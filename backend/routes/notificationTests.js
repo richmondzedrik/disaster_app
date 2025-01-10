@@ -143,4 +143,56 @@ router.post('/notifications/test-email', async (req, res) => {
   }
 });
 
+router.post('/test/notifications/post-created', auth.authMiddleware, async (req, res) => {
+  try {
+    const { email, title, content, author } = req.body;
+    
+    if (!email || !title || !content || !author) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields'
+      });
+    }
+
+    // Send email notification
+    await emailService.sendEmail({
+      to: email,
+      subject: `New Post Created: ${title}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h1>New Post Created</h1>
+          <h2>${title}</h2>
+          <p>Author: ${author}</p>
+          <p>${content}</p>
+          <p>View the post on our platform:</p>
+          <a href="${process.env.FRONTEND_URL}/news" 
+             style="padding: 10px 20px; background: #00D1D1; color: white; 
+                    text-decoration: none; border-radius: 5px;">
+            View Post
+          </a>
+        </div>
+      `
+    });
+
+    // Create notification record
+    const [result] = await db.execute(
+      'INSERT INTO notifications (user_id, type, message, created_at) VALUES (?, ?, ?, NOW())',
+      [req.user.userId, 'post_created', `New post created: ${title}`]
+    );
+
+    return res.json({
+      success: true,
+      message: 'Post creation notification sent successfully',
+      notificationId: result.insertId
+    });
+  } catch (error) {
+    console.error('Post creation notification error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to send post creation notification',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

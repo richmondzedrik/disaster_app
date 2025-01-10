@@ -239,6 +239,7 @@ import { useAuthStore } from '../stores/auth';
 import { useNotificationStore } from '../stores/notification';
 import { newsService } from '../services/newsService';
 import { useRouter } from 'vue-router';
+import axios from 'axios';
 
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
@@ -325,34 +326,30 @@ const createPost = async () => {
     console.log('Post creation response:', response);
     
     if (response.success) {
-      notificationStore.success(response.message);
+      notificationStore.success('Post created successfully');
       
-      // Send email notifications to subscribers
-      if (response.post.status === 'approved') {
-        console.log('Sending notifications for approved post:', response.post);
-        try {
-          // First send notification to subscribers
-          const notificationResponse = await newsService.notifySubscribers({
-            postId: response.post.id,
-            title: postForm.value.title,
-            content: postForm.value.content.substring(0, 150) + '...',
-            author: user.value.username
-          });
-          console.log('Notification response:', notificationResponse);
-          
-          // Then send a test email to the post creator
-          const testEmailResponse = await newsService.testEmail(user.value.email);
-          if (testEmailResponse.success) {
-            notificationStore.success('Post created and notifications sent successfully');
-          } else {
-            console.warn('Test email failed:', testEmailResponse.message);
-          }
-        } catch (notifyError) {
-          console.error('Error sending notifications:', notifyError);
-          notificationStore.error('Post created but failed to send notifications');
+      try {
+        // Send notification email for new post
+        const notificationResponse = await axios.post(`${API_URL}/test/notifications/post-created`, {
+          email: user.value.email,
+          title: postForm.value.title,
+          content: postForm.value.content,
+          author: user.value.username
+        }, {
+          headers: { Authorization: `Bearer ${authStore.token}` }
+        });
+        
+        console.log('Post notification response:', notificationResponse.data);
+
+        if (!notificationResponse.data.success) {
+          throw new Error('Failed to send post notification');
         }
+
+      } catch (notifyError) {
+        console.error('Notification error:', notifyError);
+        notificationStore.warning('Post created but notification email may not have been sent');
       }
-      
+
       showPostModal.value = false;
       resetForm();
       await loadPosts();
@@ -365,11 +362,6 @@ const createPost = async () => {
     imageFile.value = null;
     imagePreview.value = null;
   }
-};
-
-const getPostComments = (postId) => {
-  const post = posts.value.find(p => p.id === postId);
-  return post?.comments || [];
 };
 
 // Methods
