@@ -1,13 +1,5 @@
 <template>
   <div class="news-container">
-    <!-- Loading Overlay -->
-    <div v-if="loading" class="loading-overlay">
-      <div class="loading-spinner">
-        <i class="fas fa-circle-notch fa-spin"></i>
-        <span>Loading news...</span>
-      </div>
-    </div>
-
     <div class="news-content" :class="{ 'blur-content': loading }">
       <div class="news-header">
         <h1>Community News</h1>
@@ -38,7 +30,31 @@
       </div>
 
       <!-- News Feed -->
-      <div class="news-feed">
+      <div v-if="loading" class="news-feed">
+        <div v-for="n in 3" :key="n" class="news-card skeleton">
+          <div class="post-header">
+            <div class="author-info">
+              <div class="skeleton-circle"></div>
+              <div class="skeleton-lines">
+                <div class="skeleton-text short"></div>
+                <div class="skeleton-text very-short"></div>
+              </div>
+            </div>
+          </div>
+          <div class="post-content">
+            <div class="skeleton-text medium"></div>
+            <div class="skeleton-text long"></div>
+            <div class="skeleton-text long"></div>
+          </div>
+          <div class="post-footer">
+            <div class="skeleton-text very-short"></div>
+            <div class="skeleton-text very-short"></div>
+            <div class="skeleton-text very-short"></div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="news-feed">
         <div v-if="!isAuthenticated" class="guest-notice">
           <div class="notice-content">
             <i class="fas fa-info-circle"></i>
@@ -782,8 +798,8 @@ const restoreLikedStates = () => {
   }));
 };
 
-onMounted(async () => {
-  await loadPosts();
+onMounted(async () => {            
+  await loadPosts();  
   if (isAuthenticated.value) {
     restoreLikedStates();
   }
@@ -1812,6 +1828,69 @@ onMounted(() => {
     width: 100%;
     justify-content: center;
   }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e5e7eb;
+}
+
+.skeleton-lines {
+  flex: 1;
+}
+
+.skeleton-text {
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.skeleton-text.very-short {
+  width: 50px;
+}
+
+.skeleton-text.short {
+  width: 100px;
+}
+
+.skeleton-text.medium {
+  width: 150px;
+}
+
+.skeleton-text.long {
+  width: 100%;
 }
 </style>
 
