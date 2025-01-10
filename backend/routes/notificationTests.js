@@ -3,7 +3,6 @@ const router = express.Router();
 const db = require('../db/connection');
 const auth = require('../middleware/auth');
 const { sendEmail } = require('../utils/email');
-const emailService = require('../services/emailService');
 
 // Test like notification
 router.post('/test/notifications/like', auth.authMiddleware, async (req, res) => {
@@ -118,7 +117,7 @@ router.post('/notifications/test-email', async (req, res) => {
   try {
     const { email } = req.body;
     
-    await emailService.sendEmail({
+    await sendEmail({
       to: email,
       subject: 'Test Email from Disaster Prep App',
       html: `
@@ -155,7 +154,7 @@ router.post('/test/notifications/post-created', auth.authMiddleware, async (req,
     }
 
     // Send email notification
-    await emailService.sendEmail({
+    await sendEmail({
       to: email,
       subject: `New Post Created: ${title}`,
       html: `
