@@ -1,7 +1,6 @@
 const User = require('../models/User');
 const { sendEmail } = require('../utils/email');
 const db = require('../db/connection');
-const emailService = require('../utils/emailService');
 
 const notifyNewPost = async (req, res) => {
   try {
@@ -37,7 +36,7 @@ const notifyNewPost = async (req, res) => {
     const emailResults = await Promise.allSettled(users.map(async user => {
       try {
         // Using the working email template from test endpoint
-        await emailService.sendEmail({
+        await sendEmail({
           to: user.email,
           subject: `New Post Created: ${title}`,
           html: `
