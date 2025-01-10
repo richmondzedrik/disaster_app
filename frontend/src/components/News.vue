@@ -329,22 +329,21 @@ const createPost = async () => {
       notificationStore.success('Post created successfully');
       
       try {
-        // Send notification email for new post
-        const notificationResponse = await axios.post(`${API_URL}/test/notifications/post-created`, {
-          email: user.value.email,
+        // Send notifications to subscribers using newsService
+        const notificationResponse = await newsService.notifySubscribers({
+          postId: response.post.id,
           title: postForm.value.title,
           content: postForm.value.content,
           author: user.value.username
-        }, {
-          headers: { Authorization: `Bearer ${authStore.token}` }
         });
         
-        console.log('Post notification response:', notificationResponse.data);
+        console.log('Post notification response:', notificationResponse);
 
-        if (!notificationResponse.data.success) {
-          throw new Error('Failed to send post notification');
+        if (!notificationResponse.success) {
+          throw new Error(notificationResponse.message || 'Failed to send notifications');
         }
 
+        notificationStore.success('Post created and notifications sent');
       } catch (notifyError) {
         console.error('Notification error:', notifyError);
         notificationStore.warning('Post created but notification email may not have been sent');
