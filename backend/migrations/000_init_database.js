@@ -26,7 +26,7 @@ async function up() {
                 reset_token VARCHAR(255) NULL,
                 reset_token_expires TIMESTAMP NULL,
                 phone VARCHAR(20),
-                notifications JSON,
+                notifications BOOLEAN DEFAULT true,
                 location VARCHAR(255) NULL,
                 emergency_contacts JSON NULL DEFAULT ('[]'),
                 last_login TIMESTAMP NULL,
@@ -38,7 +38,7 @@ async function up() {
 
         // Add checklist_progress table
         await connection.execute(`
-            CREATE TABLE IF NOT EXISTS checklist_progress (
+            CREATE TABLE IF NOT EXISTS checklist_progress (  
                 id INT PRIMARY KEY AUTO_INCREMENT,
                 user_id INT NOT NULL,
                 item_id VARCHAR(50) NOT NULL,
