@@ -1,12 +1,12 @@
 const User = require('../models/User');
 const { sendEmail } = require('../utils/email');
 const db = require('../db/connection');
+const emailService = require('../utils/emailService');
 
 const notifyNewPost = async (req, res) => {
   try {
     const { postId, title, content, author } = req.body;
     
-    // Add more detailed logging
     console.log('Notification request received:', { postId, title, author });
     
     if (!postId || !title || !content || !author) {
@@ -36,28 +36,30 @@ const notifyNewPost = async (req, res) => {
     // Send emails with better error handling
     const emailResults = await Promise.allSettled(users.map(async user => {
       try {
-        const result = await sendEmail({
+        // Using the working email template from test endpoint
+        await emailService.sendEmail({
           to: user.email,
-          subject: 'New Post on AlertoAbra: ' + title,
+          subject: `New Post Created: ${title}`,
           html: `
             <div style="font-family: Arial, sans-serif; padding: 20px;">
-              <h2>New Post from ${author}</h2>
-              <h3>${title}</h3>
+              <h1>New Post Created</h1>
+              <h2>${title}</h2>
+              <p>Author: ${author}</p>
               <p>${content}</p>
-              <p>Click below to read the full post:</p>
+              <p>View the post on our platform:</p>
               <a href="${process.env.FRONTEND_URL}/news" 
                  style="padding: 10px 20px; background: #00D1D1; color: white; 
                         text-decoration: none; border-radius: 5px;">
-                Read More
+                View Post
               </a>
             </div>
           `
         });
         
-        // Create notification record in database
+        // Create notification record
         await db.execute(
           'INSERT INTO notifications (user_id, type, message, created_at) VALUES (?, ?, ?, NOW())',
-          [user.id, 'post_created', `New post: ${title}`]
+          [user.id, 'post_created', `New post created: ${title}`]
         );
 
         return { success: true, email: user.email };
@@ -74,7 +76,6 @@ const notifyNewPost = async (req, res) => {
       result.status === 'rejected' || !result.value.success
     );
 
-    // Log detailed results
     console.log('Notification Results:', {
       total: users.length,
       successful: successfulEmails.length,
@@ -82,7 +83,6 @@ const notifyNewPost = async (req, res) => {
       failedDetails: failedEmails.map(f => f.value?.error || f.reason)
     });
 
-    // Consider partial success as success
     res.json({
       success: successfulEmails.length > 0,
       message: `Notifications sent: ${successfulEmails.length} successful, ${failedEmails.length} failed`,
