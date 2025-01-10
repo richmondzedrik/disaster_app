@@ -390,7 +390,7 @@ export const newsService = {
             const headers = getHeaders();
             console.log('Request headers:', headers);
             
-            const response = await axios.post(`${API_URL}/api/test/notifications/test-email`, { email }, {
+            const response = await axios.post(`${API_URL}/notifications/test-email`, { email }, {
                 headers,
                 withCredentials: true,
                 timeout: 30000
@@ -411,7 +411,6 @@ export const newsService = {
                 }
             });
     
-            // Rest of error handling remains the same
             if (error.code === 'ECONNABORTED') {
                 return {
                     success: false,

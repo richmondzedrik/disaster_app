@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db/connection');
 const auth = require('../middleware/auth');
 const { sendEmail } = require('../utils/email');
+const emailService = require('../services/emailService');
 
 // Test like notification
 router.post('/test/notifications/like', auth.authMiddleware, async (req, res) => {
@@ -112,37 +113,34 @@ router.get('/test/notifications/verify', auth.authMiddleware, async (req, res) =
   }
 });
 
-// Test email endpoint
-router.post('/test-email', auth.authMiddleware, async (req, res) => {
-    try {
-        const testEmail = {
-            to: req.body.email,
-            subject: 'Test Email from AlertoAbra',
-            html: `
-                <h2>Test Email</h2>
-                <p>This is a test email to verify the notification system.</p>
-                <p>If you received this, the email system is working correctly.</p>
-                <p>Sent at: ${new Date().toISOString()}</p>
-            `
-        };
+// Add to your backend routes file (e.g., routes/notification.js or similar)
+router.post('/notifications/test-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    await emailService.sendEmail({
+      to: email,
+      subject: 'Test Email from Disaster Prep App',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h1>Test Email</h1>
+          <p>This is a test email to verify the email service is working correctly.</p>
+          <p>Sent at: ${new Date().toISOString()}</p>
+        </div>
+      `
+    });
 
-        console.log('Attempting to send test email to:', req.body.email);
-        const result = await sendEmail(testEmail);
-        console.log('Email send result:', result);
-
-        res.json({
-            success: true,
-            message: 'Test email sent successfully',
-            result
-        });
-    } catch (error) {
-        console.error('Test email error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to send test email',
-            error: error.message
-        });
-    }
+    return res.json({
+      success: true,
+      message: 'Test email sent successfully'
+    });
+  } catch (error) {
+    console.error('Test email error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to send test email'
+    });
+  }
 });
 
 module.exports = router;
