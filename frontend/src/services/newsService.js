@@ -386,22 +386,56 @@ export const newsService = {
 
     async testEmail(email) {
         try {
+            console.log('Initiating test email send to:', email);
             const headers = getHeaders();
+            console.log('Request headers:', headers);
+            
             const response = await axios.post(`${API_URL}/api/notifications/test-email`, { email }, {
                 headers,
                 withCredentials: true,
                 timeout: 30000
             });
+            
+            console.log('Test email response:', response.data);
             return response.data;
         } catch (error) {
-            console.error('Test email error:', error);
+            console.error('Test email error details:', {
+                message: error.message,
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+                config: {
+                    url: error.config?.url,
+                    method: error.config?.method,
+                    timeout: error.config?.timeout
+                }
+            });
+
+            if (error.code === 'ECONNABORTED') {
+                return {
+                    success: false,
+                    message: 'Test email request timed out. Please try again.'
+                };
+            }
+
             if (error.response?.status === 404) {
                 return {
                     success: false,
                     message: 'Test email endpoint not found'
                 };
             }
-            throw error;
+
+            if (error.response?.status === 500) {
+                return {
+                    success: false,
+                    message: 'Server error while sending test email'
+                };
+            }
+
+            return {
+                success: false,
+                message: 'Failed to send test email: ' + (error.response?.data?.message || error.message)
+            };
         }
     }
 };
