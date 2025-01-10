@@ -390,7 +390,7 @@ export const newsService = {
             const headers = getHeaders();
             console.log('Request headers:', headers);
             
-            const response = await axios.post(`${API_URL}/api/notifications/test-email`, { email }, {
+            const response = await axios.post(`${API_URL}/api/test/notifications/test-email`, { email }, {
                 headers,
                 withCredentials: true,
                 timeout: 30000
@@ -410,28 +410,22 @@ export const newsService = {
                     timeout: error.config?.timeout
                 }
             });
-
+    
+            // Rest of error handling remains the same
             if (error.code === 'ECONNABORTED') {
                 return {
                     success: false,
                     message: 'Test email request timed out. Please try again.'
                 };
             }
-
+    
             if (error.response?.status === 404) {
                 return {
                     success: false,
-                    message: 'Test email endpoint not found'
+                    message: 'Test email endpoint not found. Please check API configuration.'
                 };
             }
-
-            if (error.response?.status === 500) {
-                return {
-                    success: false,
-                    message: 'Server error while sending test email'
-                };
-            }
-
+    
             return {
                 success: false,
                 message: 'Failed to send test email: ' + (error.response?.data?.message || error.message)
