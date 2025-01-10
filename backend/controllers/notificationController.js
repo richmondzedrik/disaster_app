@@ -56,7 +56,7 @@ const notifyNewPost = async (req, res) => {
                   ${content.length > 300 ? content.substring(0, 300) + '...' : content}
                 </div>
                 
-                <a href="${process.env.FRONTEND_URL}/news/post/${postId}" 
+                <a href="${process.env.FRONTEND_URL}/news" 
                    style="display: inline-block; padding: 12px 25px; background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%); 
                           color: white; text-decoration: none; border-radius: 6px; font-weight: bold; 
                           box-shadow: 0 2px 4px rgba(0,209,209,0.2);">
@@ -66,7 +66,7 @@ const notifyNewPost = async (req, res) => {
               
               <div style="text-align: center; color: #666; font-size: 12px;">
                 <p>You received this email because you're subscribed to post notifications.</p>
-                <p>To unsubscribe, visit your <a href="${process.env.FRONTEND_URL}/profile" 
+                <p>To unsubscribe, visit your <a href="${process.env.FRONTEND_URL}/profile#notifications" 
                    style="color: #00D1D1; text-decoration: none;">notification settings</a>.</p>
               </div>
             </div>
