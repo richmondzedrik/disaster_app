@@ -19,7 +19,7 @@ const notifyNewPost = async (req, res) => {
 
     // Get all users with notifications enabled
     const [users] = await db.execute(
-      'SELECT email, id FROM users WHERE email_verified = true AND notifications = true'
+      'SELECT email, id FROM users WHERE email_verified = true AND (notifications IS NULL OR notifications = true)'
     );
 
     console.log(`Found ${users.length} subscribers to notify`);
