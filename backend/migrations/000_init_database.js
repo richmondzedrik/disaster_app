@@ -31,7 +31,8 @@ async function up() {
                 emergency_contacts JSON NULL DEFAULT ('[]'),
                 last_login TIMESTAMP NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                status ENUM('active', 'inactive', 'suspended') DEFAULT 'active'
             ) 
         `);
 
