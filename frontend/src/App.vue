@@ -6,10 +6,15 @@
         <router-link to="/">
           <i class="fas fa-shield-alt"></i> AlertoAbra
         </router-link>
-      </div>
+        <!-- Add mobile menu button -->
+        <button class="mobile-menu-btn" @click="toggleMobileMenu" :aria-expanded="isMobileMenuOpen">
+          <i :class="isMobileMenuOpen ? 'fas fa-times' : 'fas fa-bars'"></i>
+          <span class="sr-only">Toggle menu</span>
+        </button>
+      </div> 
 
       <!-- Navigation Links -->
-      <div class="nav-links">
+      <div class="nav-links" :class="{ 'active': isMobileMenuOpen }">
         <!-- Unauthenticated Navigation -->
         <template v-if="!isAuthenticated">
           <router-link to="/about" class="nav-link">
@@ -124,7 +129,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from './stores/auth';
 import { useNotificationStore } from './stores/notification';
 import NotificationsContainer from './components/NotificationsContainer.vue';
@@ -135,8 +140,9 @@ import alertService from './services/alertService';
 const router = useRouter();
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
+const route = useRoute();
 
-// Refs for dropdowns
+// Refs for dropdowns  
 const adminDropdownRef = ref(null);
 const userDropdownRef = ref(null);
 const isAdminDropdownActive = ref(false);
@@ -278,6 +284,32 @@ onMounted(() => {
     fetchUnreadNotifications();
   }
 });
+
+// Add these with other refs
+const isMobileMenuOpen = ref(false); 
+
+// Add this function
+const toggleMobileMenu = () => {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value;
+  document.body.classList.toggle('menu-open', isMobileMenuOpen.value);
+};
+
+// Watch for route changes
+watch(() => route.path, () => {
+  // Close dropdowns and mobile menu when route changes
+  isAdminDropdownActive.value = false;
+  isUserDropdownActive.value = false;
+  isMobileMenuOpen.value = false;
+  document.body.classList.remove('menu-open');
+});
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
 </script>
 
 <style scoped>
@@ -345,7 +377,7 @@ onMounted(() => {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: clamp(1rem, 2vw, 1.5rem);
 }
 
 .nav-link {
@@ -354,12 +386,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-weight: 600;
+  font-weight: 600;  
   transition: all 0.3s ease;
-  padding: 0.75rem 1.25rem;
+  padding: 0.75rem clamp(0.75rem, 2vw, 1.25rem);
   border-radius: 12px;
-  font-size: 1rem;
-  position: relative;
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  white-space: nowrap;
 }
 
 .nav-link:hover {
@@ -706,5 +738,337 @@ onMounted(() => {
 
 .dropdown-item.notification-item {
   padding-right: 3rem;
+}
+
+/* Mobile Navigation */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 1rem;
+  }
+
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .mobile-menu-btn {
+    display: block;
+    background: transparent;
+    border: none;
+    color: #005C5C;
+    font-size: 1.5rem;
+    padding: 0.5rem;
+    cursor: pointer;
+  }
+
+  .nav-links {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
+    flex-direction: column;
+    padding: 1.5rem;
+    gap: 0.75rem;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    z-index: 1000;
+    height: calc(100vh - 70px);
+  }
+
+  .nav-links.active {
+    transform: translateX(0);
+  }
+
+  .nav-link {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+    justify-content: flex-start;
+    border-radius: 12px;
+    margin: 0;
+  }
+
+  .nav-dropdown {
+    width: 100%;
+    margin: 0;
+    padding: 0 1rem;
+  }
+
+  .dropdown-btn {
+    width: 100%;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: rgba(0, 209, 209, 0.05);
+    border: none;
+  }
+
+  .dropdown-content {
+    position: static;
+    width: 100%;
+    opacity: 0;
+    visibility: hidden;
+    height: 0;
+    transform: none;
+    box-shadow: none;
+    margin-top: 0;
+    padding: 0;
+    background: white;
+    border: 1px solid rgba(0, 209, 209, 0.1);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    overflow: hidden;
+  }
+
+  .nav-dropdown.active .dropdown-content {
+    opacity: 1;
+    visibility: visible;
+    height: auto;
+    margin-top: 0.5rem;
+    padding: 1rem;
+  }
+
+  /* Keep existing profile header and item styles */
+  .profile-header {
+    background: rgba(0, 209, 209, 0.05);
+    margin: -1rem -1rem 1rem -1rem;
+    padding: 1.5rem;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .user-info {
+    gap: 1.25rem;
+  }
+
+  .avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 1.25rem;
+  }
+
+  .user-name {
+    font-size: 1.1rem;
+  }
+
+  .user-email {
+    font-size: 0.9rem;
+  }
+
+  .dropdown-item {
+    padding: 1rem 1.5rem;
+    margin-bottom: 0.75rem;
+    background: rgba(0, 209, 209, 0.05);
+    border-radius: 12px;
+    font-size: 1rem;
+  }
+
+  .dropdown-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .dropdown-divider {
+    margin: 1rem -1rem;
+    border-top: 1px solid rgba(0, 209, 209, 0.1);
+  }
+
+  .notification-item {
+    position: relative;
+    padding-right: 3.5rem;
+  }
+
+  .notification-badge {
+    right: 1.5rem;
+  }
+
+  /* Animation for dropdown */
+  .nav-dropdown.active .dropdown-content {
+    animation: slideDown 0.3s ease;
+  }
+
+  @keyframes slideDown {
+    from {   
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Fix scrolling when menu is open */
+  body.menu-open {
+    overflow: hidden;
+  }
+
+  /* Ensure proper spacing for notification badges */
+  .nav-link, 
+  .dropdown-item {
+    position: relative;
+    padding-right: 3rem;
+  }
+
+  /* Improve touch targets */
+  .nav-link,
+  .dropdown-btn,
+  .dropdown-item {
+    min-height: 48px;
+  }
+}
+
+/* Tablet Optimization */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .nav-link span {
+    display: none;
+  }
+  
+  .nav-link i {
+    font-size: 1.25rem;
+  }
+  
+  .nav-link {
+    padding: 0.75rem;
+  }
+}
+
+/* Mobile Navigation Styles */
+.mobile-menu-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #005C5C;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: color 0.3s ease;
+}
+
+.mobile-menu-btn:hover {
+  color: #00D1D1;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0.75rem 1rem;
+  }
+
+  .mobile-menu-btn {
+    display: block;
+    margin-left: 1rem;
+  }
+
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .nav-links {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
+    flex-direction: column;
+    padding: 1.5rem;
+    gap: 1rem;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    z-index: 1000;
+  }
+
+  .nav-links.active {
+    transform: translateX(0);
+  }
+
+  .nav-link {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 1rem;
+    border-radius: 12px;
+    font-size: 1.1rem;
+  }
+
+  .nav-dropdown {
+    width: 100%;
+    margin: 0;
+  }
+
+  .dropdown-btn {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .dropdown-content {
+    position: static;
+    width: 100%;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    box-shadow: none;
+    margin-top: 0.5rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+
+  .dropdown-item {
+    padding: 1rem;
+    background: rgba(0, 209, 209, 0.05);
+    margin-bottom: 0.5rem;
+    border-radius: 12px;
+  }
+
+  .alert-badge {
+    right: 1rem;
+  }
+
+  .notification-badge {
+    right: 1rem;
+  }
+}
+
+/* Improve touch targets for mobile */
+@media (max-width: 768px) {
+  .nav-link,
+  .dropdown-btn,
+  .dropdown-item {
+    min-height: 48px;
+  }
+
+  .mobile-menu-btn {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Add smooth inertia scrolling for mobile */
+@supports (-webkit-overflow-scrolling: touch) {
+  .nav-links {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 </style>
