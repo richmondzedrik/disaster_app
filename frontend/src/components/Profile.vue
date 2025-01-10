@@ -43,7 +43,7 @@
                         </span>
                     </div>
                 </div>
-                <div class="profile-stats">   
+                <div class="profile-stats">
                     <div class="stat-item">
                         <i class="fas fa-shield-alt"></i>
                         <div class="stat-info">
@@ -80,12 +80,8 @@
                         <p>Please verify your email to access all features.</p>
                     </div>
                 </div>
-                <button 
-                    @click="sendVerificationCode" 
-                    :disabled="verificationLoading" 
-                    class="verify-btn"
-                    :class="{ 'loading': verificationLoading }"
-                >
+                <button @click="sendVerificationCode" :disabled="verificationLoading" class="verify-btn"
+                    :class="{ 'loading': verificationLoading }">
                     <i :class="['fas', verificationLoading ? 'fa-spinner fa-spin' : 'fa-envelope']"></i>
                     <span>{{ verificationLoading ? 'Sending...' : 'Verify Now' }}</span>
                 </button>
@@ -128,19 +124,24 @@
                 </section>
 
                 <!-- Notification Preferences -->
+                <!-- Add this inside the Notification Preferences section -->
                 <section class="profile-section">
                     <h3><i class="fas fa-bell"></i> Notification Preferences</h3>
-                    <div class="notification-options">
-                        <label class="toggle-switch">
-                            <input type="checkbox" v-model="profileData.notifications.email" :disabled="loading" />
-                            <span class="toggle-slider"></span>
-                            <span class="toggle-label">Email Notifications</span>
-                        </label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" v-model="profileData.notifications.push" :disabled="loading" />
-                            <span class="toggle-slider"></span>
-                            <span class="toggle-label">Push Notifications</span>
-                        </label>
+                    <div class="notification-settings">
+                        <div class="notification-option">
+                            <div class="option-info">
+                                <h4>Email Notifications</h4>
+                                <p>Receive updates about new posts and important announcements</p>
+                            </div>
+                            <button @click="toggleNotifications" :disabled="notificationLoading" :class="['toggle-btn', {
+                                'subscribed': profileData.notifications,
+                                'loading': notificationLoading
+                            }]">
+                                <i :class="['fas', notificationLoading ? 'fa-spinner fa-spin' :
+                                    profileData.notifications ? 'fa-bell' : 'fa-bell-slash']"></i>
+                                {{ profileData.notifications ? 'Subscribed' : 'Unsubscribed' }}
+                            </button>
+                        </div>
                     </div>
                 </section>
 
@@ -169,17 +170,14 @@
                                 {{ (profileData.emergencyContacts || []).length }}/3
                             </span>
                         </h3>
-                        <button 
-                            @click="loadEmergencyContactsFromDB" 
-                            class="refresh-contacts-btn" 
-                            :disabled="loading"
-                        >
+                        <button @click="loadEmergencyContactsFromDB" class="refresh-contacts-btn" :disabled="loading">
                             <i :class="['fas', loading ? 'fa-spinner fa-spin' : 'fa-sync-alt']"></i>
                             Refresh Contacts
                         </button>
                     </div>
                     <div class="emergency-contacts-list">
-                        <div v-if="!profileData.emergencyContacts || profileData.emergencyContacts.length === 0" class="no-contacts">
+                        <div v-if="!profileData.emergencyContacts || profileData.emergencyContacts.length === 0"
+                            class="no-contacts">
                             <i class="fas fa-user-plus"></i>
                             <p>No emergency contacts added yet</p>
                         </div>
@@ -221,7 +219,7 @@
                             {{ loading ? 'Saving...' :
                                 !hasChanges ? 'No Changes' :
                                     !isFormValid ? 'Invalid Form' :
-                            'Save Changes' }}  
+                                        'Save Changes' }}
                         </span>
                     </button>
                 </div>
@@ -509,6 +507,59 @@
     cursor: pointer;
 }
 
+.notification-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.option-info {
+    flex: 1;
+}
+
+.option-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+}
+
+.option-info p {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #e2e8f0;
+    color: #64748b;
+}
+
+.toggle-btn.subscribed {
+    background: #00D1D1;
+    color: white;
+}
+
+.toggle-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
 /* Add styles for toggle switch, buttons, and other elements */
 
 .profile-stats {
@@ -1126,9 +1177,11 @@
     0% {
         opacity: 0.6;
     }
+
     50% {
         opacity: 0.8;
     }
+
     100% {
         opacity: 0.6;
     }
@@ -1196,10 +1249,11 @@ const verificationLoading = ref(false);
 const showPasswordModal = ref(false);
 const passwordLoading = ref(false);
 const phoneError = ref('');
+const notificationLoading = ref(false);
 
 // Add this new ref for save operation loading
 const saveLoading = ref(false);
-  
+
 // User data management
 const user = computed(() => authStore.user);
 const profileData = ref({
@@ -1207,12 +1261,9 @@ const profileData = ref({
     email: '',
     phone: '',
     location: '',
-    notifications: {
-        email: true,
-        push: true
-    },
+    notifications: false,
     emergencyContacts: []
-});  
+});
 
 // Additional state
 const userStats = ref({
@@ -1265,7 +1316,7 @@ const validateForm = () => {
 const originalData = ref(null);
 const hasChanges = computed(() => {
     if (!originalData.value) return false;
-    
+
     const currentData = {
         username: profileData.value.username?.trim() || '',
         phone: profileData.value.phone?.trim() || '',
@@ -1283,7 +1334,7 @@ const hasChanges = computed(() => {
             .filter(contact => contact.name && contact.phone && contact.relation)
     };
 
-    const original = { 
+    const original = {
         username: originalData.value.username || '',
         phone: originalData.value.phone || '',
         location: originalData.value.location || '',
@@ -1304,10 +1355,10 @@ const hasChanges = computed(() => {
 });
 
 const isSaveDisabled = computed(() => {
-    return loading.value || 
-           !isFormValid.value || 
-           !hasChanges.value ||
-           profileData.value.emergencyContacts.some(contact => contact.error); 
+    return loading.value ||
+        !isFormValid.value ||
+        !hasChanges.value ||
+        profileData.value.emergencyContacts.some(contact => contact.error);
 });
 
 
@@ -1321,10 +1372,10 @@ const loadProfileData = async () => {
     try {
         initialLoading.value = true;
         const response = await userService.getProfile();
-        
+
         if (response?.success && response.user) {
             const userData = response.user;
-            
+
             // Load emergency contacts
             try {
                 const contactsResponse = await userService.getEmergencyContacts();
@@ -1334,7 +1385,7 @@ const loadProfileData = async () => {
             } catch (error) {
                 console.error('Error loading emergency contacts:', error);
             }
-            
+
             // Store original emergency contacts
             originalEmergencyContacts.value = JSON.parse(JSON.stringify(userData.emergencyContacts || []));
 
@@ -1358,7 +1409,7 @@ const loadProfileData = async () => {
     } finally {
         initialLoading.value = false;
     }
-};  
+};
 
 // Phone validation
 const validatePhoneNumber = () => {
@@ -1437,7 +1488,7 @@ const detectLocation = async () => {
         const data = await response.json();
 
         profileData.value.location = data.display_name;
-        notificationStore.success('Location detected successfully');  
+        notificationStore.success('Location detected successfully');
     } catch (error) {
         notificationStore.error('Failed to detect location');
     } finally {
@@ -1449,7 +1500,7 @@ const detectLocation = async () => {
 const addEmergencyContact = () => {
     if (profileData.value.emergencyContacts.length < 3) {
         profileData.value.emergencyContacts.push({
-            name: '',  
+            name: '',
             phone: ''
         });
     }
@@ -1474,26 +1525,29 @@ const validateEmergencyContact = (index) => {
 // Calculate security score
 const calculateSecurityScore = () => {
     let score = 0;
+    const maxScore = 100;
 
-    // Basic profile completion
-    if (profileData.value.username) score += 15;
-    if (profileData.value.phone) score += 15;
-    if (profileData.value.location) score += 15;
+    // Email verification (30 points)
+    if (user.value?.email_verified) score += 30;
 
-    // Emergency contacts (10 points each, max 30)
-    const contactsScore = Math.min(profileData.value.emergencyContacts.length * 10, 30);
-    score += contactsScore;
+    // Profile completeness (40 points)
+    if (profileData.value.username) score += 10;
+    if (profileData.value.phone) score += 10;
+    if (profileData.value.location) score += 10;
+    if (profileData.value.emergencyContacts?.length > 0) score += 10;
 
-    // Email verification
-    if (user.value?.email_verified) score += 25;
+    // Security settings (30 points)
+    if (profileData.value.notifications) score += 15; // Increased points for notifications
+    if (profileData.value.emergencyContacts?.length >= 2) score += 15; // Additional points for multiple contacts
 
-    userStats.value.securityScore = Math.min(score, 100);
+    // Ensure score doesn't exceed maximum
+    userStats.value.securityScore = Math.min(Math.round(score), maxScore);
 };
 
 // Format date utility
 const formatDate = (dateString) => {
     if (!dateString) return 'Never';
-    
+
     try {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return 'Invalid date';
@@ -1501,7 +1555,7 @@ const formatDate = (dateString) => {
         // If date is today, show time only
         const today = new Date();
         const isToday = date.toDateString() === today.toDateString();
-        
+
         if (isToday) {
             return date.toLocaleTimeString('en-US', {
                 hour: '2-digit',
@@ -1521,7 +1575,7 @@ const formatDate = (dateString) => {
         console.error('Date formatting error:', error);
         return 'Never';
     }
-};  
+};
 
 // Initialize component
 onMounted(() => {
@@ -1535,7 +1589,7 @@ onMounted(() => {
 
 onMounted(async () => {
     await loadProfileData();
-});   
+});
 
 // Save changes function
 const saveChanges = async () => {
@@ -1566,7 +1620,7 @@ const saveChanges = async () => {
         };
 
         const response = await userService.updateProfile(updateData);
-        
+
         originalData.value = {
             username: updateData.username,
             phone: updateData.phone,
@@ -1574,13 +1628,13 @@ const saveChanges = async () => {
             notifications: { ...updateData.notifications },
             emergencyContacts: updateData.emergencyContacts.map(contact => ({ ...contact }))
         };
-        
+
         if (response?.user) {
             authStore.updateUser(response.user);
         }
 
         notificationStore.success('Profile updated successfully');
-        
+
     } catch (error) {
         console.error('Save profile error:', error);
         notificationStore.error('Failed to update profile');
@@ -1595,17 +1649,17 @@ const taskCompletionPercentage = computed(() => {
         !!profileData.value.username,
         !!profileData.value.phone,
         !!profileData.value.location,
-        !!user.value?.email_verified, 
+        !!user.value?.email_verified,
         profileData.value.emergencyContacts?.length > 0,
         !!localStorage.getItem('checklistProgress')
     ];
 
     // Count completed tasks
     const completedTasks = requiredTasks.filter(task => task).length;
-    
+
     // Calculate percentage
     const totalTasks = requiredTasks.length;
-    
+
     // Return percentage without setting userStats
     return Math.round((completedTasks / totalTasks) * 100);
 });
@@ -1616,7 +1670,7 @@ const completedTasksCount = computed(() => {
         !!profileData.value.username,
         !!profileData.value.phone,
         !!profileData.value.location,
-        !!user.value?.email_verified, 
+        !!user.value?.email_verified,
         profileData.value.emergencyContacts?.length > 0,
         !!localStorage.getItem('checklistProgress')
     ];
@@ -1630,7 +1684,7 @@ watch([profileData, () => user.value?.email_verified], () => {
 }, { deep: true });
 
 // Emergency contact management
-const showEmergencyContactModal = ref(false);   
+const showEmergencyContactModal = ref(false);
 const editingContactIndex = ref(-1);
 const emergencyContactForm = ref({
     name: '',
@@ -1646,7 +1700,7 @@ const emergencyContactErrors = ref({
 const isEmergencyContactFormValid = computed(() => {
     const phoneRegex = /^\+63[0-9]{10}$/;
     return (
-        emergencyContactForm.value.name?.trim() && 
+        emergencyContactForm.value.name?.trim() &&
         phoneRegex.test(emergencyContactForm.value.phone) &&
         emergencyContactForm.value.relation
     );
@@ -1712,7 +1766,7 @@ const closeEmergencyContactModal = () => {
 
 const saveEmergencyContact = () => {
     if (!validateEmergencyContactForm()) return;
-    
+
     console.log('Saving emergency contact:', {
         form: emergencyContactForm.value,
         isEditing: editingContactIndex.value !== -1,
@@ -1742,6 +1796,44 @@ const saveEmergencyContact = () => {
     console.log('Updated contacts array:', profileData.value.emergencyContacts);
     closeEmergencyContactModal();
 };
+
+// Add this method
+// Add after line 1416
+const toggleNotifications = async () => {
+    if (notificationLoading.value) return;
+    
+    try {
+        notificationLoading.value = true;
+        const newStatus = !profileData.value.notifications;
+        
+        const response = await userService.updateProfile({
+            ...profileData.value,
+            notifications: newStatus
+        });
+        
+        if (response?.success) {
+            profileData.value.notifications = newStatus;
+            notificationStore.success(
+                newStatus ? 'Successfully subscribed to notifications' : 
+                           'Successfully unsubscribed from notifications'
+            );
+        }
+    } catch (error) {
+        console.error('Toggle notifications error:', error);
+        notificationStore.error('Failed to update notification preferences');
+        // Revert the change on error
+        profileData.value.notifications = !profileData.value.notifications;
+    } finally {
+        notificationLoading.value = false;
+    }
+};
+
+// Add this to your existing watch effects for security score calculation
+watch(
+    () => profileData.value.notifications,
+    () => calculateSecurityScore(),
+    { immediate: true }
+);
 
 // Add this after your existing watchers
 watch(() => profileData.value, (newData) => {
@@ -1821,7 +1913,7 @@ const saveProfile = async () => {
 
     try {
         loading.value = true;
-        
+
         // Validate emergency contacts before saving
         const validContacts = profileData.value.emergencyContacts.filter(
             contact => contact && contact.name && contact.phone && contact.relation
@@ -1841,17 +1933,17 @@ const saveProfile = async () => {
         notificationStore.error('Failed to update profile');
         // Restore emergency contacts from original data if save fails
         profileData.value.emergencyContacts = [...originalEmergencyContacts.value];
-    } finally { 
+    } finally {
         loading.value = false;
     }
 };
 
 const loadEmergencyContactsFromDB = async () => {
     if (loading.value) return;
-    
+
     try {
         const response = await userService.getEmergencyContacts();
-        
+
         if (response?.success) {
             // Update both current and original data to prevent change detection
             const contacts = response.contacts || [];
@@ -1868,4 +1960,4 @@ const loadEmergencyContactsFromDB = async () => {
         notificationStore.error('Failed to refresh emergency contacts');
     }
 };
-</script>         
+</script>

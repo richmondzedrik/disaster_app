@@ -8,6 +8,7 @@ router.get('/profile', auth.authMiddleware, userController.getProfile);
 router.put('/profile', auth.authMiddleware, userController.updateProfile);
 router.delete('/profile', auth.authMiddleware, userController.deleteProfile);
 router.post('/profile/verify-email/resend', auth.authMiddleware, userController.resendVerification);
+router.put('/notifications', auth.authMiddleware, userController.updateNotificationPreferences);
 
 // Add a route to check auth status
 router.get('/check-auth', auth.authMiddleware, (req, res) => {

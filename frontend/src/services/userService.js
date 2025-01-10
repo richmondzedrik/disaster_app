@@ -142,5 +142,15 @@ export const userService = {
             console.error('Get emergency contacts error:', error);
             throw new Error(error.response?.data?.message || 'Failed to load emergency contacts');
         }
+    },
+
+    updateNotificationPreferences: async (preferences) => {
+        try {
+            const response = await api.put('/users/notifications', preferences);
+            return response.data;
+        } catch (error) {
+            console.error('Update notification preferences error:', error);
+            throw error;
+        }
     }
 }; 

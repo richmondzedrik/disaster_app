@@ -133,4 +133,27 @@ exports.resendVerification = async (req, res) => {
             message: 'Failed to resend verification code'
         });
     }
+};
+
+exports.updateNotificationPreferences = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { notifications } = req.body;
+        
+        await db.execute(
+            'UPDATE users SET notifications = ? WHERE id = ?',
+            [notifications, userId]
+        );
+        
+        res.json({
+            success: true,
+            message: 'Notification preferences updated successfully'
+        });
+    } catch (error) {
+        console.error('Update notification preferences error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update notification preferences'
+        });
+    }
 }; 
