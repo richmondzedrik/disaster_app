@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/connection');
 const auth = require('../middleware/auth');
+const { sendEmail } = require('../utils/email');
 
 // Test like notification
 router.post('/test/notifications/like', auth.authMiddleware, async (req, res) => {
@@ -109,6 +110,39 @@ router.get('/test/notifications/verify', auth.authMiddleware, async (req, res) =
       message: 'Failed to verify notifications'
     });
   }
+});
+
+// Test email endpoint
+router.post('/test-email', auth.authMiddleware, async (req, res) => {
+    try {
+        const testEmail = {
+            to: req.body.email,
+            subject: 'Test Email from AlertoAbra',
+            html: `
+                <h2>Test Email</h2>
+                <p>This is a test email to verify the notification system.</p>
+                <p>If you received this, the email system is working correctly.</p>
+                <p>Sent at: ${new Date().toISOString()}</p>
+            `
+        };
+
+        console.log('Attempting to send test email to:', req.body.email);
+        const result = await sendEmail(testEmail);
+        console.log('Email send result:', result);
+
+        res.json({
+            success: true,
+            message: 'Test email sent successfully',
+            result
+        });
+    } catch (error) {
+        console.error('Test email error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to send test email',
+            error: error.message
+        });
+    }
 });
 
 module.exports = router;
