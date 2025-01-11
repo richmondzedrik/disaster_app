@@ -140,8 +140,11 @@ const routes = [
   {
     path: '/hazard-map',
     name: 'HazardMap',
-    component: HazardMap,
-    meta: { requiresAuth: true }
+    component: () => import('../components/HazardMap.vue'),
+    meta: { 
+      requiresAuth: true,
+      title: 'Hazard Map'
+    }
   },
   {
     path: '/checklist',
@@ -230,8 +233,11 @@ const routes = [
   {
     path: '/evacuation-route',
     name: 'EvacuationRoute',
-    component: () => import('@/components/EvacuationRoute.vue'),
-    meta: { requiresAuth: true }
+    component: () => import('../components/EvacuationRoute.vue'),
+    meta: { 
+      requiresAuth: true,
+      title: 'Evacuation Route'
+    }
   },
   {
     path: '/test',

@@ -215,21 +215,22 @@ watch(() => isLoggedIn.value, (newValue) => {
   background: #f8fafc;
 }
 
-/* Hero Section Responsive Optimization */
+/* Hero Section with improved design */
 .hero-section {
   background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
-  padding: clamp(3rem, 10vw, 6rem) 2rem;
+  padding: 6rem 2rem;
   position: relative;
   overflow: hidden;
 }
 
 .hero-content {
-  max-width: min(1200px, 90%);
+  max-width: 1200px;
   margin: 0 auto;
   text-align: center;
   position: relative;
   z-index: 1;
   color: white;
+  animation: fadeInUp 1s ease;
 }
 
 .hero-content h1 {
@@ -289,14 +290,11 @@ watch(() => isLoggedIn.value, (newValue) => {
   border-radius: 2px;
 }
 
-/* Features Grid Optimization */
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
-  gap: clamp(1rem, 3vw, 2rem);
-  padding: 0 clamp(1rem, 3vw, 2rem);
-  margin: 0 auto;
-  max-width: 1400px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  padding: 0 1rem;
 }
 
 .feature-card {
@@ -433,36 +431,31 @@ watch(() => isLoggedIn.value, (newValue) => {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .hero-content {
-    padding: 1rem;
+  .hero-content h1 {
+    font-size: 2.25rem;
   }
-  
-  .hero-actions {
-    flex-direction: column;
-    padding: 0 1rem;
-  }
-  
-  .hero-actions button {
-    width: 100%;
-  }
-  
-  .features-section {
-    padding: 3rem 1rem;
-  }
-  
-  .feature-card {
-    margin: 0 1rem;
-  }
-}
 
-/* Tablet Optimization */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .features-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .hero-content p {
+    font-size: 1.1rem;
   }
-  
-  .hero-section {
-    padding: 4rem 2rem;
+
+  .features-grid {
+    grid-template-columns: 1fr;
+    padding: 0;
+  }
+
+  .cta-content h2 {
+    font-size: 1.75rem;
+  }
+
+  .hero-actions, .cta-actions {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .primary-btn, .cta-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 

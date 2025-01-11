@@ -111,6 +111,21 @@ async function up() {
                 FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
             )
         `);
+
+        // Add hazard_zones table
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS hazard_zones (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                name VARCHAR(255) NOT NULL,
+                description TEXT,
+                risk_level ENUM('low', 'moderate', 'high') NOT NULL,
+                coordinates JSON NOT NULL,
+                created_by INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+            )
+        `);
         
         await connection.commit();
         return true;
