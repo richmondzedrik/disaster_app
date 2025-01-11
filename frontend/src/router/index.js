@@ -7,7 +7,7 @@ import Register from '../components/Register.vue'
 import VerifyCode from '../components/VerifyCode.vue'
 import ForgotPassword from '../components/ForgotPassword.vue'
 import ResetPassword from '../components/ResetPassword.vue'
-import HazardMap from '../components/HazardMap.vue'
+import HazardMap from '../components/EvacuationRoute.vue'
 import Alerts from '../components/Alerts.vue'
 import AboutUs from '../components/AboutUs.vue'
 import EmailVerification from '../components/EmailVerification.vue'
@@ -228,9 +228,9 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/evacuation-routes',
-    name: 'EvacuationRoutes',
-    component: () => import('@/components/EvacuationRoutes.vue'),
+    path: '/evacuation-route',
+    name: 'EvacuationRoute',
+    component: () => import('@/components/EvacuationRoute.vue'),
     meta: { requiresAuth: true }
   },
   {

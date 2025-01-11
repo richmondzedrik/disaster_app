@@ -8,7 +8,7 @@
                 <i class="fas fa-crosshairs"></i> Find Me
             </button>
         </div>
-        <div id="hazard-map" class="map-view"></div>
+        <div id="evacuation-map" class="map-view"></div>
     </div>
 </template>
 
@@ -54,7 +54,7 @@ const initMap = async () => {
         const position = await getCurrentPosition().catch(() => ({ coords: { latitude: 17.5907, longitude: 120.6856 } })); // Default to Bangued, Abra
         const { latitude, longitude } = position.coords;
 
-        map.value = L.map('hazard-map', {
+        map.value = L.map('evacuation-map', {
             scrollWheelZoom: true,
             dragging: true,
             maxBounds: [[-90, -180], [90, 180]],

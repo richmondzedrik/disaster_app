@@ -75,7 +75,7 @@
                             <i class="fas fa-phone-alt"></i>
                             Emergency Contacts
                         </button>
-                        <button @click="router.push('/evacuation-routes')" class="quick-access-btn">
+                        <button @click="router.push('/evacuation-route')" class="quick-access-btn">
                             <i class="fas fa-route"></i>
                             Evacuation Routes
                         </button>
