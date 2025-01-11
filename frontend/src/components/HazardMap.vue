@@ -23,6 +23,10 @@ import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 import 'leaflet-routing-machine';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
+import { useNotificationStore } from '../stores/notification';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import 'leaflet.markercluster';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
 
@@ -34,6 +38,13 @@ const isAddingZone = ref(false);
 const markers = ref([]);
 const evacuationZones = ref([]);
 const authStore = useAuthStore();
+const notificationStore = useNotificationStore();
+const currentOpenMarker = ref(null);
+const pageSize = 10;
+const currentPage = ref(1);
+const totalMarkers = ref(0);
+const activeWatchers = ref(new Set());
+const markerClusterGroup = ref(null);
 
 // Add these constants at the top of your script
 const GEOLOCATION_OPTIONS = {
@@ -47,15 +58,24 @@ const initMap = async () => {
     try {
         const position = await getCurrentPosition().catch(() => ({ coords: { latitude: 17.5907, longitude: 120.6856 } })); // Default to Bangued, Abra
         const { latitude, longitude } = position.coords;
-        
+
         map.value = L.map('hazard-map', {
             scrollWheelZoom: true,
             dragging: true,
             maxBounds: [[-90, -180], [90, 180]],
             minZoom: 2,
             maxZoom: 19,
-            zoomControl: true
+            zoomControl: true,
+            tap: false,
+            touchZoom: false,
+            doubleClickZoom: false,
+            bounceAtZoomLimits: false
         }).setView([latitude, longitude], 13);
+
+        // Disable touch gestures
+        map.value.touchZoom.disable();
+        map.value.doubleClickZoom.disable();
+        map.value.boxZoom.disable();
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
@@ -67,6 +87,23 @@ const initMap = async () => {
 
         // Initialize user location marker
         initializeUserMarker(position);
+
+        // Add zoom end handler
+        map.value.on('zoomend', updateRouteOnZoom);
+
+        // Add zoom handlers with debounce
+        let zoomTimeout;
+        map.value.on('zoomend', () => {
+            if (zoomTimeout) {
+                clearTimeout(zoomTimeout);
+            }
+            zoomTimeout = setTimeout(() => {
+                if (map.value) {
+                    updatePopupPosition();
+                    updateRouteOnZoom();
+                }
+            }, 100); // 100ms debounce
+        });
     } catch (error) {
         console.error('Map initialization error:', error);
     }
@@ -74,7 +111,7 @@ const initMap = async () => {
 
 const initializeUserMarker = (position) => {
     const { latitude, longitude } = position.coords;
-    
+
     userMarker.value = L.marker([latitude, longitude], {
         icon: L.divIcon({
             className: 'user-location-marker',
@@ -119,17 +156,44 @@ const calculateTime = (distanceInMeters) => {
 };
 
 const loadMarkers = async () => {
+    console.log('Starting marker load process...');
+
+    if (!map.value) {
+        console.warn('Map not initialized yet, waiting...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!map.value) {
+            console.error('Map failed to initialize');
+            return;
+        }
+    }
+
     try {
-        const token = authStore.token;
-        const response = await axios.get(`${API_URL}/api/markers`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
+        const baseUrl = import.meta.env.DEV ? 'http://localhost:3000' : 'https://disaster-app-backend.onrender.com';
+        const offset = (currentPage.value - 1) * pageSize;
+        
+        console.log('Fetching markers from:', `${baseUrl}/api/markers?limit=${pageSize}&offset=${offset}`);
+
+        const response = await axios.get(`${baseUrl}/api/markers`, {
+            params: {
+                limit: pageSize,
+                offset: offset
             }
         });
-        if (response.data.success) {
+
+        if (response.data.success && Array.isArray(response.data.markers)) {
+            // Clear existing markers before adding new ones
+            markers.value.forEach(marker => {
+                cleanupMarker(marker);
+            });
+            markers.value = [];
+
+            console.log(`Loading ${response.data.markers.length} markers`);
             response.data.markers.forEach(markerData => {
                 createMarkerFromData(markerData);
             });
+            
+            totalMarkers.value = response.data.total;
+            console.log('Markers loaded successfully');
         }
     } catch (error) {
         console.error('Error loading markers:', error);
@@ -139,8 +203,26 @@ const loadMarkers = async () => {
 const createMarkerFromData = (markerData) => {
     const marker = L.marker([markerData.latitude, markerData.longitude]).addTo(map.value);
     let routingControl = null;
-    
+    let routeLayer = null;
+    let isRouteVisible = false;
+
     marker.on('click', () => {
+        // Close previously open popup and clean up its routing
+        if (currentOpenMarker.value && currentOpenMarker.value !== marker) {
+            currentOpenMarker.value.closePopup();
+            if (currentOpenMarker.value.routingControl) {
+                map.value.removeControl(currentOpenMarker.value.routingControl);
+                currentOpenMarker.value.routingControl = null;
+            }
+            if (currentOpenMarker.value.routeLayer) {
+                map.value.removeLayer(currentOpenMarker.value.routeLayer);
+                currentOpenMarker.value.routeLayer = null;
+            }
+            currentOpenMarker.value.isRouteVisible = false;
+        }
+
+        currentOpenMarker.value = marker;
+
         if (userMarker.value) {
             const userLatLng = userMarker.value.getLatLng();
             const markerLatLng = marker.getLatLng();
@@ -150,122 +232,273 @@ const createMarkerFromData = (markerData) => {
             
             const popupContent = document.createElement('div');
             popupContent.className = 'custom-popup';
+
+            // Format creation date
+            const createdAt = markerData.created_at ? new Date(markerData.created_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : 'Unknown';
+
             popupContent.innerHTML = `
-                <h3>${markerData.title}</h3>
-                ${markerData.description ? `<p>${markerData.description}</p>` : ''}
+                <div class="popup-header">
+                    <h3>${markerData.title}</h3>
+                    <div class="popup-meta">
+                        <span class="meta-item">
+                            <i class="fas fa-clock"></i> ${createdAt}
+                        </span>
+                        ${markerData.created_by ? `
+                            <span class="meta-item">
+                                <i class="fas fa-user"></i> ${markerData.created_by}
+                            </span>
+                        ` : ''}
+                    </div>
+                </div>
+                ${markerData.description ? `
+                    <div class="popup-description">
+                        <p>${markerData.description}</p>
+                    </div>
+                ` : ''}
                 <div class="distance-info">
                     <p><i class="fas fa-route"></i> Distance: ${Math.round(distance)} meters</p>
                     <p><i class="fas fa-walking"></i> Est. time: ${timeToWalk} minutes</p>
                 </div>
             `;
-            
-            // Add route button
+
+            if (authStore.user?.role === 'admin') {
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'delete-marker-btn';
+                deleteButton.innerHTML = '<i class="fas fa-trash"></i> Remove Marker';
+                
+                deleteButton.onclick = async (e) => {
+                    e.stopPropagation();
+                    if (confirm('Are you sure you want to delete this marker?')) {
+                        try {
+                            const baseUrl = import.meta.env.DEV ? 'http://localhost:3000' : 'https://disaster-app-backend.onrender.com';
+                            const token = authStore.token || localStorage.getItem('token');
+                            
+                            if (!token) {
+                                notificationStore.error('Please login again to perform this action');
+                                authStore.logout();
+                                return;
+                            }
+
+                            const response = await axios.delete(`${baseUrl}/api/markers/${markerData.id}`, {
+                                headers: {
+                                    'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
+                                }
+                            });
+                            
+                            if (response.data.success) {
+                                map.value.removeLayer(marker);
+                                const index = markers.value.findIndex(m => m === marker);
+                                if (index > -1) {
+                                    markers.value.splice(index, 1);
+                                }
+                                notificationStore.success('Marker deleted successfully');
+                            }
+                        } catch (error) {
+                            console.error('Error deleting marker:', error);
+                            if (error.response?.status === 401) {
+                                notificationStore.error('Please login again to perform this action');
+                                authStore.logout();
+                            } else if (error.response?.status === 403) {
+                                notificationStore.error('Admin access required to delete markers');
+                            } else {
+                                notificationStore.error('Failed to delete marker');
+                            }
+                        }
+                    }
+                };
+                
+                popupContent.appendChild(deleteButton);
+            }
+
             const routeButton = document.createElement('button');
             routeButton.className = 'route-btn';
-            routeButton.textContent = 'Show Route';
-            routeButton.onclick = () => {
-                if (routingControl) {
-                    map.value.removeControl(routingControl);
-                    routingControl = null;
+            routeButton.textContent = isRouteVisible ? 'Hide Route' : 'Show Route';
+
+            routeButton.onclick = (e) => {
+                e.stopPropagation();
+                if (isRouteVisible) {
+                    if (routingControl) {
+                        map.value.removeControl(routingControl);
+                        routingControl = null;
+                    }
+                    if (routeLayer) {
+                        map.value.removeLayer(routeLayer);
+                        routeLayer = null;
+                    }
+                    isRouteVisible = false;
                     routeButton.textContent = 'Show Route';
                 } else {
-                    routingControl = L.Routing.control({
-                        waypoints: [
-                            L.latLng(userLatLng.lat, userLatLng.lng),
-                            L.latLng(markerLatLng.lat, markerLatLng.lng)
-                        ],
-                        router: L.Routing.osrmv1({
-                            serviceUrl: 'https://router.project-osrm.org/route/v1'
-                        }),
-                        lineOptions: {
-                            styles: [{ color: '#00D1D1', weight: 4 }]
-                        },
-                        addWaypoints: false,
-                        draggableWaypoints: false,
-                        fitSelectedRoutes: true,
-                        showAlternatives: false
-                    }).addTo(map.value);
+                    updateRoute();
+                    isRouteVisible = true;
                     routeButton.textContent = 'Hide Route';
                 }
             };
-            popupContent.appendChild(routeButton);
-            
-            // Add remove button if user created the marker
-            if (authStore.user?.id === markerData.created_by) {
-                const removeButton = document.createElement('button');
-                removeButton.textContent = 'Remove Marker';
-                removeButton.onclick = async () => {
-                    try {
-                        const token = authStore.token;
-                        await axios.delete(`${API_URL}/api/markers/${markerData.id}`, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
-                        if (routingControl) {
-                            map.value.removeControl(routingControl);
-                        }
-                        map.value.removeLayer(marker);
-                        markers.value = markers.value.filter(m => m !== marker);
-                    } catch (error) {
-                        console.error('Error removing marker:', error);
-                        alert('Failed to remove marker');
+
+            const updateRoute = () => {
+                const currentUserLatLng = userMarker.value.getLatLng();
+                
+                if (routingControl) {
+                    map.value.removeControl(routingControl);
+                }
+                if (routeLayer) {
+                    map.value.removeLayer(routeLayer);
+                }
+
+                routingControl = L.Routing.control({
+                    waypoints: [
+                        L.latLng(currentUserLatLng.lat, currentUserLatLng.lng),
+                        L.latLng(markerLatLng.lat, markerLatLng.lng)
+                    ],
+                    router: L.Routing.osrmv1({
+                        serviceUrl: 'https://router.project-osrm.org/route/v1'
+                    }),
+                    lineOptions: {
+                        styles: [{ 
+                            color: '#00D1D1', 
+                            weight: getRouteWeight(map.value.getZoom()),
+                            opacity: 0.8
+                        }],
+                        missingRouteTolerance: 0
+                    },
+                    createMarker: function() { return null; },
+                    addWaypoints: false,
+                    draggableWaypoints: false,
+                    fitSelectedRoutes: false,
+                    showAlternatives: false,
+                    show: false,
+                    routeWhileDragging: false,
+                    useZoomParameter: true,
+                    zIndexOffset: 1000,
+                    plan: L.Routing.plan([], {
+                        createMarker: function() { return null; },
+                        draggableWaypoints: false,
+                        dragStyle: { opacity: 0 }
+                    })
+                }).addTo(map.value);
+
+                routingControl.getPlan().setWaypoints([
+                    L.latLng(currentUserLatLng.lat, currentUserLatLng.lng),
+                    L.latLng(markerLatLng.lat, markerLatLng.lng)
+                ]);
+
+                marker.routingControl = routingControl;
+                marker.routeLayer = routeLayer;
+                marker.isRouteVisible = isRouteVisible;
+            };
+
+            if (userMarker.value) {
+                userMarker.value.on('move', () => {
+                    if (isRouteVisible) {
+                        updateRoute();
                     }
-                };
-                popupContent.appendChild(removeButton);
+                });
             }
-            
-            marker.bindPopup(popupContent).openPopup();
+
+            popupContent.appendChild(routeButton);
+
+            // Use unbindPopup() before binding a new popup
+            marker.unbindPopup();
+            marker.bindPopup(popupContent, {
+                closeButton: true,
+                closeOnClick: false,
+                autoClose: false,
+                autoPan: true,
+                autoPanPadding: [50, 50],
+                keepInView: true,
+                offset: L.point(0, -20)  // Offset to keep popup above marker
+            }).openPopup();
+
+            // Add popup close handler
+            marker.on('popupclose', () => {
+                if (routingControl) {
+                    map.value.removeControl(routingControl);
+                    routingControl = null;
+                }
+                if (routeLayer) {
+                    map.value.removeLayer(routeLayer);
+                    routeLayer = null;
+                }
+                isRouteVisible = false;
+                currentOpenMarker.value = null;
+            });
         }
     });
-    
+
     markers.value.push(marker);
 };
 
 const createMarker = async (latlng) => {
-    if (!authStore.isAuthenticated) {
+    const token = localStorage.getItem('token');
+    console.log('Creating marker - Auth state:', {
+        isAuthenticated: authStore.isAuthenticated,
+        token: token,
+        coordinates: latlng
+    });
+
+    if (!token) {
         alert('Please login to add markers');
         return;
     }
 
     const title = prompt('Enter marker title:');
+    if (!title?.trim()) {
+        alert('Title is required');
+        return;
+    }
+
     const description = prompt('Enter marker description:');
-    
-    if (title) {
-        try {
-            const token = authStore.token;
-            console.log('Sending request with token:', token);
-            const response = await axios.post(
-                `${API_URL}/api/markers`,
-                {
-                    title,
-                    description,
-                    latitude: latlng.lat,
-                    longitude: latlng.lng
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    withCredentials: true
+
+    try {
+        const baseUrl = import.meta.env.DEV ? 'http://localhost:3000' : 'https://disaster-app-backend.onrender.com';
+        console.log('Sending marker request:', {
+            url: `${baseUrl}/api/markers`,
+            data: {
+                title: title.trim(),
+                description: description?.trim(),
+                latitude: latlng.lat,
+                longitude: latlng.lng
+            }
+        });
+
+        const response = await axios.post(
+            `${baseUrl}/api/markers`,
+            {
+                title: title.trim(),
+                description: description?.trim(),
+                latitude: latlng.lat,
+                longitude: latlng.lng
+            },
+            {
+                headers: {
+                    'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 }
-            );
-            
-            if (response.data.success) {
-                createMarkerFromData(response.data.marker);
             }
-        } catch (error) {
-            console.error('Error saving marker:', error);
-            console.log('Request details:', {
-                url: `${API_URL}/api/markers`,
-                token: authStore.token
-            });
-            if (error.response?.status === 401) {
-                alert('Please login to add markers');
-            } else {
-                alert('Failed to save marker. Please try again.');
-            }
+        );
+
+        console.log('Marker creation response:', response.data);
+
+        if (response.data.success) {
+            createMarkerFromData(response.data.marker);
+            alert('Marker added successfully');
+        }
+    } catch (error) {
+        console.error('Error saving marker:', {
+            error: error,
+            response: error.response?.data,
+            status: error.response?.status
+        });
+        if (error.response?.status === 401) {
+            alert('Session expired. Please login again.');
+            authStore.logout();
+        } else {
+            alert(`Failed to save marker: ${error.response?.data?.message || 'Network error - please try again'}`);
         }
     }
 };
@@ -273,7 +506,7 @@ const createMarker = async (latlng) => {
 const createEvacZone = (latlng) => {
     const radius = prompt('Enter evacuation zone radius (in meters):', '500');
     const description = prompt('Enter zone description:');
-    
+
     if (radius) {
         const zone = L.circle(latlng, {
             radius: parseInt(radius),
@@ -282,7 +515,7 @@ const createEvacZone = (latlng) => {
             fillOpacity: 0.3,
             weight: 2
         }).addTo(map.value);
-        
+
         const popupContent = document.createElement('div');
         popupContent.className = 'custom-popup';
         popupContent.innerHTML = `
@@ -290,14 +523,14 @@ const createEvacZone = (latlng) => {
             <p>Radius: ${radius}m</p>
             ${description ? `<p>${description}</p>` : ''}
         `;
-        
+
         const removeButton = document.createElement('button');
         removeButton.textContent = 'Remove Zone';
         removeButton.onclick = () => {
             map.value.removeLayer(zone);
             evacuationZones.value = evacuationZones.value.filter(z => z !== zone);
         };
-        
+
         popupContent.appendChild(removeButton);
         zone.bindPopup(popupContent);
         evacuationZones.value.push(zone);
@@ -308,7 +541,7 @@ const centerOnUser = async () => {
     try {
         const position = await getCurrentPosition();
         const { latitude, longitude } = position.coords;
-        
+
         if (map.value) {
             map.value.setView([latitude, longitude], 16);
             updateUserLocation(position);
@@ -362,13 +595,13 @@ const getCurrentPosition = () => {
 
 const updateUserLocation = (position) => {
     const { latitude, longitude, accuracy } = position.coords;
-    
+
     if (map.value && userMarker.value) {
         const newLatLng = [latitude, longitude];
-        
+
         // Update marker and accuracy circle
         userMarker.value.setLatLng(newLatLng);
-        
+
         // Create accuracy circle if it doesn't exist
         if (!accuracyCircle.value) {
             accuracyCircle.value = L.circle(newLatLng, {
@@ -393,11 +626,20 @@ const updateUserLocation = (position) => {
 const startLocationTracking = () => {
     if (!navigator.geolocation) return null;
 
+    let lastUpdate = Date.now();
+    const MIN_UPDATE_INTERVAL = 1000; // Minimum time between updates (1 second)
+
     return navigator.geolocation.watchPosition(
         (position) => {
+            const now = Date.now();
+            if (now - lastUpdate < MIN_UPDATE_INTERVAL) {
+                return; // Skip update if too soon
+            }
+
             // Only update if accuracy is good
             if (position.coords.accuracy <= 100) {
                 updateUserLocation(position);
+                lastUpdate = now;
             } else {
                 console.warn('Skipping low accuracy position update:', position.coords.accuracy);
             }
@@ -414,20 +656,126 @@ const startLocationTracking = () => {
 
 let locationWatchId = null;
 
-onMounted(() => {
-    console.log('Auth status:', authStore.isAuthenticated, 'Token:', authStore.token);
-    initMap();
+const cleanupMarker = (marker) => {
+    // Remove routing controls
+    if (marker.routingControl) {
+        map.value.removeControl(marker.routingControl);
+    }
+    // Remove route layer
+    if (marker.routeLayer) {
+        map.value.removeLayer(marker.routeLayer);
+    }
+    // Remove marker from map
+    map.value.removeLayer(marker);
+    // Remove any associated watchers
+    if (marker.watcherId && activeWatchers.value.has(marker.watcherId)) {
+        activeWatchers.value.delete(marker.watcherId);
+    }
+};
+
+const cleanupAllMarkers = () => {
+    markers.value.forEach(marker => {
+        cleanupMarker(marker);
+    });
+    markers.value = [];
+};
+
+const updateRouteOnZoom = () => {
+    if (!map.value || !currentOpenMarker.value || !userMarker.value) return;
+
+    try {
+        if (currentOpenMarker.value.isRouteVisible && currentOpenMarker.value.routingControl) {
+            const userLatLng = userMarker.value.getLatLng();
+            const markerLatLng = currentOpenMarker.value.getLatLng();
+            
+            if (userLatLng && markerLatLng) {
+                const currentZoom = map.value.getZoom();
+                const weight = getRouteWeight(currentZoom);
+                
+                // Update route line weight
+                const routingControl = currentOpenMarker.value.routingControl;
+                
+                // Update the line options
+                if (routingControl._line) {
+                    routingControl._line.setStyle({ weight: weight });
+                }
+                
+                // Update alternatives if they exist
+                if (routingControl._alternatives) {
+                    routingControl._alternatives.forEach(alt => {
+                        if (alt._line) {
+                            alt._line.setStyle({ weight: weight });
+                        }
+                    });
+                }
+            }
+        }
+    } catch (error) {
+        console.warn('Error updating route during zoom:', error);
+    }
+};
+
+const updatePopupPosition = () => {
+    if (!map.value || !currentOpenMarker.value) return;
+
+    try {
+        const popup = currentOpenMarker.value.getPopup();
+        if (popup && popup.isOpen() && map.value) {
+            requestAnimationFrame(() => {
+                if (map.value && popup.isOpen()) {
+                    popup.update();
+                }
+            });
+        }
+    } catch (error) {
+        console.warn('Error updating popup position:', error);
+    }
+};
+
+const getRouteWeight = (zoomLevel) => {
+    const baseWeight = 4;
+    const minWeight = 2;
+    const maxWeight = 8;
+    
+    // Adjust weight based on zoom level ranges
+    if (zoomLevel <= 12) return minWeight;
+    if (zoomLevel >= 18) return maxWeight;
+    
+    // Linear interpolation between min and max weights
+    return minWeight + ((zoomLevel - 12) * (maxWeight - minWeight) / (18 - 12));
+};
+
+onMounted(async () => {
+    console.log('Component mounted, initializing map...');
+    await initMap();
     locationWatchId = startLocationTracking();
-    loadMarkers();
+    await loadMarkers();
+    console.log('Initialization complete');
 });
 
 onUnmounted(() => {
+    if (zoomTimeout) {
+        clearTimeout(zoomTimeout);
+    }
     if (map.value) {
-        map.value.remove();
+        try {
+            map.value.off('zoomend');
+            cleanupAllMarkers();
+            if (userMarker.value) {
+                map.value.removeLayer(userMarker.value);
+            }
+            if (accuracyCircle.value) {
+                map.value.removeLayer(accuracyCircle.value);
+            }
+            map.value.remove();
+        } catch (error) {
+            console.warn('Error during map cleanup:', error);
+        }
     }
     if (locationWatchId !== null) {
         navigator.geolocation.clearWatch(locationWatchId);
     }
+    activeWatchers.value.clear();
 });
 </script>
 
@@ -435,7 +783,7 @@ onUnmounted(() => {
 .hazard-map-container {
     position: relative;
     width: 100%;
-    height: 100vh;
+    height: calc(100vh - 80px);
     overflow: hidden;
 }
 
@@ -454,7 +802,7 @@ onUnmounted(() => {
     border: none;
     padding: 10px;
     border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -470,12 +818,7 @@ onUnmounted(() => {
 .map-view {
     width: 100%;
     height: 100%;
-}
-
-:deep(.user-location-marker) {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    overflow: hidden;
 }
 
 :deep(.location-dot) {
@@ -489,19 +832,44 @@ onUnmounted(() => {
 
 :deep(.custom-popup) {
     text-align: center;
+    padding: 10px;
+    min-width: 200px;
 }
 
-:deep(.custom-popup button) {
+:deep(.custom-popup h3) {
+    color: #2c3e50;
+    margin-bottom: 8px;
+    font-size: 1.2em;
+    border-bottom: 2px solid #42b983;
+    padding-bottom: 5px;
+}
+
+:deep(.custom-popup p) {
+    color: #666;
+    margin: 8px 0;
+    line-height: 1.4;
+}
+
+:deep(.popup-actions) {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+:deep(.remove-marker-btn) {
     background: #ff4444;
     color: white;
     border: none;
-    padding: 5px 10px;
+    padding: 8px;
     border-radius: 4px;
     cursor: pointer;
-    margin-top: 10px;
+    width: 100%;
+    font-size: 0.9em;
+    transition: background 0.3s ease;
 }
 
-:deep(.custom-popup button:hover) {
+:deep(.remove-marker-btn:hover) {
     background: #ff2222;
 }
 
@@ -542,8 +910,124 @@ onUnmounted(() => {
     background-color: white;
     padding: 10px;
     border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     max-height: 300px;
     overflow-y: auto;
+    overflow-y: hidden !important;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
 }
-</style> 
+
+:deep(.route-info) {
+    margin: 10px 0;
+    padding: 8px;
+    background: #f0f8ff;
+    border-radius: 4px;
+}
+
+:deep(.route-info p) {
+    margin: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #2c3e50;
+}
+
+:deep(.route-info i) {
+    color: #00D1D1;
+}
+
+:deep(.leaflet-popup-close-button) {
+    display: block !important;
+    color: #666;
+    font-size: 16px;
+    padding: 4px;
+    height: 20px;
+    width: 20px;
+    line-height: 14px;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+:deep(.leaflet-popup-close-button:hover) {
+    color: #ff4444;
+    background: none;
+}
+
+:deep(.leaflet-popup-content-wrapper) {
+    padding-right: 20px;
+}
+
+:deep(.leaflet-container) {
+    overflow: hidden !important;
+}
+
+:deep(.leaflet-control-container) {
+    overflow: hidden;
+}
+
+:deep(.leaflet-routing-container::-webkit-scrollbar) {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+:deep(.delete-marker-btn) {
+    background: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+    border: none;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+    margin: 8px 0;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+:deep(.delete-marker-btn:hover) {
+    background: #dc2626;
+    color: white;
+}
+
+:deep(.popup-header) {
+    margin-bottom: 1rem;
+}
+
+:deep(.popup-meta) {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: #666;
+}
+
+:deep(.meta-item) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+:deep(.meta-item i) {
+    color: #42b983;
+    font-size: 0.875rem;
+}
+
+:deep(.popup-description) {
+    margin: 1rem 0;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 3px solid #42b983;
+}
+
+:deep(.popup-description p) {
+    margin: 0;
+    color: #2c3e50;
+    line-height: 1.5;
+}
+
+</style>
