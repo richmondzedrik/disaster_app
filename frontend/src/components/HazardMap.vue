@@ -4,9 +4,6 @@
             <button @click="addMarker" class="control-btn">
                 <i class="fas fa-map-marker-alt"></i> Add Marker
             </button>
-            <button @click="addEvacZone" class="control-btn">
-                <i class="fas fa-circle"></i> Add Evacuation Zone
-            </button>
             <button @click="centerOnUser" class="control-btn">
                 <i class="fas fa-crosshairs"></i> Find Me
             </button>
@@ -34,9 +31,7 @@ const map = ref(null);
 const userMarker = ref(null);
 const accuracyCircle = ref(null);
 const isAddingMarker = ref(false);
-const isAddingZone = ref(false);
 const markers = ref([]);
-const evacuationZones = ref([]);
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
 const currentOpenMarker = ref(null);
@@ -122,13 +117,6 @@ const initializeUserMarker = (position) => {
 
 const addMarker = () => {
     isAddingMarker.value = true;
-    isAddingZone.value = false;
-    map.value.getContainer().style.cursor = 'crosshair';
-};
-
-const addEvacZone = () => {
-    isAddingZone.value = true;
-    isAddingMarker.value = false;
     map.value.getContainer().style.cursor = 'crosshair';
 };
 
@@ -136,10 +124,6 @@ const handleMapClick = (e) => {
     if (isAddingMarker.value) {
         createMarker(e.latlng);
         isAddingMarker.value = false;
-        map.value.getContainer().style.cursor = '';
-    } else if (isAddingZone.value) {
-        createEvacZone(e.latlng);
-        isAddingZone.value = false;
         map.value.getContainer().style.cursor = '';
     }
 };
@@ -210,15 +194,7 @@ const createMarkerFromData = (markerData) => {
         // Close previously open popup and clean up its routing
         if (currentOpenMarker.value && currentOpenMarker.value !== marker) {
             currentOpenMarker.value.closePopup();
-            if (currentOpenMarker.value.routingControl) {
-                map.value.removeControl(currentOpenMarker.value.routingControl);
-                currentOpenMarker.value.routingControl = null;
-            }
-            if (currentOpenMarker.value.routeLayer) {
-                map.value.removeLayer(currentOpenMarker.value.routeLayer);
-                currentOpenMarker.value.routeLayer = null;
-            }
-            currentOpenMarker.value.isRouteVisible = false;
+            cleanupPreviousMarkerRoute(currentOpenMarker.value);
         }
 
         currentOpenMarker.value = marker;
@@ -318,7 +294,7 @@ const createMarkerFromData = (markerData) => {
 
             const routeButton = document.createElement('button');
             routeButton.className = 'route-btn';
-            routeButton.textContent = isRouteVisible ? 'Hide Route' : 'Show Route';
+            routeButton.textContent = isRouteVisible ? 'Remove Route' : 'Show Route';
 
             routeButton.onclick = (e) => {
                 e.stopPropagation();
@@ -332,11 +308,14 @@ const createMarkerFromData = (markerData) => {
                         routeLayer = null;
                     }
                     isRouteVisible = false;
+                    marker.isRouteVisible = false;
+                    marker.routingControl = null;
                     routeButton.textContent = 'Show Route';
                 } else {
                     updateRoute();
                     isRouteVisible = true;
-                    routeButton.textContent = 'Hide Route';
+                    marker.isRouteVisible = true;
+                    routeButton.textContent = 'Remove Route';
                 }
             };
 
@@ -350,6 +329,9 @@ const createMarkerFromData = (markerData) => {
                     map.value.removeLayer(routeLayer);
                 }
 
+                const currentZoom = map.value.getZoom();
+                const weight = getRouteWeight(currentZoom);
+
                 routingControl = L.Routing.control({
                     waypoints: [
                         L.latLng(currentUserLatLng.lat, currentUserLatLng.lng),
@@ -361,9 +343,11 @@ const createMarkerFromData = (markerData) => {
                     lineOptions: {
                         styles: [{ 
                             color: '#00D1D1', 
-                            weight: getRouteWeight(map.value.getZoom()),
-                            opacity: 0.8
+                            weight: weight,
+                            opacity: 0.8,
+                            className: 'route-path'
                         }],
+                        addWaypoints: false,
                         missingRouteTolerance: 0
                     },
                     createMarker: function() { return null; },
@@ -371,25 +355,13 @@ const createMarkerFromData = (markerData) => {
                     draggableWaypoints: false,
                     fitSelectedRoutes: false,
                     showAlternatives: false,
-                    show: false,
-                    routeWhileDragging: false,
-                    useZoomParameter: true,
-                    zIndexOffset: 1000,
-                    plan: L.Routing.plan([], {
-                        createMarker: function() { return null; },
-                        draggableWaypoints: false,
-                        dragStyle: { opacity: 0 }
-                    })
+                    show: false
                 }).addTo(map.value);
 
-                routingControl.getPlan().setWaypoints([
-                    L.latLng(currentUserLatLng.lat, currentUserLatLng.lng),
-                    L.latLng(markerLatLng.lat, markerLatLng.lng)
-                ]);
-
+                // Store the routing control in the marker
                 marker.routingControl = routingControl;
-                marker.routeLayer = routeLayer;
-                marker.isRouteVisible = isRouteVisible;
+                marker.isRouteVisible = true;
+                routeButton.textContent = 'Remove Route';
             };
 
             if (userMarker.value) {
@@ -416,15 +388,7 @@ const createMarkerFromData = (markerData) => {
 
             // Add popup close handler
             marker.on('popupclose', () => {
-                if (routingControl) {
-                    map.value.removeControl(routingControl);
-                    routingControl = null;
-                }
-                if (routeLayer) {
-                    map.value.removeLayer(routeLayer);
-                    routeLayer = null;
-                }
-                isRouteVisible = false;
+                cleanupPreviousMarkerRoute(marker);
                 currentOpenMarker.value = null;
             });
         }
@@ -503,52 +467,35 @@ const createMarker = async (latlng) => {
     }
 };
 
-const createEvacZone = (latlng) => {
-    const radius = prompt('Enter evacuation zone radius (in meters):', '500');
-    const description = prompt('Enter zone description:');
-
-    if (radius) {
-        const zone = L.circle(latlng, {
-            radius: parseInt(radius),
-            color: '#ff4444',
-            fillColor: '#ff444433',
-            fillOpacity: 0.3,
-            weight: 2
-        }).addTo(map.value);
-
-        const popupContent = document.createElement('div');
-        popupContent.className = 'custom-popup';
-        popupContent.innerHTML = `
-            <h3>Evacuation Zone</h3>
-            <p>Radius: ${radius}m</p>
-            ${description ? `<p>${description}</p>` : ''}
-        `;
-
-        const removeButton = document.createElement('button');
-        removeButton.textContent = 'Remove Zone';
-        removeButton.onclick = () => {
-            map.value.removeLayer(zone);
-            evacuationZones.value = evacuationZones.value.filter(z => z !== zone);
-        };
-
-        popupContent.appendChild(removeButton);
-        zone.bindPopup(popupContent);
-        evacuationZones.value.push(zone);
-    }
-};
-
 const centerOnUser = async () => {
     try {
         const position = await getCurrentPosition();
         const { latitude, longitude } = position.coords;
 
-        if (map.value) {
-            map.value.setView([latitude, longitude], 16);
-            updateUserLocation(position);
+        if (map.value && userMarker.value) {
+            // Update user marker position
+            userMarker.value.setLatLng([latitude, longitude]);
+            
+            // Update accuracy circle if it exists
+            if (accuracyCircle.value) {
+                accuracyCircle.value.setLatLng([latitude, longitude]);
+                accuracyCircle.value.setRadius(position.coords.accuracy);
+            }
+
+            // Pan map to new location with animation
+            map.value.setView([latitude, longitude], 16, {
+                animate: true,
+                duration: 1
+            });
+
+            // Update any active routes if they exist
+            if (currentOpenMarker.value?.isRouteVisible) {
+                updateRouteOnZoom();
+            }
         }
     } catch (error) {
         console.error('Error centering on user:', error);
-        // You might want to show a notification to the user here
+        notificationStore.error('Unable to get your location. Please check your location permissions.');
     }
 };
 
@@ -691,22 +638,30 @@ const updateRouteOnZoom = () => {
             if (userLatLng && markerLatLng) {
                 const currentZoom = map.value.getZoom();
                 const weight = getRouteWeight(currentZoom);
-                
-                // Update route line weight
+
+                // Get the routing control and its route
                 const routingControl = currentOpenMarker.value.routingControl;
+                const route = routingControl.getRouter();
                 
-                // Update the line options
-                if (routingControl._line) {
-                    routingControl._line.setStyle({ weight: weight });
-                }
-                
-                // Update alternatives if they exist
-                if (routingControl._alternatives) {
-                    routingControl._alternatives.forEach(alt => {
-                        if (alt._line) {
-                            alt._line.setStyle({ weight: weight });
-                        }
-                    });
+                // Update the route options
+                if (routingControl._router && routingControl._plan) {
+                    // Update existing waypoints to trigger route redraw
+                    routingControl.setWaypoints([
+                        L.latLng(userLatLng.lat, userLatLng.lng),
+                        L.latLng(markerLatLng.lat, markerLatLng.lng)
+                    ]);
+
+                    // Update line options for future route calculations
+                    routingControl.options.lineOptions = {
+                        styles: [{ 
+                            color: '#00D1D1', 
+                            weight: weight,
+                            opacity: 0.8,
+                            className: 'route-path'
+                        }],
+                        addWaypoints: false,
+                        missingRouteTolerance: 0
+                    };
                 }
             }
         }
@@ -743,6 +698,48 @@ const getRouteWeight = (zoomLevel) => {
     
     // Linear interpolation between min and max weights
     return minWeight + ((zoomLevel - 12) * (maxWeight - minWeight) / (18 - 12));
+};
+
+const cleanupOtherRoutes = (currentMarker) => {
+    markers.value.forEach(marker => {
+        if (marker !== currentMarker && marker.isRouteVisible) {
+            if (marker.routingControl) {
+                map.value.removeControl(marker.routingControl);
+                marker.routingControl = null;
+            }
+            if (marker.routeLayer) {
+                map.value.removeLayer(marker.routeLayer);
+                marker.routeLayer = null;
+            }
+            marker.isRouteVisible = false;
+            
+            // Update the route button text in the popup if it exists
+            const popup = marker.getPopup();
+            if (popup) {
+                const routeBtn = popup.getContent().querySelector('.route-btn');
+                if (routeBtn) {
+                    routeBtn.textContent = 'Show Route';
+                }
+            }
+        }
+    });
+};
+
+const cleanupPreviousMarkerRoute = (marker) => {
+    if (marker && marker.routingControl) {
+        map.value.removeControl(marker.routingControl);
+        marker.routingControl = null;
+        marker.isRouteVisible = false;
+        
+        // Update the button text in the popup if it exists
+        const popup = marker.getPopup();
+        if (popup) {
+            const routeBtn = popup.getContent().querySelector('.route-btn');
+            if (routeBtn) {
+                routeBtn.textContent = 'Show Route';
+            }
+        }
+    }
 };
 
 onMounted(async () => {
