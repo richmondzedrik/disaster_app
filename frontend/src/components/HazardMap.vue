@@ -380,10 +380,9 @@ const createMarkerFromData = (markerData) => {
                 closeButton: true,
                 closeOnClick: false,
                 autoClose: false,
-                autoPan: true,
-                autoPanPadding: [50, 50],
-                keepInView: true,
-                offset: L.point(0, -20)  // Offset to keep popup above marker
+                autoPan: false,
+                keepInView: false,
+                offset: L.point(0, -20)
             }).openPopup();
 
             // Add popup close handler
