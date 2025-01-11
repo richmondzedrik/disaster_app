@@ -24,7 +24,7 @@ import 'leaflet-routing-machine';
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
 
 const map = ref(null);
 const userMarker = ref(null);
@@ -234,6 +234,7 @@ const createMarker = async (latlng) => {
     if (title) {
         try {
             const token = authStore.token;
+            console.log('Sending request with token:', token);
             const response = await axios.post(
                 `${API_URL}/api/markers`,
                 {
@@ -246,7 +247,8 @@ const createMarker = async (latlng) => {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    withCredentials: true
                 }
             );
             
@@ -255,6 +257,10 @@ const createMarker = async (latlng) => {
             }
         } catch (error) {
             console.error('Error saving marker:', error);
+            console.log('Request details:', {
+                url: `${API_URL}/api/markers`,
+                token: authStore.token
+            });
             if (error.response?.status === 401) {
                 alert('Please login to add markers');
             } else {
