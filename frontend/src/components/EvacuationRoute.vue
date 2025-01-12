@@ -1,5 +1,9 @@
 <template>
     <div class="evacuation-route-container">
+        <div v-if="isLoading" class="loading-overlay">
+            <div class="loader"></div>
+            <span>Loading map...</span>
+        </div>
         <div class="map-controls">
             <button @click="addMarker" class="control-btn">
                 <i class="fas fa-map-marker-alt"></i> Add Evacuation Point
@@ -40,6 +44,7 @@ const currentPage = ref(1);
 const totalMarkers = ref(0);
 const activeWatchers = ref(new Set());
 const markerClusterGroup = ref(null);
+const isLoading = ref(true);
 
 // Add these constants at the top of your script
 const GEOLOCATION_OPTIONS = {
@@ -75,8 +80,9 @@ const debounce = (func, wait) => {
 
 // Initialize map with basic functionality
 const initMap = async () => {
+    isLoading.value = true;
     try {
-        const position = await getCurrentPosition().catch(() => ({ coords: { latitude: 17.5907, longitude: 120.6856 } })); // Default to Bangued, Abra
+        const position = await getCurrentPosition().catch(() => ({ coords: { latitude: 17.5907, longitude: 120.6856 } }));
         const { latitude, longitude } = position.coords;
 
         map.value = L.map('evacuation-map', {
@@ -92,31 +98,33 @@ const initMap = async () => {
             bounceAtZoomLimits: false
         }).setView([latitude, longitude], 13);
 
-        // Disable touch gestures
-        map.value.touchZoom.disable();
-        map.value.doubleClickZoom.disable();
-        map.value.boxZoom.disable();
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Wait for tile layer to load
+        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map.value);
 
-        // Add click handler for the map
-        map.value.on('click', handleMapClick);
+        // Add loading complete handler
+        tileLayer.on('load', () => {
+            isLoading.value = false;
+        });
 
-        // Initialize user location marker
+        // Rest of your existing map initialization code
+        map.value.touchZoom.disable();
+        map.value.doubleClickZoom.disable();
+        map.value.boxZoom.disable();
+
+        map.value.on('click', handleMapClick);
         initializeUserMarker(position);
 
-        // Add zoom end handler with debouncing
+        // Add your existing zoom handlers here
         const debouncedRouteUpdate = debounce(() => {
             if (map.value && currentOpenMarker.value?.isRouteVisible) {
                 updateRouteOnZoom();
             }
-        }, 300); // 300ms delay
+        }, 300);
 
         map.value.on('zoomstart', () => {
-            // Hide routes during zoom animation
             if (currentOpenMarker.value?.routingControl) {
                 const container = currentOpenMarker.value.routingControl.getContainer();
                 if (container) {
@@ -126,22 +134,24 @@ const initMap = async () => {
         });
 
         map.value.on('zoomend', () => {
-            // Update popup positions immediately
             updatePopupPosition();
-            
-            // Show routes after zoom animation
             if (currentOpenMarker.value?.routingControl) {
                 const container = currentOpenMarker.value.routingControl.getContainer();
                 if (container) {
                     container.style.visibility = 'visible';
                 }
             }
-            
-            // Debounced route update
             debouncedRouteUpdate();
         });
+
+        // Set loading to false after a timeout in case tile loading fails
+        setTimeout(() => {
+            isLoading.value = false;
+        }, 5000);
+
     } catch (error) {
         console.error('Map initialization error:', error);
+        isLoading.value = false;
     }
 };
 
@@ -1233,6 +1243,41 @@ onUnmounted(() => {
     margin: 0;
     color: #2c3e50;
     line-height: 1.5;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.loader {
+    width: 48px;
+    height: 48px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #42b983;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-overlay span {
+    color: #42b983;
+    font-size: 1.1em;
+    font-weight: 500;
 }
 
 </style>
