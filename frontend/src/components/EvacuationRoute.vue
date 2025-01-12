@@ -283,7 +283,7 @@ const createMarkerFromData = (markerData) => {
             meta.innerHTML = `
                 <div class="meta-item">
                     <i class="fas fa-user"></i>
-                    <span>Created by: ${markerData.user?.username || markerData.username || 'Unknown User'}</span>
+                    <span>Created by: ${markerData.created_by || markerData.username || 'Unknown User'}</span>
                 </div>
                 <div class="meta-item">
                     <i class="fas fa-calendar"></i>
@@ -534,7 +534,7 @@ const createMarker = async (latlng) => {
             description: description?.trim(),
             latitude: latlng.lat,
             longitude: latlng.lng,
-            created_by: user.username // Send username directly
+            created_by: user.username
         };
 
         const response = await axios.post(
@@ -551,8 +551,8 @@ const createMarker = async (latlng) => {
         if (response.data.success) {
             const newMarkerData = {
                 ...response.data.marker,
-                created_by: user.username,
-                created_by_username: user.username
+                username: user.username,
+                created_by: user.username
             };
             createMarkerFromData(newMarkerData);
             notificationStore.success('Marker added successfully');
