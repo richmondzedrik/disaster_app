@@ -61,6 +61,18 @@ const RESTRICTED_BOUNDS = L.latLngBounds(
     [ABRA_BOUNDS.north, ABRA_BOUNDS.east]
 );
 
+const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);   
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+};
+
 // Initialize map with basic functionality
 const initMap = async () => {
     try {
@@ -96,24 +108,37 @@ const initMap = async () => {
         // Initialize user location marker
         initializeUserMarker(position);
 
-        // Add zoom end handler
-        map.value.on('zoomend', updateRouteOnZoom);
-
-        // Add zoom handlers with debounce
-        let zoomTimeout;
-        map.value.on('zoomend', () => {
-            if (zoomTimeout) {
-                clearTimeout(zoomTimeout);
+        // Add zoom end handler with debouncing
+        const debouncedRouteUpdate = debounce(() => {
+            if (map.value && currentOpenMarker.value?.isRouteVisible) {
+                updateRouteOnZoom();
             }
-            zoomTimeout = setTimeout(() => {
-                if (map.value) {
-                    // Only update popup positions and routes, not marker positions
-                    updatePopupPosition();
-                    if (currentOpenMarker.value?.isRouteVisible) {
-                        updateRouteOnZoom();
-                    }
+        }, 300); // 300ms delay
+
+        map.value.on('zoomstart', () => {
+            // Hide routes during zoom animation
+            if (currentOpenMarker.value?.routingControl) {
+                const container = currentOpenMarker.value.routingControl.getContainer();
+                if (container) {
+                    container.style.visibility = 'hidden';
                 }
-            }, 100); // 100ms debounce
+            }
+        });
+
+        map.value.on('zoomend', () => {
+            // Update popup positions immediately
+            updatePopupPosition();
+            
+            // Show routes after zoom animation
+            if (currentOpenMarker.value?.routingControl) {
+                const container = currentOpenMarker.value.routingControl.getContainer();
+                if (container) {
+                    container.style.visibility = 'visible';
+                }
+            }
+            
+            // Debounced route update
+            debouncedRouteUpdate();
         });
     } catch (error) {
         console.error('Map initialization error:', error);
@@ -239,39 +264,34 @@ const createMarkerFromData = (markerData) => {
             const popupContent = document.createElement('div');
             popupContent.className = 'custom-popup';
 
-            // Format creation date
-            const createdAt = markerData.created_at ? new Date(markerData.created_at).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            }) : 'Unknown';
+            const header = document.createElement('div');
+            header.className = 'popup-header';
+            header.innerHTML = `<h3>${markerData.name}</h3>`;
 
-            popupContent.innerHTML = `
-                <div class="popup-header">
-                    <h3>${markerData.title}</h3>
-                    <div class="popup-meta">
-                        <span class="meta-item">
-                            <i class="fas fa-clock"></i> ${createdAt}
-                        </span>
-                        ${markerData.created_by ? `
-                            <span class="meta-item">
-                                <i class="fas fa-user"></i> ${markerData.created_by}
-                            </span>
-                        ` : ''}
-                    </div>
+            const meta = document.createElement('div');
+            meta.className = 'popup-meta';
+            meta.innerHTML = `
+                <div class="meta-item">
+                    <i class="fas fa-user"></i>
+                    <span>Created by: ${markerData.user?.username || markerData.username || 'Unknown User'}</span>
                 </div>
-                ${markerData.description ? `
-                    <div class="popup-description">
-                        <p>${markerData.description}</p>
-                    </div>
-                ` : ''}
-                <div class="distance-info">
-                    <p><i class="fas fa-route"></i> Distance: ${Math.round(distance)} meters</p>
-                    <p><i class="fas fa-walking"></i> Est. time: ${timeToWalk} minutes</p>
+                <div class="meta-item">
+                    <i class="fas fa-calendar"></i>
+                    <span>${new Date(markerData.created_at).toLocaleDateString()}</span>
                 </div>
             `;
+
+            const description = document.createElement('div');
+            description.className = 'popup-description';
+            description.innerHTML = `<p>${markerData.description || 'No description available'}</p>`;
+
+            const actions = document.createElement('div');
+            actions.className = 'popup-actions';
+
+            popupContent.appendChild(header);
+            popupContent.appendChild(meta);
+            popupContent.appendChild(description);
+            popupContent.appendChild(actions);
 
             if (authStore.user?.role === 'admin') {
                 const deleteButton = document.createElement('button');
@@ -334,7 +354,7 @@ const createMarkerFromData = (markerData) => {
 
             const routeButton = document.createElement('button');
             routeButton.className = 'route-btn';
-            routeButton.textContent = isRouteVisible ? 'Remove Route' : 'Show Route';
+            routeButton.textContent = isRouteVisible ? 'Hide Route' : 'Show Route';
 
             routeButton.onclick = (e) => {
                 e.stopPropagation();
@@ -355,7 +375,7 @@ const createMarkerFromData = (markerData) => {
                     updateRoute();
                     isRouteVisible = true;
                     marker.isRouteVisible = true;
-                    routeButton.textContent = 'Remove Route';
+                    routeButton.textContent = 'Hide Route';
                 }
             };
 
@@ -378,7 +398,8 @@ const createMarkerFromData = (markerData) => {
                         L.latLng(markerLatLng.lat, markerLatLng.lng)
                     ],
                     router: L.Routing.osrmv1({
-                        serviceUrl: 'https://router.project-osrm.org/route/v1'
+                        serviceUrl: 'https://router.project-osrm.org/route/v1',
+                        profile: 'foot'
                     }),
                     lineOptions: {
                         styles: [{ 
@@ -395,8 +416,45 @@ const createMarkerFromData = (markerData) => {
                     draggableWaypoints: false,
                     fitSelectedRoutes: false,
                     showAlternatives: false,
-                    show: false
+                    show: false,
+                    formatter: new L.Routing.Formatter({
+                        units: 'metric',
+                        roundingSensitivity: 1
+                    })
                 }).addTo(map.value);
+
+                // Add route summary handler
+                routingControl.on('routesfound', function(e) {
+                    const routes = e.routes;
+                    const summary = routes[0].summary;
+                    
+                    // Create route info element
+                    const routeInfo = document.createElement('div');
+                    routeInfo.className = 'route-info';
+                    
+                    const walkingTime = formatDuration(summary.totalTime);
+                    const distance = formatDistance(summary.totalDistance);
+                    const arrival = getEstimatedArrival(summary.totalTime);
+                    
+                    routeInfo.innerHTML = `
+                        <p><i class="fas fa-walking"></i> Walking time: ${walkingTime}</p>
+                        <p><i class="fas fa-route"></i> Distance: ${distance}</p>
+                        <p><i class="fas fa-clock"></i> Estimated arrival: ${arrival}</p>
+                    `;
+                    
+                    // Find and update the popup content
+                    const popup = marker.getPopup();
+                    if (popup) {
+                        const content = popup.getContent();
+                        const existingRouteInfo = content.querySelector('.route-info');
+                        if (existingRouteInfo) {
+                            existingRouteInfo.replaceWith(routeInfo);
+                        } else {
+                            content.appendChild(routeInfo);
+                        }
+                        popup.update();
+                    }
+                });
 
                 // Store the routing control in the marker
                 marker.routingControl = routingControl;
@@ -438,9 +496,12 @@ const createMarkerFromData = (markerData) => {
 
 const createMarker = async (latlng) => {
     const token = localStorage.getItem('token');
+    const user = authStore.user;
+
     console.log('Creating marker - Auth state:', {
         isAuthenticated: authStore.isAuthenticated,
         token: token,
+        user: user,
         coordinates: latlng
     });
 
@@ -465,7 +526,8 @@ const createMarker = async (latlng) => {
                 title: title.trim(),
                 description: description?.trim(),
                 latitude: latlng.lat,
-                longitude: latlng.lng
+                longitude: latlng.lng,
+                created_by: user.id
             }
         });
 
@@ -475,7 +537,8 @@ const createMarker = async (latlng) => {
                 title: title.trim(),
                 description: description?.trim(),
                 latitude: latlng.lat,
-                longitude: latlng.lng
+                longitude: latlng.lng,
+                created_by: user.id
             },
             {
                 headers: {
@@ -488,14 +551,22 @@ const createMarker = async (latlng) => {
         console.log('Marker creation response:', response.data);
 
         if (response.data.success) {
-            createMarkerFromData(response.data.marker);
+            // Add user information to the marker data
+            const markerData = {
+                ...response.data.marker,
+                user: {
+                    username: user.username
+                }
+            };
+            createMarkerFromData(markerData);
             alert('Marker added successfully');
         }
     } catch (error) {
         console.error('Error saving marker:', {
             error: error,
             response: error.response?.data,
-            status: error.response?.status
+            status: error.response?.status,
+            user: user
         });
         if (error.response?.status === 401) {
             alert('Session expired. Please login again.');
@@ -746,31 +817,19 @@ const updateRouteOnZoom = () => {
 
         if (currentOpenMarker.value.isRouteVisible && currentOpenMarker.value.routingControl) {
             const userLatLng = userMarker.value.getLatLng();
-            const markerLatLng = currentOpenMarker.value.getLatLng();
+            const markerLatLng = currentOpenMarker.value.originalLatLng || currentOpenMarker.value.getLatLng();
             
+            // Only update if positions are valid
             if (userLatLng && markerLatLng) {
-                const currentZoom = map.value.getZoom();
-                const weight = getRouteWeight(currentZoom);
-
-                const routingControl = currentOpenMarker.value.routingControl;
-                
-                if (routingControl._router && routingControl._plan) {
-                    routingControl.setWaypoints([
-                        L.latLng(userLatLng.lat, userLatLng.lng),
-                        L.latLng(markerLatLng.lat, markerLatLng.lng)
-                    ]);
-
-                    routingControl.options.lineOptions = {
-                        styles: [{ 
-                            color: '#00D1D1', 
-                            weight: weight,
-                            opacity: 0.8,
-                            className: 'route-path'
-                        }],
-                        addWaypoints: false,
-                        missingRouteTolerance: 0
-                    };
-                }
+                requestAnimationFrame(() => {
+                    const routingControl = currentOpenMarker.value.routingControl;
+                    if (routingControl && routingControl._router && routingControl._plan) {
+                        routingControl.setWaypoints([
+                            L.latLng(userLatLng.lat, userLatLng.lng),
+                            L.latLng(markerLatLng.lat, markerLatLng.lng)
+                        ]);
+                    }
+                });
             }
         }
     } catch (error) {
@@ -848,6 +907,28 @@ const cleanupPreviousMarkerRoute = (marker) => {
             }
         }
     }
+};
+
+const formatDistance = (meters) => {
+    if (meters >= 1000) {
+        return `${(meters / 1000).toFixed(1)} km`;
+    }
+    return `${Math.round(meters)} m`;
+};
+
+const formatDuration = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+    }
+    return `${minutes} min`;
+};
+
+const getEstimatedArrival = (durationInSeconds) => {
+    const arrival = new Date(Date.now() + (durationInSeconds * 1000));
+    return arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
 onMounted(async () => {
@@ -1025,21 +1106,25 @@ onUnmounted(() => {
 
 :deep(.route-info) {
     margin: 10px 0;
-    padding: 8px;
+    padding: 12px;
     background: #f0f8ff;
-    border-radius: 4px;
+    border-radius: 6px;
+    border-left: 3px solid #00D1D1;
 }
 
 :deep(.route-info p) {
-    margin: 4px 0;
+    margin: 6px 0;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     color: #2c3e50;
+    font-size: 0.95em;
 }
 
 :deep(.route-info i) {
     color: #00D1D1;
+    width: 16px;
+    text-align: center;
 }
 
 :deep(.leaflet-popup-close-button) {
@@ -1061,7 +1146,13 @@ onUnmounted(() => {
 }
 
 :deep(.leaflet-popup-content-wrapper) {
-    padding-right: 20px;
+    padding: 12px 0;
+    border-radius: 8px;
+}
+
+:deep(.leaflet-popup-content) {
+    margin: 0;
+    padding: 0 12px;
 }
 
 :deep(.leaflet-container) {
@@ -1104,7 +1195,8 @@ onUnmounted(() => {
 
 :deep(.popup-meta) {
     display: flex;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.5rem;
     margin-top: 0.5rem;
     font-size: 0.875rem;
     color: #666;
@@ -1119,6 +1211,8 @@ onUnmounted(() => {
 :deep(.meta-item i) {
     color: #42b983;
     font-size: 0.875rem;
+    width: 16px;
+    text-align: center;
 }
 
 :deep(.popup-description) {
