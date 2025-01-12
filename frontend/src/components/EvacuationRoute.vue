@@ -202,13 +202,20 @@ const loadMarkers = async () => {
 };
 
 const createMarkerFromData = (markerData) => {
-    // Create marker with fixed coordinates
+    // Create marker with fixed coordinates and disable all movement
     const marker = L.marker([markerData.latitude, markerData.longitude], {
         draggable: false,
         autoPan: false,
         riseOnHover: false,
-        bubblingMouseEvents: false
+        bubblingMouseEvents: false,
+        interactive: true,
+        keyboard: false,
+        zIndexOffset: 1000
     }).addTo(map.value);
+
+    // Store original coordinates
+    marker.originalLatLng = L.latLng(markerData.latitude, markerData.longitude);
+    
     let routingControl = null;
     let routeLayer = null;
     let isRouteVisible = false;
@@ -291,22 +298,22 @@ const createMarkerFromData = (markerData) => {
                             });
                             
                             if (response.data.success) {
-                                // Close popup and cleanup current marker
+                                // Reset current marker reference
                                 if (currentOpenMarker.value === marker) {
-                                    marker.closePopup();
                                     currentOpenMarker.value = null;
                                 }
                                 
-                                // Remove the marker from the map
+                                // Perform complete cleanup with garbage collection
                                 cleanupMarker(marker);
                                 
-                                // Remove from markers array
-                                const index = markers.value.findIndex(m => m === marker);
-                                if (index > -1) {
-                                    markers.value.splice(index, 1);
-                                }
-                                
                                 notificationStore.success('Marker deleted successfully');
+                                
+                                // Reset remaining markers to their original positions
+                                markers.value.forEach(m => {
+                                    if (m && m.originalLatLng) {
+                                        m.setLatLng(m.originalLatLng);
+                                    }
+                                });
                             }
                         } catch (error) {
                             console.error('Error deleting marker:', error);
@@ -635,11 +642,52 @@ const startLocationTracking = () => {
 
 let locationWatchId = null;
 
+const destroyMarker = (marker) => {
+    if (!marker) return;
+
+    // Remove all event bindings
+    marker.off();
+    marker.closePopup();
+    marker.unbindPopup();
+    
+    // Remove from map
+    if (map.value && map.value.hasLayer(marker)) {
+        map.value.removeLayer(marker);
+    }
+    
+    // Clear all internal references
+    if (marker._icon) marker._icon.remove();
+    if (marker._shadow) marker._shadow.remove();
+    
+    // Clear all custom properties
+    marker.routingControl = null;
+    marker.routeLayer = null;
+    marker.isRouteVisible = false;
+    marker.watcherId = null;
+    marker.originalLatLng = null;
+    
+    // Clear internal Leaflet properties
+    marker._map = null;
+    marker._popup = null;
+    marker._events = null;
+    marker._eventParents = null;
+    marker._leaflet_events = null;
+    marker._leaflet_id = null;
+    marker._icon = null;
+    marker._shadow = null;
+    marker._zIndex = null;
+    marker._removeIcon();
+    marker._removeShadow();
+    
+    // Clear options
+    marker.options = null;
+    marker.dragging = null;
+    
+    return null;
+};
+
 const cleanupMarker = (marker) => {
     if (!marker) return;
-    
-    // Remove all event listeners
-    marker.off();
     
     // Remove routing controls if they exist
     if (marker.routingControl) {
@@ -653,21 +701,29 @@ const cleanupMarker = (marker) => {
         marker.routeLayer = null;
     }
     
-    // Remove popup if it exists
-    if (marker.getPopup()) {
-        marker.closePopup();
-        marker.unbindPopup();
-    }
-    
-    // Remove marker from map
-    if (map.value && map.value.hasLayer(marker)) {
-        map.value.removeLayer(marker);
-    }
-    
-    // Remove any associated watchers
+    // Remove watchers
     if (marker.watcherId && activeWatchers.value.has(marker.watcherId)) {
         activeWatchers.value.delete(marker.watcherId);
     }
+    
+    // Remove from markers array
+    const index = markers.value.findIndex(m => m === marker);
+    if (index > -1) {
+        markers.value.splice(index, 1);
+    }
+    
+    // Perform thorough cleanup and destroy marker
+    marker = destroyMarker(marker);
+    
+    // Force garbage collection
+    setTimeout(() => {
+        if (marker) {
+            Object.keys(marker).forEach(key => {
+                marker[key] = null;
+            });
+            marker = null;
+        }
+    }, 0);
 };
 
 const cleanupAllMarkers = () => {
@@ -681,6 +737,13 @@ const updateRouteOnZoom = () => {
     if (!map.value || !currentOpenMarker.value || !userMarker.value) return;
 
     try {
+        // Reset positions of all markers to their original coordinates
+        markers.value.forEach(marker => {
+            if (marker.originalLatLng) {
+                marker.setLatLng(marker.originalLatLng);
+            }
+        });
+
         if (currentOpenMarker.value.isRouteVisible && currentOpenMarker.value.routingControl) {
             const userLatLng = userMarker.value.getLatLng();
             const markerLatLng = currentOpenMarker.value.getLatLng();
@@ -689,19 +752,14 @@ const updateRouteOnZoom = () => {
                 const currentZoom = map.value.getZoom();
                 const weight = getRouteWeight(currentZoom);
 
-                // Get the routing control and its route
                 const routingControl = currentOpenMarker.value.routingControl;
-                const route = routingControl.getRouter();
                 
-                // Update the route options
                 if (routingControl._router && routingControl._plan) {
-                    // Update existing waypoints to trigger route redraw
                     routingControl.setWaypoints([
                         L.latLng(userLatLng.lat, userLatLng.lng),
                         L.latLng(markerLatLng.lat, markerLatLng.lng)
                     ]);
 
-                    // Update line options for future route calculations
                     routingControl.options.lineOptions = {
                         styles: [{ 
                             color: '#00D1D1', 
