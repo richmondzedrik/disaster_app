@@ -48,6 +48,19 @@ const GEOLOCATION_OPTIONS = {
     maximumAge: 0               // Force fresh location data
 };
 
+const ABRA_BOUNDS = {
+    north: 18.0922,
+    south: 17.2142,
+    east: 121.2881,
+    west: 120.3133
+};
+
+// Create a bounds object for Leaflet
+const RESTRICTED_BOUNDS = L.latLngBounds(
+    [ABRA_BOUNDS.south, ABRA_BOUNDS.west],
+    [ABRA_BOUNDS.north, ABRA_BOUNDS.east]
+);
+
 // Initialize map with basic functionality
 const initMap = async () => {
     try {
@@ -94,8 +107,11 @@ const initMap = async () => {
             }
             zoomTimeout = setTimeout(() => {
                 if (map.value) {
+                    // Only update popup positions and routes, not marker positions
                     updatePopupPosition();
-                    updateRouteOnZoom();
+                    if (currentOpenMarker.value?.isRouteVisible) {
+                        updateRouteOnZoom();
+                    }
                 }
             }, 100); // 100ms debounce
         });
@@ -165,19 +181,20 @@ const loadMarkers = async () => {
         });
 
         if (response.data.success && Array.isArray(response.data.markers)) {
-            // Clear existing markers before adding new ones
+            // Remove existing markers properly
             markers.value.forEach(marker => {
-                cleanupMarker(marker);
+                if (map.value && map.value.hasLayer(marker)) {
+                    map.value.removeLayer(marker);
+                }
             });
             markers.value = [];
 
-            console.log(`Loading ${response.data.markers.length} markers`);
+            // Create new markers with fixed positions
             response.data.markers.forEach(markerData => {
                 createMarkerFromData(markerData);
             });
             
             totalMarkers.value = response.data.total;
-            console.log('Markers loaded successfully');
         }
     } catch (error) {
         console.error('Error loading markers:', error);
@@ -185,7 +202,13 @@ const loadMarkers = async () => {
 };
 
 const createMarkerFromData = (markerData) => {
-    const marker = L.marker([markerData.latitude, markerData.longitude]).addTo(map.value);
+    // Create marker with fixed coordinates
+    const marker = L.marker([markerData.latitude, markerData.longitude], {
+        draggable: false,
+        autoPan: false,
+        riseOnHover: false,
+        bubblingMouseEvents: false
+    }).addTo(map.value);
     let routingControl = null;
     let routeLayer = null;
     let isRouteVisible = false;
@@ -268,11 +291,21 @@ const createMarkerFromData = (markerData) => {
                             });
                             
                             if (response.data.success) {
-                                map.value.removeLayer(marker);
+                                // Close popup and cleanup current marker
+                                if (currentOpenMarker.value === marker) {
+                                    marker.closePopup();
+                                    currentOpenMarker.value = null;
+                                }
+                                
+                                // Remove the marker from the map
+                                cleanupMarker(marker);
+                                
+                                // Remove from markers array
                                 const index = markers.value.findIndex(m => m === marker);
                                 if (index > -1) {
                                     markers.value.splice(index, 1);
                                 }
+                                
                                 notificationStore.success('Marker deleted successfully');
                             }
                         } catch (error) {
@@ -603,16 +636,34 @@ const startLocationTracking = () => {
 let locationWatchId = null;
 
 const cleanupMarker = (marker) => {
-    // Remove routing controls
+    if (!marker) return;
+    
+    // Remove all event listeners
+    marker.off();
+    
+    // Remove routing controls if they exist
     if (marker.routingControl) {
         map.value.removeControl(marker.routingControl);
+        marker.routingControl = null;
     }
-    // Remove route layer
+    
+    // Remove route layer if it exists
     if (marker.routeLayer) {
         map.value.removeLayer(marker.routeLayer);
+        marker.routeLayer = null;
     }
+    
+    // Remove popup if it exists
+    if (marker.getPopup()) {
+        marker.closePopup();
+        marker.unbindPopup();
+    }
+    
     // Remove marker from map
-    map.value.removeLayer(marker);
+    if (map.value && map.value.hasLayer(marker)) {
+        map.value.removeLayer(marker);
+    }
+    
     // Remove any associated watchers
     if (marker.watcherId && activeWatchers.value.has(marker.watcherId)) {
         activeWatchers.value.delete(marker.watcherId);
