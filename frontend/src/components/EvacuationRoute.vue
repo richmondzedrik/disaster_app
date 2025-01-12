@@ -266,7 +266,7 @@ const createMarkerFromData = (markerData) => {
 
             const header = document.createElement('div');
             header.className = 'popup-header';
-            header.innerHTML = `<h3>${markerData.name}</h3>`;
+            header.innerHTML = `<h3>${markerData.title || 'Untitled Location'}</h3>`;
 
             const meta = document.createElement('div');
             meta.className = 'popup-meta';
@@ -716,85 +716,91 @@ let locationWatchId = null;
 const destroyMarker = (marker) => {
     if (!marker) return;
 
-    // Remove all event bindings
-    marker.off();
-    marker.closePopup();
-    marker.unbindPopup();
-    
-    // Remove from map
-    if (map.value && map.value.hasLayer(marker)) {
-        map.value.removeLayer(marker);
+    try {
+        // Remove all event bindings first
+        if (marker._events) {
+            marker.off();
+        }
+
+        // Close and unbind popup if exists
+        if (marker.getPopup()) {
+            marker.closePopup();
+            marker.unbindPopup();
+        }
+        
+        // Remove from map if still added
+        if (map.value && map.value.hasLayer(marker)) {
+            map.value.removeLayer(marker);
+        }
+
+        // Safely remove DOM elements if they exist
+        if (marker._icon && marker._icon.parentNode) {
+            marker._icon.parentNode.removeChild(marker._icon);
+        }
+        if (marker._shadow && marker._shadow.parentNode) {
+            marker._shadow.parentNode.removeChild(marker._shadow);
+        }
+
+        // Clear all custom properties
+        marker.routingControl = null;
+        marker.routeLayer = null;
+        marker.isRouteVisible = false;
+        marker.watcherId = null;
+        marker.originalLatLng = null;
+
+        // Clear internal Leaflet properties
+        marker._map = null;
+        marker._popup = null;
+        marker._events = null;
+        marker._eventParents = null;
+        marker._leaflet_events = null;
+        marker._leaflet_id = null;
+        marker._icon = null;
+        marker._shadow = null;
+        marker._zIndex = null;
+        
+        // Clear options
+        marker.options = null;
+        marker.dragging = null;
+    } catch (error) {
+        console.warn('Error during marker destruction:', error);
     }
-    
-    // Clear all internal references
-    if (marker._icon) marker._icon.remove();
-    if (marker._shadow) marker._shadow.remove();
-    
-    // Clear all custom properties
-    marker.routingControl = null;
-    marker.routeLayer = null;
-    marker.isRouteVisible = false;
-    marker.watcherId = null;
-    marker.originalLatLng = null;
-    
-    // Clear internal Leaflet properties
-    marker._map = null;
-    marker._popup = null;
-    marker._events = null;
-    marker._eventParents = null;
-    marker._leaflet_events = null;
-    marker._leaflet_id = null;
-    marker._icon = null;
-    marker._shadow = null;
-    marker._zIndex = null;
-    marker._removeIcon();
-    marker._removeShadow();
-    
-    // Clear options
-    marker.options = null;
-    marker.dragging = null;
-    
+
     return null;
 };
 
 const cleanupMarker = (marker) => {
     if (!marker) return;
     
-    // Remove routing controls if they exist
-    if (marker.routingControl) {
-        map.value.removeControl(marker.routingControl);
-        marker.routingControl = null;
-    }
-    
-    // Remove route layer if it exists
-    if (marker.routeLayer) {
-        map.value.removeLayer(marker.routeLayer);
-        marker.routeLayer = null;
-    }
-    
-    // Remove watchers
-    if (marker.watcherId && activeWatchers.value.has(marker.watcherId)) {
-        activeWatchers.value.delete(marker.watcherId);
-    }
-    
-    // Remove from markers array
-    const index = markers.value.findIndex(m => m === marker);
-    if (index > -1) {
-        markers.value.splice(index, 1);
-    }
-    
-    // Perform thorough cleanup and destroy marker
-    marker = destroyMarker(marker);
-    
-    // Force garbage collection
-    setTimeout(() => {
-        if (marker) {
-            Object.keys(marker).forEach(key => {
-                marker[key] = null;
-            });
-            marker = null;
+    try {
+        // Remove routing controls if they exist
+        if (marker.routingControl) {
+            map.value.removeControl(marker.routingControl);
+            marker.routingControl = null;
         }
-    }, 0);
+        
+        // Remove route layer if it exists
+        if (marker.routeLayer) {
+            map.value.removeLayer(marker.routeLayer);
+            marker.routeLayer = null;
+        }
+        
+        // Remove watchers
+        if (marker.watcherId && activeWatchers.value.has(marker.watcherId)) {
+            activeWatchers.value.delete(marker.watcherId);
+        }
+        
+        // Remove from markers array
+        const index = markers.value.findIndex(m => m === marker);
+        if (index > -1) {
+            markers.value.splice(index, 1);
+        }
+        
+        // Perform thorough cleanup and destroy marker
+        marker = destroyMarker(marker);
+    } catch (error) {
+        console.warn('Error during marker cleanup:', error);
+    }
 };
 
 const cleanupAllMarkers = () => {
