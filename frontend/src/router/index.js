@@ -232,7 +232,7 @@ const routes = [
   },
   {
     path: '/evacuation-route',
-    name: 'EvacuationRoute',
+    name: 'evacuation-route',
     component: () => import('../components/EvacuationRoute.vue'),
     meta: { 
       requiresAuth: true,

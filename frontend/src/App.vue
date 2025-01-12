@@ -42,6 +42,9 @@
           <router-link to="/hazard-map" class="nav-link">
             <i class="fas fa-map-marked-alt"></i> Hazard Map
           </router-link>
+          <router-link to="/evacuation-route" class="nav-link">
+            <i class="fas fa-route"></i> Evacuation Route
+          </router-link>
           <!-- Admin Dropdown -->
           <div ref="adminDropdownRef" class="nav-dropdown" :class="{ active: isAdminDropdownActive }">
             <button class="dropdown-btn" @click="toggleAdminDropdown">
@@ -76,6 +79,9 @@
           </router-link>
           <router-link to="/checklist" class="nav-link">
             <i class="fas fa-tasks"></i> Checklist
+          </router-link>
+          <router-link to="/evacuation-route" class="nav-link">
+            <i class="fas fa-route"></i> Evacuation Route
           </router-link>
           <!-- User Dropdown -->
           <div ref="userDropdownRef" class="nav-dropdown" :class="{ active: isUserDropdownActive }">
