@@ -515,14 +515,14 @@ const createMarker = async (latlng) => {
         coordinates: latlng
     });
 
-    if (!token) {
-        alert('Please login to add markers');
+    if (!token || !user) {
+        notificationStore.error('Please login to add markers');
         return;
     }
 
     const title = prompt('Enter marker title:');
     if (!title?.trim()) {
-        alert('Title is required');
+        notificationStore.error('Title is required');
         return;
     }
 
@@ -530,26 +530,21 @@ const createMarker = async (latlng) => {
 
     try {
         const baseUrl = import.meta.env.DEV ? 'http://localhost:3000' : 'https://disaster-app-backend.onrender.com';
-        console.log('Sending marker request:', {
-            url: `${baseUrl}/api/markers`,
-            data: {
-                title: title.trim(),
-                description: description?.trim(),
-                latitude: latlng.lat,
-                longitude: latlng.lng,
-                created_by: user.id
-            }
-        });
+        
+        const markerData = {
+            title: title.trim(),
+            description: description?.trim(),
+            latitude: latlng.lat,
+            longitude: latlng.lng,
+            created_by: user.id,
+            created_by_username: user.username
+        };
+
+        console.log('Sending marker data:', markerData);
 
         const response = await axios.post(
             `${baseUrl}/api/markers`,
-            {
-                title: title.trim(),
-                description: description?.trim(),
-                latitude: latlng.lat,
-                longitude: latlng.lng,
-                created_by: user.id
-            },
+            markerData,
             {
                 headers: {
                     'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
@@ -561,28 +556,23 @@ const createMarker = async (latlng) => {
         console.log('Marker creation response:', response.data);
 
         if (response.data.success) {
-            // Add user information to the marker data
-            const markerData = {
+            const newMarkerData = {
                 ...response.data.marker,
                 user: {
+                    id: user.id,
                     username: user.username
                 }
             };
-            createMarkerFromData(markerData);
-            alert('Marker added successfully');
+            createMarkerFromData(newMarkerData);
+            notificationStore.success('Marker added successfully');
         }
     } catch (error) {
-        console.error('Error saving marker:', {
-            error: error,
-            response: error.response?.data,
-            status: error.response?.status,
-            user: user
-        });
+        console.error('Error saving marker:', error);
         if (error.response?.status === 401) {
-            alert('Session expired. Please login again.');
+            notificationStore.error('Session expired. Please login again.');
             authStore.logout();
         } else {
-            alert(`Failed to save marker: ${error.response?.data?.message || 'Network error - please try again'}`);
+            notificationStore.error('Failed to save marker. Please try again.');
         }
     }
 };
