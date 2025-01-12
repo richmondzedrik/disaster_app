@@ -20,9 +20,11 @@ router.use((req, res, next) => {
 // Get all markers
 router.get('/', async (req, res) => {
     try {
-        const [markers] = await db.execute(
-            'SELECT * FROM map_markers ORDER BY created_at DESC'
-        );
+        const [markers] = await db.execute(`
+            SELECT *, created_by as created_by_username 
+            FROM map_markers 
+            ORDER BY created_at DESC
+        `);
         res.json({ success: true, markers });
     } catch (error) {
         console.error('Get markers error:', error);
@@ -32,40 +34,34 @@ router.get('/', async (req, res) => {
 
 // Add new marker
 router.post('/', auth.authMiddleware, async (req, res) => {
-    console.log('Received marker request:', {
-        body: req.body,
-        user: req.user,
-        headers: req.headers
-    });
-    
     try {
         const { title, description, latitude, longitude } = req.body;
+        const username = req.user.username;
         
-        if (!title || !latitude || !longitude) {
-            console.warn('Missing required fields:', { title, latitude, longitude });
+        // Verify username exists in users table
+        const [userCheck] = await db.execute(
+            'SELECT username FROM users WHERE username = ?',
+            [username]
+        );
+
+        if (!userCheck.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid user'
+            });
+        }
+
+        if (!title || !latitude || !longitude || !username) {
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields'
             });
         }
 
-        console.log('Executing database query with params:', {
-            title,
-            description,
-            latitude,
-            longitude,
-            userId: req.user.id
-        });
-
         const [result] = await db.execute(
             'INSERT INTO map_markers (title, description, latitude, longitude, created_by) VALUES (?, ?, ?, ?, ?)',
-            [title, description, latitude, longitude, req.user.id]
+            [title, description, latitude, longitude, username]
         );
-        
-        console.log('Marker created successfully:', {
-            result,
-            insertId: result.insertId
-        });
         
         res.json({
             success: true,
@@ -75,19 +71,16 @@ router.post('/', auth.authMiddleware, async (req, res) => {
                 description,
                 latitude,
                 longitude,
-                created_by: req.user.id,
+                created_by: username,
+                created_by_username: username,
                 created_at: new Date()
             }
         });
     } catch (error) {
-        console.error('Add marker error:', {
-            error: error.message,
-            stack: error.stack,
-            sql: error.sql
-        });
+        console.error('Error creating marker:', error);
         res.status(500).json({ 
             success: false, 
-            message: 'Failed to add marker',
+            message: 'Failed to create marker',
             error: error.message 
         });
     }

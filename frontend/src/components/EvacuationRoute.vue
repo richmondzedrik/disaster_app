@@ -508,11 +508,9 @@ const createMarker = async (latlng) => {
     const token = localStorage.getItem('token');
     const user = authStore.user;
 
-    console.log('Creating marker - Auth state:', {
-        isAuthenticated: authStore.isAuthenticated,
-        token: token,
-        user: user,
-        coordinates: latlng
+    console.log('Creating marker with user:', {
+        username: user?.username,
+        token: token
     });
 
     if (!token || !user) {
@@ -536,11 +534,8 @@ const createMarker = async (latlng) => {
             description: description?.trim(),
             latitude: latlng.lat,
             longitude: latlng.lng,
-            created_by: user.id,
-            created_by_username: user.username
+            created_by: user.username // Send username directly
         };
-
-        console.log('Sending marker data:', markerData);
 
         const response = await axios.post(
             `${baseUrl}/api/markers`,
@@ -553,26 +548,22 @@ const createMarker = async (latlng) => {
             }
         );
 
-        console.log('Marker creation response:', response.data);
-
         if (response.data.success) {
             const newMarkerData = {
                 ...response.data.marker,
-                user: {
-                    id: user.id,
-                    username: user.username
-                }
+                created_by: user.username,
+                created_by_username: user.username
             };
             createMarkerFromData(newMarkerData);
             notificationStore.success('Marker added successfully');
         }
     } catch (error) {
-        console.error('Error saving marker:', error);
+        console.error('Error saving marker:', error.response?.data || error);
         if (error.response?.status === 401) {
             notificationStore.error('Session expired. Please login again.');
             authStore.logout();
         } else {
-            notificationStore.error('Failed to save marker. Please try again.');
+            notificationStore.error(error.response?.data?.message || 'Failed to save marker. Please try again.');
         }
     }
 };

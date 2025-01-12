@@ -106,9 +106,9 @@ async function up() {
                 description TEXT,
                 latitude DECIMAL(10, 8) NOT NULL,
                 longitude DECIMAL(11, 8) NOT NULL,
-                created_by INT,
+                created_by VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+                FOREIGN KEY (created_by) REFERENCES users(username) ON DELETE SET NULL
             )
         `);
 
