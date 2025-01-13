@@ -86,7 +86,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/checklist', checklistRoutes); 
 app.use('/api/news', newsRoutes);
-app.use('/api/admin/news', adminNewsRoutes);
+app.use('/admin/news', adminNewsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/news', newsRoutes);
 app.use('/api/alerts', require('./routes/alerts'));
