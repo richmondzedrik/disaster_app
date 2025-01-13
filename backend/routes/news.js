@@ -348,6 +348,25 @@ router.post('/posts', auth.authMiddleware, upload.single('image'), async (req, r
             WHERE p.id = ?
         `, [result.insertId]);
 
+        // Send notifications immediately for admin posts
+        if (req.user.role === 'admin') {
+            try {
+                await notificationController.notifyNewPost({
+                    body: {
+                        postId: result.insertId,
+                        title,
+                        content,
+                        author: req.user.username,
+                        status: 'approved',
+                        isAdmin: true
+                    }
+                }, res);
+            } catch (notifyError) {
+                console.error('Notification error:', notifyError);
+                // Don't fail the post creation if notification fails
+            }
+        }
+
         res.json({
             success: true,
             message: status === 'approved' ? 'Post created successfully' : 'Post created successfully and pending approval',

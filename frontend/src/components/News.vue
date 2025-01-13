@@ -304,6 +304,7 @@ const resetForm = () => {
   imagePreview.value = null;
   editingPost.value = null;
 };
+
 const createPost = async () => {
   if (!canCreatePost.value) {
     notificationStore.error('You do not have permission to create posts');

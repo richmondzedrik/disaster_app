@@ -72,28 +72,30 @@ router.put('/posts/:id/approve', async (req, res) => {
             });
         }
 
-        // Send notifications after approval
-        try {
-            const notificationData = {
-                postId: post[0].id,
-                title: post[0].title,
-                content: post[0].content,
-                author: post[0].author,
-                status: 'approved',
-                isAdmin: post[0].author_role === 'admin'
-            };
+        // Send notifications only if the post author is not an admin
+        if (post[0].author_role !== 'admin') {
+            try {
+                const notificationData = {
+                    postId: post[0].id,
+                    title: post[0].title,
+                    content: post[0].content,
+                    author: post[0].author,
+                    status: 'approved',
+                    isAdmin: false
+                };
 
-            // Make request to notification endpoint
-            const notifyResponse = await axios.post(
-                `${process.env.API_URL}/api/news/notify-subscribers`,
-                notificationData,
-                { headers: { 'Content-Type': 'application/json' } }
-            );
+                // Make request to notification endpoint
+                const notifyResponse = await axios.post(
+                    `${process.env.API_URL}/api/news/notify-subscribers`,
+                    notificationData,
+                    { headers: { 'Content-Type': 'application/json' } }
+                );
 
-            console.log('Notification response:', notifyResponse.data);
-        } catch (notifyError) {
-            console.error('Error sending notifications:', notifyError);
-            // Don't fail the approval if notifications fail
+                console.log('Notification response:', notifyResponse.data);
+            } catch (notifyError) {
+                console.error('Error sending notifications:', notifyError);
+                // Don't fail the approval if notifications fail
+            }
         }
 
         res.json({
