@@ -126,7 +126,20 @@ async function up() {
                 FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
             )
         `);
-        
+
+        // Add likes table
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS likes (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                post_id INT NOT NULL,
+                user_id INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_like (post_id, user_id)
+            )
+        `);
+
         await connection.commit();
         return true;
     } catch (error) {

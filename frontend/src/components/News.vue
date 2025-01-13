@@ -372,28 +372,31 @@ const createPost = async () => {
 const loadPosts = async () => {
   try {
     loading.value = true;
-    const response = await newsService.getPublicPosts();
+    const [postsResponse, likedPostsResponse] = await Promise.all([
+      newsService.getPublicPosts(),
+      newsService.getLikedPosts()
+    ]);
 
-    if (response.success) {
-      // Store current liked states before updating posts
-      const currentLikedStates = {};
-      posts.value.forEach(post => {
-        if (post.liked) {
-          currentLikedStates[post.id] = true;
-        }
+    console.log('Liked posts response:', likedPostsResponse);
+
+    if (postsResponse.success) {
+      posts.value = postsResponse.posts.map(post => {
+        const isLiked = likedPostsResponse.success && 
+          likedPostsResponse.likedPosts.includes(post.id);
+        
+        console.log(`Post ${post.id} liked status:`, isLiked);
+        
+        return {
+          ...post,
+          showComments: false,
+          comments: [],
+          newComment: '',
+          commentCount: parseInt(post.comment_count) || 0,
+          liked: isLiked,
+          likes: parseInt(post.likes) || 0,
+          likeLoading: false
+        };
       });
-
-      posts.value = response.posts.map(post => ({
-        ...post,
-        showComments: false,
-        comments: [],
-        newComment: '',
-        commentCount: parseInt(post.comment_count) || 0,
-        // Preserve liked state from current posts or use the response
-        liked: currentLikedStates[post.id] || Boolean(post.liked),
-        likes: parseInt(post.likes) || 0,
-        likeLoading: false
-      }));
     }
   } catch (error) {
     console.error('Error loading posts:', error);
@@ -475,80 +478,54 @@ const processedPosts = computed(() => {
   }));
 });
 
+// Replace the existing likePost method
 const likePost = async (post) => {
-  if (!isAuthenticated.value) {
-    notificationStore.info('Please sign in to like posts');
-    return;
-  }
-
-  // Prevent double-clicking
-  if (post.likeLoading) return;
-
-  try {
-    // Set loading state
-    post.likeLoading = true;
-
-    // Optimistic update
-    const originalLiked = post.liked;
-    const originalLikes = post.likes;
-
-    // Update UI immediately
-    post.liked = !post.liked;
-    post.likes = post.liked ? post.likes + 1 : post.likes - 1;
-
-    const response = await newsService.likePost(post.id);
-
-    if (!response || response.status === 401) {
-      // Revert optimistic update on auth error or network failure
-      post.liked = originalLiked;
-      post.likes = originalLikes;
-      if (response?.status === 401) {
-        notificationStore.error('Session expired. Please login again');
-        router.push('/login');
-      } else {
-        notificationStore.error('Network error. Please try again');
-      }
-      return;
+    if (!isAuthenticated.value) {
+        notificationStore.info('Please sign in to like posts');
+        return;
     }
 
-    if (response.success) {
-      const postIndex = posts.value.findIndex(p => p.id === post.id);
-      if (postIndex !== -1) {
-        posts.value[postIndex] = {
-          ...posts.value[postIndex],
-          liked: response.liked === true || response.liked === 1 || response.liked === "true",
-          likes: parseInt(response.likes) || 0,
-          likeLoading: false
-        };
-        // Force reactivity update
-        posts.value = [...posts.value];
+    if (post.likeLoading) return;
 
-        // Store like state in localStorage as backup
-        const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '{}');
-        if (posts.value[postIndex].liked) {
-          likedPosts[post.id] = true;
-        } else {
-          delete likedPosts[post.id];
+    try {
+        post.likeLoading = true;
+        const originalLiked = post.liked;
+        const originalLikes = post.likes;
+
+        post.liked = !post.liked;
+        post.likes = post.liked ? post.likes + 1 : post.likes - 1;
+
+        const response = await newsService.likePost(post.id);
+
+        if (!response || response.status === 401) {
+            post.liked = originalLiked;
+            post.likes = originalLikes;
+            if (response?.status === 401) {
+                notificationStore.error('Session expired. Please login again');
+                router.push('/login');
+            } else {
+                notificationStore.error('Network error. Please try again');
+            }
+            return;
         }
-        localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
-      }
-    } else {
-      // Revert optimistic update on error
-      post.liked = originalLiked;
-      post.likes = originalLikes;
-      throw new Error(response.message || 'Failed to like post');
+
+        if (response.success) {
+            const postIndex = posts.value.findIndex(p => p.id === post.id);
+            if (postIndex !== -1) {
+                posts.value[postIndex] = {
+                    ...posts.value[postIndex],
+                    liked: response.liked,
+                    likes: response.likes,
+                    likeLoading: false
+                };
+            }
+        }
+    } catch (error) {
+        console.error('Error liking post:', error);
+        notificationStore.error('Failed to like post');
+    } finally {
+        post.likeLoading = false;
     }
-  } catch (error) {
-    console.error('Error liking post:', error);
-    notificationStore.error('Failed to like post');
-  } finally {
-    // Ensure loading state is cleared even if there's an error
-    const postIndex = posts.value.findIndex(p => p.id === post.id);
-    if (postIndex !== -1) {
-      posts.value[postIndex].likeLoading = false;
-      posts.value = [...posts.value];
-    }
-  }
 };
 
 const approvePost = async (postId) => {
@@ -808,21 +785,16 @@ const autoGrow = (element) => {
   element.style.height = (element.scrollHeight) + "px";
 };
 
-const restoreLikedStates = () => {
-  if (!isAuthenticated.value) return;
-
-  const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '{}');
-  posts.value = posts.value.map(post => ({
-    ...post,
-    liked: post.liked || Boolean(likedPosts[post.id])
-  }));
+const getPostComments = (postId) => {
+  const post = posts.value.find(p => p.id === postId);
+  if (!post || !post.comments) {
+    return [];
+  }
+  return post.comments;
 };
 
-onMounted(async () => {            
-  await loadPosts();  
-  if (isAuthenticated.value) {
-    restoreLikedStates();
-  }
+onMounted(async () => {
+  await loadPosts();
 });
 
 // Add this to the News component

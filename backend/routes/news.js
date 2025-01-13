@@ -175,17 +175,18 @@ router.delete('/posts/:id', auth.authMiddleware, async (req, res) => {
 
 // Like a post
 router.post('/posts/:id/like', auth.authMiddleware, async (req, res) => {
+    const connection = await db.getConnection();
     try {
-        const { id } = req.params;
-        const userId = req.user.userId;
+        await connection.beginTransaction();
 
         // First check if the post exists
-        const [posts] = await db.execute(
-            'SELECT id FROM posts WHERE id = ?',
-            [id]
+        const [posts] = await connection.execute(
+            'SELECT id, author_id FROM posts WHERE id = ?',
+            [req.params.id]
         );
 
         if (posts.length === 0) {
+            await connection.rollback();
             return res.status(404).json({
                 success: false,
                 message: 'Post not found'
@@ -193,33 +194,48 @@ router.post('/posts/:id/like', auth.authMiddleware, async (req, res) => {
         }
 
         // Check if user already liked the post
-        const [existingLike] = await db.execute(
+        const [existingLike] = await connection.execute(
             'SELECT id FROM likes WHERE post_id = ? AND user_id = ?',
-            [id, userId]
+            [req.params.id, req.user.userId]
         );
 
         let liked = false;
         if (existingLike.length > 0) {
             // Unlike the post
-            await db.execute(
+            await connection.execute(
                 'DELETE FROM likes WHERE post_id = ? AND user_id = ?',
-                [id, userId]
+                [req.params.id, req.user.userId]
             );
         } else {
             // Like the post
-            await db.execute(
+            await connection.execute(
                 'INSERT INTO likes (post_id, user_id) VALUES (?, ?)',
-                [id, userId]
+                [req.params.id, req.user.userId]
             );
             liked = true;
+
+            // Create notification for post author if it's not their own post
+            if (posts[0].author_id !== req.user.userId) {
+                await connection.execute(
+                    'INSERT INTO notifications (user_id, type, reference_id, message) VALUES (?, ?, ?, ?)',
+                    [
+                        posts[0].author_id,
+                        'like',
+                        req.params.id,
+                        `${req.user.username} liked your post`
+                    ]
+                );
+            }
         }
 
         // Get updated like count
-        const [result] = await db.execute(`
+        const [result] = await connection.execute(`
             SELECT COUNT(*) as likes
             FROM likes
             WHERE post_id = ?
-        `, [id]);
+        `, [req.params.id]);
+
+        await connection.commit();
 
         return res.json({
             success: true,
@@ -227,11 +243,14 @@ router.post('/posts/:id/like', auth.authMiddleware, async (req, res) => {
             liked: liked
         });
     } catch (error) {
+        await connection.rollback();
         console.error('Error liking post:', error);
         return res.status(500).json({
             success: false,
             message: 'Failed to like post'
         });
+    } finally {
+        connection.release();
     }
 });
 
@@ -548,39 +567,38 @@ router.delete('/posts/:postId/comments/:commentId', auth.authMiddleware, adminMi
     }
 });
 
-// Get public posts (no auth required)
-router.get('/public', async (req, res) => {
+// Get public posts
+router.get('/public', auth.optionalAuthMiddleware, async (req, res) => {
     try {
-        const userId = req.headers.authorization ? 
-            (await auth.getUserFromToken(req.headers.authorization))?.userId : 
-            null;
-
-        // First get all posts with their basic info
-        const [posts] = await db.execute(`
+        const userId = req.user?.userId;
+        const query = `
             SELECT 
                 p.*,
                 u.username as author,
-                (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) as like_count,
-                (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.deleted_by IS NULL) as comment_count,
-                IF(? IS NOT NULL, EXISTS(SELECT 1 FROM likes l WHERE l.post_id = p.id AND l.user_id = ?), FALSE) as is_liked
+                COUNT(DISTINCT l.id) as likes,
+                COUNT(DISTINCT c.id) as comment_count,
+                EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = ?) as liked
             FROM posts p
-            JOIN users u ON p.author_id = u.id
-            WHERE p.status = 'approved'
+            LEFT JOIN users u ON p.author_id = u.id
+            LEFT JOIN likes l ON p.id = l.post_id
+            LEFT JOIN comments c ON p.id = c.post_id
+            GROUP BY p.id
             ORDER BY p.created_at DESC
-        `, [userId || null, userId || null]);
+        `;
+
+        const [posts] = await db.execute(query, userId ? [userId] : []);
         
-        return res.json({
+        res.json({
             success: true,
             posts: posts.map(post => ({
                 ...post,
-                likes: parseInt(post.like_count) || 0,
-                comment_count: parseInt(post.comment_count) || 0,
-                liked: Boolean(post.is_liked)
+                liked: Boolean(post.liked),
+                likes: parseInt(post.likes) || 0
             }))
         });
     } catch (error) {
         console.error('Error fetching public posts:', error);
-        return res.status(500).json({
+        res.status(500).json({
             success: false,
             message: 'Failed to fetch posts'
         });
@@ -763,5 +781,27 @@ router.post('/test-upload', auth.authMiddleware, upload.single('image'), async (
 });
 
 router.post('/notify-subscribers', auth.authMiddleware, notificationController.notifyNewPost);
+
+// Get user's liked posts
+router.get('/posts/liked', auth.authMiddleware, async (req, res) => {
+    try {
+        const [likes] = await db.execute(`
+            SELECT post_id 
+            FROM likes 
+            WHERE user_id = ?
+        `, [req.user.userId]);
+
+        res.json({
+            success: true,
+            likedPosts: likes.map(like => like.post_id)
+        });
+    } catch (error) {
+        console.error('Error fetching liked posts:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch liked posts'
+        });
+    }
+});
 
 module.exports = router;

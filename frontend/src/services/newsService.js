@@ -157,7 +157,7 @@ export const newsService = {
             const response = await axios.post(`${API_URL}/news/posts/${postId}/like`, {}, {
                 headers,
                 withCredentials: true,
-                validateStatus: status => status < 500 // Handle 401 in catch
+                validateStatus: status => status < 500
             });
             
             // Handle 401 Unauthorized
@@ -174,7 +174,7 @@ export const newsService = {
             };
         } catch (error) {
             if (error.message.includes('Session expired')) {
-                throw error; // Rethrow session errors
+                throw error;
             }
             console.error('Error liking post:', error);
             return {
@@ -443,6 +443,40 @@ export const newsService = {
             return {
                 success: false,
                 message: error.response?.data?.message || 'Test notification system failed'
+            };
+        }
+    },
+
+    async getLikedPosts() {
+        const authStore = useAuthStore();
+        
+        if (!authStore.isAuthenticated) {
+            return {
+                success: true,
+                likedPosts: []
+            };
+        }
+
+        try {
+            const headers = getHeaders();
+            const response = await axios.get(`${API_URL}/news/posts/liked`, {
+                headers,
+                withCredentials: true,
+                validateStatus: status => status < 500
+            });
+            
+            if (response.status === 401) {
+                await authStore.logout();
+                throw new Error('Session expired. Please login again.');
+            }
+
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching liked posts:', error);
+            return {
+                success: false,
+                likedPosts: [],
+                message: error.response?.data?.message || 'Failed to fetch liked posts'
             };
         }
     }
