@@ -45,7 +45,7 @@ router.put('/posts/:id/approve', async (req, res) => {
     try {
         // First get the post details
         const [post] = await db.execute(
-            `SELECT p.*, u.username as author 
+            `SELECT p.*, u.username as author, u.role as author_role 
              FROM posts p 
              JOIN users u ON p.author_id = u.id 
              WHERE p.id = ?`,
@@ -79,7 +79,8 @@ router.put('/posts/:id/approve', async (req, res) => {
                 title: post[0].title,
                 content: post[0].content,
                 author: post[0].author,
-                status: 'approved'
+                status: 'approved',
+                isAdmin: post[0].author_role === 'admin'
             };
 
             // Make request to notification endpoint

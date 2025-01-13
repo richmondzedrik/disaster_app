@@ -4,12 +4,13 @@ const db = require('../db/connection');
 
 const notifyNewPost = async (req, res) => {
   try {
-    const { postId, title, content, author, status } = req.body;
+    const { postId, title, content, author, status, isAdmin } = req.body;
     
-    console.log('Notification request received:', { postId, title, author, status });
+    console.log('Notification request received:', { postId, title, author, status, isAdmin });
     
-    // Only proceed with notifications if the post is approved
-    if (status !== 'approved') {
+    // For admin posts, send notification immediately
+    // For verified users, only send when post is approved
+    if (!isAdmin && status !== 'approved') {
       return res.json({
         success: true,
         message: 'Post pending approval - notifications will be sent upon approval',

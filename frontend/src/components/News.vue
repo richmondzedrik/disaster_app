@@ -324,30 +324,35 @@ const createPost = async () => {
     console.log('Post creation response:', response);
     
     if (response.success) {
-      try {
-        // Send notifications to subscribers using newsService
-        const notificationResponse = await newsService.notifySubscribers({
-          postId: response.post.id,
-          title: postForm.value.title,
-          content: postForm.value.content,
-          author: user.value.username
-        });
-        
-        console.log('Post notification response:', notificationResponse);
+      // Only send notifications immediately if user is admin
+      if (authStore.isAdmin) {
+        try {
+          const notificationResponse = await newsService.notifySubscribers({
+            postId: response.post.id,
+            title: postForm.value.title,
+            content: postForm.value.content,
+            author: user.value.username,
+            isAdmin: true,
+            status: 'approved'
+          });
+          
+          console.log('Post notification response:', notificationResponse);
 
-        if (!notificationResponse.success) {
-          // Still show post creation success but with warning about notifications
+          if (!notificationResponse.success) {
+            notificationStore.success('Post created successfully');
+            notificationStore.warning('Post notifications could not be sent');
+            console.error('Notification error:', notificationResponse.message);
+          } else {
+            notificationStore.success('Post created and notifications sent successfully');
+          }
+        } catch (notifyError) {
+          console.error('Notification error:', notifyError);
           notificationStore.success('Post created successfully');
           notificationStore.warning('Post notifications could not be sent');
-          console.error('Notification error:', notificationResponse.message);
-        } else {
-          notificationStore.success('Post created and notifications sent successfully');
         }
-      } catch (notifyError) {
-        // Handle notification error but don't fail the whole operation
-        console.error('Notification error:', notifyError);
-        notificationStore.success('Post created successfully');
-        notificationStore.warning('Post notifications could not be sent');
+      } else {
+        // For non-admin users, just show post creation success
+        notificationStore.success('Post created successfully and pending approval');
       }
 
       showPostModal.value = false;

@@ -83,7 +83,7 @@ export const newsService = {
     async approvePost(postId) {
         try {
             const headers = getHeaders();
-            const response = await axios.put(`${API_URL}/news/posts/${postId}/approve`, {}, {
+            const response = await axios.put(`${API_URL}/admin/news/posts/${postId}/approve`, {}, {
                 headers,
                 withCredentials: true,
                 timeout: 15000,
@@ -97,7 +97,7 @@ export const newsService = {
             }
 
             return {
-                success: true,
+                success: response.data.success,
                 message: response.data?.message || 'Post approved successfully'
             };
         } catch (error) {

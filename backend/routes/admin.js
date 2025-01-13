@@ -5,6 +5,7 @@ const adminController = require('../controllers/adminController');
 const db = require('../db/connection');
 const User = require('../models/User');
 const cors = require('cors');
+const axios = require('axios');
 
 // Configure CORS
 const corsOptions = {
@@ -540,12 +541,29 @@ router.delete('/alerts/:id', async (req, res) => {
 // Add these routes after the existing /posts route
 
 // Approve a post
-// Approve a post
 router.put('/news/posts/:id/approve', async (req, res) => {
   try {
     const postId = req.params.id;
     
-    // Check if post exists and update status
+    // First get the post details
+    const [posts] = await db.execute(
+      `SELECT p.*, u.username as author, u.role as author_role 
+       FROM posts p 
+       JOIN users u ON p.author_id = u.id 
+       WHERE p.id = ?`,
+      [postId]
+    );
+
+    if (!posts[0]) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found'
+      });
+    }
+
+    const post = posts[0];
+
+    // Update post status
     const [result] = await db.execute(
       'UPDATE posts SET status = "approved", approved_at = NOW(), approved_by = ? WHERE id = ?',
       [req.user.userId, postId]
@@ -556,6 +574,32 @@ router.put('/news/posts/:id/approve', async (req, res) => {
         success: false,
         message: 'Post not found'
       });
+    }
+
+    // Send notifications if the post author is not an admin
+    if (post.author_role !== 'admin') {
+      try {
+        const notificationData = {
+          postId: post.id,
+          title: post.title,
+          content: post.content,
+          author: post.author,
+          status: 'approved',
+          isAdmin: false
+        };
+
+        // Make request to notification endpoint
+        const notifyResponse = await axios.post(
+          `${process.env.API_URL}/api/news/notify-subscribers`,
+          notificationData,
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+
+        console.log('Notification response:', notifyResponse.data);
+      } catch (notifyError) {
+        console.error('Error sending notifications:', notifyError);
+        // Don't fail the approval if notifications fail
+      }
     }
 
     // Log the activity
