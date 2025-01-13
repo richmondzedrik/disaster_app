@@ -83,15 +83,26 @@ export const newsService = {
     async approvePost(postId) {
         try {
             const headers = getHeaders();
-            const response = await axios.put(`${API_URL}/api/admin/news/posts/${postId}/approve`, {}, {
+            const response = await axios.put(`${API_URL}/news/posts/${postId}/approve`, {}, {
                 headers,
                 withCredentials: true,
-                timeout: 15000
+                timeout: 15000,
+                validateStatus: status => status < 500
             });
-            return response.data;
+
+            if (response.status === 401) {
+                const authStore = useAuthStore();
+                await authStore.logout();
+                throw new Error('Session expired. Please login again.');
+            }
+
+            return {
+                success: true,
+                message: response.data?.message || 'Post approved successfully'
+            };
         } catch (error) {
             console.error('Error approving post:', error);
-            throw new Error(error.response?.data?.message || 'Failed to approve post');
+            throw new Error(error.response?.data?.message || 'Unable to connect to the server. Please check your connection.');
         }
     },
     
@@ -116,12 +127,58 @@ export const newsService = {
     },
 
     async updatePostStatus(postId, status) {
-        const response = await api.put(`/admin/news/posts/${postId}/status`, { status });
-        return response.data;
+        try {
+            const headers = getHeaders();
+            const response = await axios.put(`${API_URL}/news/posts/${postId}/status`, 
+                { status },
+                {
+                    headers,
+                    withCredentials: true,
+                    timeout: 15000,
+                    validateStatus: status => status < 500
+                }
+            );
+
+            if (response.status === 401) {
+                const authStore = useAuthStore();
+                await authStore.logout();
+                throw new Error('Session expired. Please login again.');
+            }
+
+            return {
+                success: true,
+                message: response.data?.message || `Post ${status} successfully`
+            };
+        } catch (error) {
+            console.error(`Error updating post status to ${status}:`, error);
+            throw new Error(error.response?.data?.message || 'Unable to connect to the server. Please check your connection.');
+        }
     },
 
     async rejectPost(postId) {
-        return this.updatePostStatus(postId, 'rejected');
+        try {
+            const headers = getHeaders();
+            const response = await axios.put(`${API_URL}/news/posts/${postId}/reject`, {}, {
+                headers,
+                withCredentials: true,
+                timeout: 15000,
+                validateStatus: status => status < 500
+            });
+
+            if (response.status === 401) {
+                const authStore = useAuthStore();
+                await authStore.logout();
+                throw new Error('Session expired. Please login again.');
+            }
+
+            return {
+                success: true,
+                message: response.data?.message || 'Post rejected successfully'
+            };
+        } catch (error) {
+            console.error('Error rejecting post:', error);
+            throw new Error(error.response?.data?.message || 'Unable to connect to the server. Please check your connection.');
+        }
     },
 
     // Keep existing methods

@@ -8,10 +8,6 @@
           <i class="fas fa-plus"></i>
           Create Post
         </button>
-        <button v-if="isAdmin" @click="testEmailNotifications" class="test-email-btn">
-          <i class="fas fa-envelope"></i>
-          Test Email
-        </button>
       </div>
 
       <div v-if="isAdmin" class="admin-controls">
