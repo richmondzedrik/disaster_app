@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../../middleware/auth');
 const adminMiddleware = require('../../middleware/admin');
 const db = require('../../db/connection');
+const axios = require('axios');
 
 // Apply middleware to all routes
 router.use(auth.authMiddleware);
@@ -42,6 +43,23 @@ router.get('/posts', async (req, res) => {
 // Approve post
 router.put('/posts/:id/approve', async (req, res) => {
     try {
+        // First get the post details
+        const [post] = await db.execute(
+            `SELECT p.*, u.username as author 
+             FROM posts p 
+             JOIN users u ON p.author_id = u.id 
+             WHERE p.id = ?`,
+            [req.params.id]
+        );
+
+        if (!post[0]) {
+            return res.status(404).json({
+                success: false,
+                message: 'Post not found'
+            });
+        }
+
+        // Update post status
         const [result] = await db.execute(
             'UPDATE posts SET status = "approved" WHERE id = ?',
             [req.params.id]
@@ -52,6 +70,29 @@ router.put('/posts/:id/approve', async (req, res) => {
                 success: false,
                 message: 'Post not found'
             });
+        }
+
+        // Send notifications after approval
+        try {
+            const notificationData = {
+                postId: post[0].id,
+                title: post[0].title,
+                content: post[0].content,
+                author: post[0].author,
+                status: 'approved'
+            };
+
+            // Make request to notification endpoint
+            const notifyResponse = await axios.post(
+                `${process.env.API_URL}/api/news/notify-subscribers`,
+                notificationData,
+                { headers: { 'Content-Type': 'application/json' } }
+            );
+
+            console.log('Notification response:', notifyResponse.data);
+        } catch (notifyError) {
+            console.error('Error sending notifications:', notifyError);
+            // Don't fail the approval if notifications fail
         }
 
         res.json({

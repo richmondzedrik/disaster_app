@@ -4,10 +4,19 @@ const db = require('../db/connection');
 
 const notifyNewPost = async (req, res) => {
   try {
-    const { postId, title, content, author } = req.body;
+    const { postId, title, content, author, status } = req.body;
     
-    console.log('Notification request received:', { postId, title, author });
+    console.log('Notification request received:', { postId, title, author, status });
     
+    // Only proceed with notifications if the post is approved
+    if (status !== 'approved') {
+      return res.json({
+        success: true,
+        message: 'Post pending approval - notifications will be sent upon approval',
+        details: { notificationsSent: false }
+      });
+    }
+
     if (!postId || !title || !content || !author) {
       console.log('Missing fields:', { postId, title, content, author });
       return res.status(400).json({
