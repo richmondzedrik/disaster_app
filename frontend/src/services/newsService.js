@@ -52,7 +52,7 @@ export const newsService = {
     async getAdminPosts() {
         try {
             const headers = getHeaders();
-            const response = await axios.get(`${API_URL}/api/admin/news/posts`, {
+            const response = await axios.get(`${API_URL}/news/admin/posts`, {
                 headers,
                 withCredentials: true,
                 timeout: 15000

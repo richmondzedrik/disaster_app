@@ -283,8 +283,10 @@ const filteredPosts = computed(() => {
 
   // For admin users
   if (isAdmin.value) {
-    if (postStatus.value !== 'all') {
-      filtered = filtered.filter(post => post.status === postStatus.value);
+    if (postStatus.value === 'pending') {
+      filtered = filtered.filter(post => post.status === 'pending');
+    } else if (postStatus.value === 'approved') {
+      filtered = filtered.filter(post => post.status === 'approved');
     }
     return filtered;
   }
@@ -373,18 +375,17 @@ const loadPosts = async () => {
   try {
     loading.value = true;
     const [postsResponse, likedPostsResponse] = await Promise.all([
-      newsService.getPublicPosts(),
+      isAdmin.value ? newsService.getAdminPosts() : newsService.getPublicPosts(),
       newsService.getLikedPosts()
     ]);
 
+    console.log('Posts response:', postsResponse);
     console.log('Liked posts response:', likedPostsResponse);
 
     if (postsResponse.success) {
       posts.value = postsResponse.posts.map(post => {
         const isLiked = likedPostsResponse.success && 
           likedPostsResponse.likedPosts.includes(post.id);
-        
-        console.log(`Post ${post.id} liked status:`, isLiked);
         
         return {
           ...post,
@@ -394,7 +395,8 @@ const loadPosts = async () => {
           commentCount: parseInt(post.comment_count) || 0,
           liked: isLiked,
           likes: parseInt(post.likes) || 0,
-          likeLoading: false
+          likeLoading: false,
+          status: post.status || 'pending' // Ensure status is always set
         };
       });
     }
@@ -471,7 +473,7 @@ const deletePost = async (postId) => {
 
 
 const processedPosts = computed(() => {
-  return posts.value.map(post => ({
+  return filteredPosts.value.map(post => ({
     ...post,
     // Ensure liked status is properly converted to boolean
     liked: post.liked === true || post.liked === 1 || post.liked === "true"
