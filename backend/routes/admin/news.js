@@ -85,8 +85,9 @@ router.put('/posts/:id/approve', async (req, res) => {
                 };
 
                 // Make request to notification endpoint
+                const apiUrl = process.env.API_URL || 'https://disaster-app-backend.onrender.com';
                 const notifyResponse = await axios.post(
-                    `${process.env.API_URL}/api/news/notify-subscribers`,
+                    `${apiUrl}/api/news/notify-subscribers`,
                     notificationData,
                     { headers: { 'Content-Type': 'application/json' } }
                 );
