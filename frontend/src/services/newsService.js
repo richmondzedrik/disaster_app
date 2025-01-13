@@ -24,10 +24,7 @@ export const newsService = {
         try {
             const response = await axios.get(`${API_URL}/news/public`, {
                 withCredentials: true,
-                timeout: 15000,
-                params: {
-                    status: 'approved'
-                }
+                timeout: 15000
             });
             
             // Ensure liked status is properly set for each post
