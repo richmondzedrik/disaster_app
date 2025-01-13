@@ -336,7 +336,10 @@ router.post('/posts', auth.authMiddleware, upload.single('image'), async (req, r
         );
 
         if (!result.insertId) {
-            throw new Error('Failed to create post');
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to create post'
+            });
         }
 
         const [posts] = await db.execute(`
@@ -360,21 +363,23 @@ router.post('/posts', auth.authMiddleware, upload.single('image'), async (req, r
                         status: 'approved',
                         isAdmin: true
                     }
-                }, res);
+                }, {
+                    json: () => {} // Mock response object to prevent double response
+                });
             } catch (notifyError) {
                 console.error('Notification error:', notifyError);
                 // Don't fail the post creation if notification fails
             }
         }
 
-        res.json({
+        return res.json({
             success: true,
             message: status === 'approved' ? 'Post created successfully' : 'Post created successfully and pending approval',
             post: posts[0]
         });
     } catch (error) {
         console.error('Error creating post:', error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: 'Failed to create post'
         });
