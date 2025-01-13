@@ -89,7 +89,12 @@ router.put('/posts/:id/approve', async (req, res) => {
                 const notifyResponse = await axios.post(
                     `${apiUrl}/api/news/notify-subscribers`,
                     notificationData,
-                    { headers: { 'Content-Type': 'application/json' } }
+                    {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': req.headers.authorization
+                        }
+                    }
                 );
 
                 console.log('Notification response:', notifyResponse.data);
