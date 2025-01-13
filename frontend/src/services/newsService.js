@@ -103,7 +103,7 @@ export const newsService = {
 
             // After successful approval, trigger notifications
             try {
-                const notifyResponse = await axios.post(`${API_URL}/api/notifications/news/notify-subscribers`, {
+                const notifyResponse = await axios.post(`${API_URL}/notifications/api/news/notify-subscribers`, {
                     postId: postId,
                     title: response.data.post?.title || '',
                     content: response.data.post?.content || '',
@@ -138,11 +138,17 @@ export const newsService = {
     async deletePost(postId) {
         try {
             const headers = getHeaders();
-            const response = await axios.delete(`${API_URL}/api/admin/news/posts/${postId}`, {
+            const response = await axios.delete(`${API_URL}/api/admin/posts/${postId}`, {
                 headers,
                 withCredentials: true,
-                timeout: 15000
+                timeout: 15000,
+                validateStatus: status => status < 500
             });
+            
+            if (!response.data.success) {
+                throw new Error(response.data.message || 'Failed to delete post');
+            }
+            
             return response.data;
         } catch (error) {
             console.error('Error deleting post:', error);
