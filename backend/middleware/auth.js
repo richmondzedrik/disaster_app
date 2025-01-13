@@ -96,7 +96,26 @@ const adminMiddleware = async (req, res, next) => {
     }
 };
 
+const optionalAuthMiddleware = async (req, res, next) => {
+    try {
+        const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+        
+        if (!token) {
+            req.user = null;
+            return next();
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        req.user = null;
+        next();
+    }
+};
+
 module.exports = {
     authMiddleware,
-    adminMiddleware
+    adminMiddleware,
+    optionalAuthMiddleware
 };

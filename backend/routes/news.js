@@ -568,20 +568,21 @@ router.delete('/posts/:postId/comments/:commentId', auth.authMiddleware, adminMi
 });
 
 // Get public posts
-router.get('/public', auth.optionalAuthMiddleware, async (req, res) => {
+router.get('/public', async (req, res) => {
     try {
-        const userId = req.user?.userId;
+        const userId = req.user?.userId || null;
         const query = `
             SELECT 
                 p.*,
                 u.username as author,
                 COUNT(DISTINCT l.id) as likes,
                 COUNT(DISTINCT c.id) as comment_count,
-                EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = ?) as liked
+                ${userId ? 'EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = ?) as liked' : 'FALSE as liked'}
             FROM posts p
             LEFT JOIN users u ON p.author_id = u.id
             LEFT JOIN likes l ON p.id = l.post_id
             LEFT JOIN comments c ON p.id = c.post_id
+            WHERE p.status = 'approved'
             GROUP BY p.id
             ORDER BY p.created_at DESC
         `;
