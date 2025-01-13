@@ -24,7 +24,10 @@ export const newsService = {
         try {
             const response = await axios.get(`${API_URL}/news/public`, {
                 withCredentials: true,
-                timeout: 15000
+                timeout: 15000,
+                params: {
+                    status: 'approved'
+                }
             });
             
             // Ensure liked status is properly set for each post
@@ -121,9 +124,35 @@ export const newsService = {
         }
     }, 
 
-    async createPost(postData) {
-        const response = await api.post('/admin/posts', postData);
-        return response.data;
+    async createPost(formData) {
+        try {
+            const headers = {
+                ...getHeaders(),
+                'Content-Type': 'multipart/form-data'
+            };
+            
+            const response = await axios.post(`${API_URL}/news/posts`, formData, {
+                headers,
+                withCredentials: true,
+                timeout: 30000, // Increased timeout for file upload
+                validateStatus: status => status < 500
+            });
+
+            if (response.status === 401) {
+                const authStore = useAuthStore();
+                await authStore.logout();
+                throw new Error('Session expired. Please login again.');
+            }
+
+            if (!response.data.success) {
+                throw new Error(response.data.message || 'Failed to create post');
+            }
+
+            return response.data;
+        } catch (error) {
+            console.error('Error creating post:', error);
+            throw new Error(error.response?.data?.message || 'Failed to create post. Please try again.');
+        }
     },
 
     async updatePostStatus(postId, status) {
@@ -182,20 +211,6 @@ export const newsService = {
     },
 
     // Keep existing methods
-    async createPost(formData) {
-        const headers = {
-            ...getHeaders(),
-            'Content-Type': 'multipart/form-data'
-        };
-        
-        const response = await axios.post(`${API_URL}/news/posts`, formData, {
-            headers,
-            withCredentials: true,
-            timeout: 15000
-        });
-        return response.data;
-    },
-
     async updatePost(id, formData) {
         const headers = {
             ...getHeaders(),
