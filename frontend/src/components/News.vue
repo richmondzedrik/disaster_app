@@ -11,7 +11,7 @@
       </div>
 
       <div v-if="isAdmin" class="admin-controls">
-        <div class="filter-controls">     
+        <div class="filter-controls">
           <button v-for="status in ['all', 'pending', 'approved']" :key="status" @click="postStatus = status"
             :class="['filter-btn', { active: postStatus === status }]">
             {{ status.charAt(0).toUpperCase() + status.slice(1) }}
@@ -91,7 +91,7 @@
                 <i class="fas fa-trash-alt"></i>
               </button>
             </div>
-          </div>  
+          </div>
 
           <div class="post-content">
             <h2>{{ post.title }}</h2>
@@ -316,14 +316,14 @@ const createPost = async () => {
     const formData = new FormData();
     formData.append('title', postForm.value.title.trim());
     formData.append('content', postForm.value.content.trim());
-    
+
     if (imageFile.value) {
       formData.append('image', imageFile.value);
     }
 
     const response = await newsService.createPost(formData);
     console.log('Post creation response:', response);
-    
+
     if (response.success) {
       // Only send notifications immediately if user is admin
       if (authStore.isAdmin) {
@@ -336,7 +336,7 @@ const createPost = async () => {
             isAdmin: true,
             status: 'approved'
           });
-          
+
           console.log('Post notification response:', notificationResponse);
 
           if (!notificationResponse.success) {
@@ -386,19 +386,19 @@ const loadPosts = async () => {
 
     if (postsResponse.success) {
       posts.value = postsResponse.posts.map(post => {
-        const isLiked = likedPostsResponse.success && 
+        const isLiked = likedPostsResponse.success &&
           likedPostsResponse.likedPosts.includes(post.id);
-        
+
         return {
           ...post,
           showComments: false,
           comments: [],
           newComment: '',
-          commentCount: parseInt(post.comment_count) || 0,
+          commentCount: post.comment_count ? parseInt(post.comment_count) : 0,
           liked: isLiked,
           likes: parseInt(post.likes) || 0,
           likeLoading: false,
-          status: post.status || 'pending' // Ensure status is always set
+          status: post.status || 'pending'
         };
       });
     }
@@ -484,52 +484,52 @@ const processedPosts = computed(() => {
 
 // Replace the existing likePost method
 const likePost = async (post) => {
-    if (!isAuthenticated.value) {
-        notificationStore.info('Please sign in to like posts');
-        return;
+  if (!isAuthenticated.value) {
+    notificationStore.info('Please sign in to like posts');
+    return;
+  }
+
+  if (post.likeLoading) return;
+
+  try {
+    post.likeLoading = true;
+    const originalLiked = post.liked;
+    const originalLikes = post.likes;
+
+    post.liked = !post.liked;
+    post.likes = post.liked ? post.likes + 1 : post.likes - 1;
+
+    const response = await newsService.likePost(post.id);
+
+    if (!response || response.status === 401) {
+      post.liked = originalLiked;
+      post.likes = originalLikes;
+      if (response?.status === 401) {
+        notificationStore.error('Session expired. Please login again');
+        router.push('/login');
+      } else {
+        notificationStore.error('Network error. Please try again');
+      }
+      return;
     }
 
-    if (post.likeLoading) return;
-
-    try {
-        post.likeLoading = true;
-        const originalLiked = post.liked;
-        const originalLikes = post.likes;
-
-        post.liked = !post.liked;
-        post.likes = post.liked ? post.likes + 1 : post.likes - 1;
-
-        const response = await newsService.likePost(post.id);
-
-        if (!response || response.status === 401) {
-            post.liked = originalLiked;
-            post.likes = originalLikes;
-            if (response?.status === 401) {
-                notificationStore.error('Session expired. Please login again');
-                router.push('/login');
-            } else {
-                notificationStore.error('Network error. Please try again');
-            }
-            return;
-        }
-
-        if (response.success) {
-            const postIndex = posts.value.findIndex(p => p.id === post.id);
-            if (postIndex !== -1) {
-                posts.value[postIndex] = {
-                    ...posts.value[postIndex],
-                    liked: response.liked,
-                    likes: response.likes,
-                    likeLoading: false
-                };
-            }
-        }
-    } catch (error) {
-        console.error('Error liking post:', error);
-        notificationStore.error('Failed to like post');
-    } finally {
-        post.likeLoading = false;
+    if (response.success) {
+      const postIndex = posts.value.findIndex(p => p.id === post.id);
+      if (postIndex !== -1) {
+        posts.value[postIndex] = {
+          ...posts.value[postIndex],
+          liked: response.liked,
+          likes: response.likes,
+          likeLoading: false
+        };
+      }
     }
+  } catch (error) {
+    console.error('Error liking post:', error);
+    notificationStore.error('Failed to like post');
+  } finally {
+    post.likeLoading = false;
+  }
 };
 
 const approvePost = async (postId) => {
@@ -838,7 +838,7 @@ const testNotificationSystem = async () => {
   justify-content: flex-end;
 }
 
-.add-post-btn {  
+.add-post-btn {
   background-color: #00ADA9;
   color: white;
   border: none;
@@ -1854,13 +1854,11 @@ const testNotificationSystem = async () => {
   bottom: 0;
   left: 0;
   transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.2) 20%,
-    rgba(255, 255, 255, 0.5) 60%,
-    rgba(255, 255, 255, 0)
-  );
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.2) 20%,
+      rgba(255, 255, 255, 0.5) 60%,
+      rgba(255, 255, 255, 0));
   animation: shimmer 2s infinite;
 }
 
@@ -1921,4 +1919,3 @@ const testNotificationSystem = async () => {
   background: #45a049;
 }
 </style>
-

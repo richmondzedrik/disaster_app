@@ -17,7 +17,8 @@ router.get('/posts', async (req, res) => {
                 p.*,
                 u.username as author,
                 u.id as author_id,
-                p.created_at
+                p.created_at,
+                (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND deleted_by IS NULL) as comment_count
             FROM posts p
             LEFT JOIN users u ON p.author_id = u.id
             ORDER BY p.created_at DESC
@@ -28,7 +29,8 @@ router.get('/posts', async (req, res) => {
             posts: posts.map(post => ({
                 ...post,
                 created_at: new Date(post.created_at).toISOString(),
-                author_username: post.author || 'Unknown Author'
+                author_username: post.author || 'Unknown Author',
+                comment_count: parseInt(post.comment_count) || 0
             }))
         });
     } catch (error) {

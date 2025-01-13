@@ -153,7 +153,9 @@ const loadPosts = async () => {
                 content: post.content || '',
                 status: post.status || 'pending',
                 created_at: post.created_at || post.createdAt || new Date().toISOString(),
-                author_username: post.author || post.author_username || post.author_name || 'Unknown Author'
+                author_username: post.author || post.author_username || post.author_name || 'Unknown Author',
+                comment_count: parseInt(post.comment_count) || 0,
+                comments: []
             }));
         } else {
             throw new Error(response.message || 'Failed to load posts');
