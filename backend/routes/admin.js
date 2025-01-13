@@ -6,6 +6,7 @@ const db = require('../db/connection');
 const User = require('../models/User');
 const cors = require('cors');
 const axios = require('axios');
+const notificationController = require('../controllers/notificationController');
 
 // Configure CORS
 const corsOptions = {
@@ -541,84 +542,87 @@ router.delete('/alerts/:id', async (req, res) => {
 // Add these routes after the existing /posts route
 
 // Approve a post
-router.put('/news/posts/:id/approve', async (req, res) => {
-  try {
-    const postId = req.params.id;
-    
-    // First get the post details
-    const [posts] = await db.execute(
-      `SELECT p.*, u.username as author, u.role as author_role 
-       FROM posts p 
-       JOIN users u ON p.author_id = u.id 
-       WHERE p.id = ?`,
-      [postId]
-    );
+router.put('/posts/:id/approve', async (req, res) => {
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
 
-    if (!posts[0]) {
-      return res.status(404).json({
-        success: false,
-        message: 'Post not found'
-      });
-    }
-
-    const post = posts[0];
-
-    // Update post status
-    const [result] = await db.execute(
-      'UPDATE posts SET status = "approved", approved_at = NOW(), approved_by = ? WHERE id = ?',
-      [req.user.userId, postId]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Post not found'
-      });
-    }
-
-    // Send notifications if the post author is not an admin
-    if (post.author_role !== 'admin') {
-      try {
-        const notificationData = {
-          postId: post.id,
-          title: post.title,
-          content: post.content,
-          author: post.author,
-          status: 'approved',
-          isAdmin: false
-        };
-
-        // Make request to notification endpoint
-        const notifyResponse = await axios.post(
-          `${process.env.API_URL}/api/news/notify-subscribers`,
-          notificationData,
-          { headers: { 'Content-Type': 'application/json' } }
+        // First get the post details
+        const [posts] = await connection.execute(
+            `SELECT p.*, u.username as author, u.role as author_role 
+             FROM posts p 
+             JOIN users u ON p.author_id = u.id 
+             WHERE p.id = ?`,
+            [req.params.id]
         );
 
-        console.log('Notification response:', notifyResponse.data);
-      } catch (notifyError) {
-        console.error('Error sending notifications:', notifyError);
-        // Don't fail the approval if notifications fail
-      }
+        if (!posts[0]) {
+            await connection.rollback();
+            return res.status(404).json({
+                success: false,
+                message: 'Post not found'
+            });
+        }
+
+        const post = posts[0];
+
+        // Update post status
+        const [result] = await connection.execute(
+            'UPDATE posts SET status = "approved", approved_at = NOW(), approved_by = ? WHERE id = ?',
+            [req.user.userId, req.params.id]
+        );
+
+        if (result.affectedRows === 0) {
+            await connection.rollback();
+            return res.status(404).json({
+                success: false,
+                message: 'Post not found'
+            });
+        }
+
+        // Send notifications if the post author is not an admin
+        if (post.author_role !== 'admin') {
+            try {
+                await notificationController.notifyNewPost({
+                    body: {
+                        postId: post.id,
+                        title: post.title,
+                        content: post.content,
+                        author: post.author,
+                        status: 'approved',
+                        isAdmin: false
+                    }
+                }, {
+                    json: () => {} // Mock response object
+                });
+            } catch (notifyError) {
+                console.error('Error sending notifications:', notifyError);
+                // Continue with approval even if notification fails
+            }
+        }
+
+        // Log the activity
+        await connection.execute(
+            'INSERT INTO activity_logs (user_id, action, target_type, target_id) VALUES (?, ?, ?, ?)',
+            [req.user.userId, 'approved_post', 'post', req.params.id]
+        );
+
+        await connection.commit();
+
+        res.json({
+            success: true,
+            message: 'Post approved successfully'
+        });
+    } catch (error) {
+        await connection.rollback();
+        console.error('Approve post error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to approve post'
+        });
+    } finally {
+        connection.release();
     }
-
-    // Log the activity
-    await db.execute(
-      'INSERT INTO activity_logs (user_id, action, target_type, target_id) VALUES (?, ?, ?, ?)',
-      [req.user.userId, 'approved_post', 'post', postId]
-    );
-
-    res.json({
-      success: true,
-      message: 'Post approved successfully'
-    });
-  } catch (error) {
-    console.error('Approve post error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to approve post'
-    });
-  }
 });
 
 // Reject a post

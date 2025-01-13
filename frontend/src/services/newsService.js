@@ -83,6 +83,7 @@ export const newsService = {
     async approvePost(postId) {
         try {
             const headers = getHeaders();
+            // First approve the post
             const response = await axios.put(`${API_URL}/admin/news/posts/${postId}/approve`, {}, {
                 headers,
                 withCredentials: true,
@@ -96,13 +97,41 @@ export const newsService = {
                 throw new Error('Session expired. Please login again.');
             }
 
+            if (!response.data?.success) {
+                throw new Error(response.data?.message || 'Failed to approve post');
+            }
+
+            // After successful approval, trigger notifications
+            try {
+                const notifyResponse = await axios.post(`${API_URL}/notifications/api/news/notify-subscribers`, {
+                    postId: postId,
+                    title: response.data.post?.title || '',
+                    content: response.data.post?.content || '',
+                    author: response.data.post?.author || '',
+                    status: 'approved',
+                    isAdmin: false
+                }, {
+                    headers,
+                    withCredentials: true,
+                    timeout: 30000
+                });
+
+                console.log('Notification response:', notifyResponse.data);
+            } catch (notifyError) {
+                console.error('Error sending notifications:', notifyError);
+                // Don't fail the approval if notifications fail
+            }
+
             return {
-                success: response.data.success,
+                success: true,
                 message: response.data?.message || 'Post approved successfully'
             };
         } catch (error) {
             console.error('Error approving post:', error);
-            throw new Error(error.response?.data?.message || 'Unable to connect to the server. Please check your connection.');
+            if (error.code === 'ERR_NETWORK') {
+                throw new Error('Network error. Please check your connection and try again.');
+            }
+            throw new Error(error.response?.data?.message || error.message || 'Failed to approve post');
         }
     },
     
