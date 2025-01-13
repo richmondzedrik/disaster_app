@@ -1,11 +1,18 @@
 <template>
   <AdminHome v-if="isAdmin" />
   <div v-else class="home-container">
-    <!-- Hero Section -->
+    <!-- Enhanced Hero Section -->
     <section class="hero-section">
       <div class="hero-content">
-        <h1>Disaster Preparedness Platform</h1>
-        <p>Stay informed, prepared, and safe with our comprehensive disaster management system.</p>
+        <div class="hero-badge" v-show="isLoggedIn">
+          <i class="fas fa-shield-alt"></i>
+          Active Protection
+        </div>
+        <h1>
+          <span class="gradient-text">Disaster Preparedness</span>
+          <br />Platform
+        </h1>
+        <p class="hero-description">Stay informed, prepared, and safe with our comprehensive disaster management system.</p>
         <div class="hero-actions">
           <button @click="$router.push('/login')" class="primary-btn" v-if="!isLoggedIn">
             <i class="fas fa-sign-in-alt"></i>
@@ -21,9 +28,55 @@
           </button>
         </div>
       </div>
+      <div class="hero-stats" v-if="isLoggedIn">
+        <div class="stat-item">
+          <div class="stat-icon">
+            <i class="fas fa-bell"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ alerts.length }}</span>
+            <span class="stat-label">Active Alerts</span>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon">
+            <i class="fas fa-newspaper"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ recentNews.length }}</span>
+            <span class="stat-label">Latest Updates</span>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- Recent News Section -->
+    <!-- Interactive Features Section -->
+    <section class="features-section">
+      <h2>Key Features</h2>
+      <div class="features-grid">
+        <div 
+          v-for="(feature, index) in features" 
+          :key="index"
+          class="feature-card"
+          @click="navigateToFeature(feature.route)"
+          @mouseenter="activeFeature = index"
+          @mouseleave="activeFeature = null"
+          :class="{ 'active': activeFeature === index }"
+        >
+          <div class="feature-icon">
+            <i :class="feature.icon"></i>
+          </div>
+          <h3>{{ feature.title }}</h3>
+          <p>{{ feature.description }}</p>
+          <div class="feature-hover-content">
+            <span>{{ feature.cta }}</span>
+            <i class="fas fa-arrow-right"></i>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Enhanced Recent News Section -->
     <section v-if="recentNews.length > 0" class="recent-news-section">
       <div class="recent-news-content">
         <h2>Latest Community Update</h2>
@@ -37,45 +90,16 @@
           </div>
           <h3>{{ post.title }}</h3>
           <p>{{ post.content.substring(0, 150) }}...</p>
-          <button @click="$router.push('/news')" class="view-more-btn">
-            <span>View All News</span>
-            <i class="fas fa-arrow-right"></i>
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Features Section -->
-    <section class="features-section">
-      <h2>Key Features</h2>
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon">
-            <i class="fas fa-bell"></i>
+          <div class="news-preview-footer">
+            <button @click="$router.push('/news')" class="view-more-btn">
+              <span>View All News</span>
+              <i class="fas fa-arrow-right"></i>
+            </button>
+            <div class="news-stats">
+              <span><i class="fas fa-eye"></i> {{ post.views || 0 }}</span>
+              <span><i class="fas fa-heart"></i> {{ post.likes || 0 }}</span>
+            </div>
           </div>
-          <h3>Real-time Alerts</h3>
-          <p>Receive instant notifications about emergencies and critical updates in your area.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <i class="fas fa-map-marked-alt"></i>
-          </div>
-          <h3>Interactive Maps</h3>
-          <p>Access detailed hazard maps and evacuation routes for your location.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <i class="fas fa-clipboard-check"></i>
-          </div>
-          <h3>Emergency Checklists</h3>
-          <p>Stay prepared with customizable emergency supply checklists and guides.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <i class="fas fa-phone-alt"></i>
-          </div>
-          <h3>Emergency Contacts</h3>
-          <p>Quick access to emergency services and important contact information.</p>
         </div>
       </div>
     </section>
@@ -93,6 +117,10 @@
           <button @click="$router.push('/hazard-map')" class="quick-access-btn">
             <i class="fas fa-map-marked-alt"></i>
             <span>Hazard Map</span>
+          </button>
+          <button @click="$router.push('/evacuation-route')" class="quick-access-btn">
+            <i class="fas fa-route"></i>
+            <span>Evacuation Route</span>
           </button>
           <button @click="$router.push('/checklist')" class="quick-access-btn">
             <i class="fas fa-tasks"></i>
@@ -207,6 +235,45 @@ watch(() => isLoggedIn.value, (newValue) => {
     alerts.value = [];
   }
 });
+
+// New reactive references
+const activeFeature = ref(null);
+
+// Features data
+const features = [
+  {
+    icon: 'fas fa-bell',
+    title: 'Real-time Alerts',
+    description: 'Receive instant notifications about emergencies and critical updates in your area.',
+    route: '/alerts',
+    cta: 'View Active Alerts'
+  },
+  {
+    icon: 'fas fa-map-marked-alt',
+    title: 'Interactive Maps',
+    description: 'Access detailed hazard maps and evacuation routes for your location.',
+    route: '/hazard-map',
+    cta: 'Explore Map'
+  },
+  {
+    icon: 'fas fa-route',
+    title: 'Evacuation Routes',
+    description: 'Find safe evacuation routes and emergency gathering points near you.',
+    route: '/evacuation-route',
+    cta: 'Plan Your Route'
+  },
+  {
+    icon: 'fas fa-clipboard-check',
+    title: 'Emergency Checklists',
+    description: 'Stay prepared with customizable emergency supply checklists and guides.',
+    route: '/checklist',
+    cta: 'View Checklist'
+  }
+];
+
+const navigateToFeature = (route) => {
+  router.push(route);
+};
 </script>
 
 <style scoped>
@@ -309,6 +376,7 @@ watch(() => isLoggedIn.value, (newValue) => {
   animation-fill-mode: backwards;
   transform-origin: center;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
 }
 
 .feature-card:hover {
@@ -767,5 +835,135 @@ watch(() => isLoggedIn.value, (newValue) => {
   0% { transform: scale(1); }
   50% { transform: scale(1.1); }
   100% { transform: scale(1); }
+}
+
+/* Enhanced Hero Section */
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  color: white;
+  margin-bottom: 1rem;
+  backdrop-filter: blur(4px);
+  animation: slideInDown 0.5s ease;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #ffffff 0%, #e0f2f2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 2rem;
+  margin-top: 3rem;
+  animation: fadeInUp 0.8s ease;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Enhanced Feature Cards */
+.feature-card {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.feature-hover-content {
+  position: absolute;
+  bottom: -50px;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 209, 209, 0.1), transparent);
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+  opacity: 0;
+}
+
+.feature-card:hover .feature-hover-content {
+  bottom: 0;
+  opacity: 1;
+}
+
+.feature-card.active {
+  transform: translateY(-5px);
+}
+
+/* Enhanced News Preview */
+.news-preview-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.news-stats {
+  display: flex;
+  gap: 1rem;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.news-stats span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Add new animations */
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
