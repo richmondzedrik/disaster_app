@@ -83,8 +83,7 @@ export const newsService = {
     async approvePost(postId) {
         try {
             const headers = getHeaders();
-            // First approve the post
-            const response = await axios.put(`${API_URL}/admin/news/posts/${postId}/approve`, {}, {
+            const response = await axios.put(`${API_URL}/news/admin/posts/${postId}/approve`, {}, {
                 headers,
                 withCredentials: true,
                 timeout: 15000,
@@ -101,25 +100,17 @@ export const newsService = {
                 throw new Error(response.data?.message || 'Failed to approve post');
             }
 
-            // After successful approval, trigger notifications
             try {
-                const notifyResponse = await axios.post(`${API_URL}/notifications/api/news/notify-subscribers`, {
+                await this.notifySubscribers({
                     postId: postId,
                     title: response.data.post?.title || '',
                     content: response.data.post?.content || '',
                     author: response.data.post?.author || '',
                     status: 'approved',
                     isAdmin: false
-                }, {
-                    headers,
-                    withCredentials: true,
-                    timeout: 30000
                 });
-
-                console.log('Notification response:', notifyResponse.data);
             } catch (notifyError) {
                 console.error('Error sending notifications:', notifyError);
-                // Don't fail the approval if notifications fail
             }
 
             return {
