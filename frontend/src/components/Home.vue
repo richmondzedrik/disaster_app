@@ -43,7 +43,7 @@
             <i class="fas fa-newspaper"></i>
           </div>
           <div class="stat-info">
-            <span class="stat-value">{{ recentNews.length }}</span>
+            <span class="stat-value">{{ latestUpdatesCount }}</span>
             <span class="stat-label">Latest Updates</span>
           </div>
         </div>
@@ -156,9 +156,11 @@ import { useRouter } from 'vue-router';
 import { alertService } from '../services/alertService';
 import { newsService } from '../services/newsService';
 import AdminHome from './AdminHome.vue';
+import { useNotificationStore } from '../stores/notification';
 
 const authStore = useAuthStore();
 const router = useRouter();
+const notificationStore = useNotificationStore();
 const isLoggedIn = computed(() => authStore.isAuthenticated);
 const alerts = ref([]);
 const recentNews = ref([]);
@@ -202,26 +204,34 @@ const loadAlerts = async () => {
   }
 };
 
-const loadRecentNews = async () => {
+const latestUpdatesCount = computed(() => {
+  // Only count approved posts from the last 7 days
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  return recentNews.value.filter(post => 
+    post.status === 'approved' && 
+    new Date(post.created_at) > sevenDaysAgo
+  ).length;
+});
+
+const fetchRecentNews = async () => {
   try {
-    const response = await newsService.getPublicPosts();
+    const response = await newsService.getRecentPosts();
     if (response.success) {
-      recentNews.value = response.posts
-        .filter(post => post.status === 'approved')
-        .slice(0, 1)
-        .map(post => ({
-          ...post,
-          createdAt: post.created_at || post.createdAt || new Date().toISOString()
-        }));
+      recentNews.value = response.posts;
     }
   } catch (error) {
-    console.error('Error loading recent news:', error);
+    console.error('Error fetching recent news:', error);
+    notificationStore.error('Failed to load recent updates');
   }
 };
 
 // Load alerts on mount and when authentication state changes
 onMounted(() => {
-  loadRecentNews();
+  if (authStore.isLoggedIn) {
+    fetchRecentNews();
+  }
   if (isLoggedIn.value) {
     loadAlerts();
   }

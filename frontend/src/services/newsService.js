@@ -583,5 +583,26 @@ export const newsService = {
                 message: error.response?.data?.message || 'Failed to fetch liked posts'
             };
         }
+    },
+
+    async getRecentPosts() {
+        try {
+            const headers = getHeaders();
+            const response = await axios.get(`${API_URL}/news/recent`, {
+                headers,
+                withCredentials: true
+            });
+
+            return {
+                success: true,
+                posts: response.data.posts || []
+            };
+        } catch (error) {
+            console.error('Error fetching recent posts:', error);
+            return {
+                success: false,
+                posts: []
+            };
+        }
     }
 };
