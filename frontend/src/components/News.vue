@@ -959,11 +959,15 @@ const testNotificationSystem = async () => {
   border-bottom: 1px solid rgba(0, 173, 173, 0.1);
 }
 
-.author-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+.author-info i {
+  font-size: 2.5rem;
+  color: #00D1D1;
+  background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
+
 
 .author-info i {
   font-size: 2.5rem;
@@ -1937,5 +1941,12 @@ const testNotificationSystem = async () => {
   gap: 0.5rem;
   color: #64748b;
   font-size: 0.875rem;
+}
+
+.post-date i {
+  font-size: 1rem;
+  color: #00D1D1;
+  background: none;
+  -webkit-text-fill-color: initial;
 }
 </style>
