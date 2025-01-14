@@ -1286,17 +1286,20 @@
 }
 
 .avatar-container {
+    width: 120px;
+    height: 120px;
     position: relative;
-    width: 100px;
-    height: 100px;
     border-radius: 50%;
     overflow: hidden;
+    background: #f8fafc;
+    border: 3px solid rgba(255, 255, 255, 0.2);
 }
 
 .avatar-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
 }
 
 .avatar-overlay {
@@ -1355,17 +1358,20 @@
     align-items: center;
     justify-content: center;
     border: 3px solid rgba(0, 209, 209, 0.2);
+    position: relative;
 }
 
 .preview-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
 }
 
 .avatar-preview i {
     font-size: 6rem;
     color: #cbd5e1;
+    position: absolute;
 }
 
 .avatar-upload-controls {
@@ -1401,7 +1407,6 @@
     width: 100%;
     height: 100%;
     background: linear-gradient(135deg, #00D1D1, #4052D6);
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1414,6 +1419,7 @@
 .avatar-placeholder span {
     opacity: 0.9;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    line-height: 1;
 }
 </style>
 
@@ -1572,6 +1578,9 @@ const loadProfileData = async () => {
             // Store original emergency contacts
             originalEmergencyContacts.value = JSON.parse(JSON.stringify(userData.emergencyContacts || []));
 
+            // Get stored avatar URL from localStorage as fallback
+            const storedAvatarUrl = localStorage.getItem('userAvatar');
+            
             // Update profile data including avatar_url
             profileData.value = {
                 ...profileData.value,
@@ -1581,24 +1590,35 @@ const loadProfileData = async () => {
                 location: userData.location || '',
                 notifications: userData.notifications || { email: true, push: true },
                 emergencyContacts: userData.emergencyContacts || [],
-                // Ensure avatar_url is properly set from the response
-                avatar_url: userData.avatar_url || null,
-                // Reset any pending avatar data
+                // Use the response avatar_url or fallback to stored URL
+                avatar_url: userData.avatar_url || storedAvatarUrl || null,
                 pendingAvatar: null,
                 tempAvatarUrl: null
             };
 
-            // Log avatar URL for debugging with more details
-            console.log('Profile Data Loaded:', {
-                avatarUrl: userData.avatar_url,
-                fullUserData: userData,
-                constructedUrl: getAvatarUrl(userData.avatar_url)
-            });
+            // If we have an avatar URL, verify it's working
+            if (profileData.value.avatar_url) {
+                const img = new Image();
+                img.onload = () => {
+                    console.log('Avatar loaded successfully:', profileData.value.avatar_url);
+                    localStorage.setItem('userAvatar', profileData.value.avatar_url);
+                };
+                img.onerror = () => {
+                    console.error('Failed to load avatar:', profileData.value.avatar_url);
+                    if (storedAvatarUrl && storedAvatarUrl !== profileData.value.avatar_url) {
+                        profileData.value.avatar_url = storedAvatarUrl;
+                    } else {
+                        profileData.value.avatar_url = '';
+                        localStorage.removeItem('userAvatar');
+                    }
+                };
+                img.src = getAvatarUrl(profileData.value.avatar_url);
+            }
 
             // Store original data for change detection
             originalData.value = JSON.parse(JSON.stringify({
                 ...profileData.value,
-                avatar_url: userData.avatar_url
+                avatar_url: profileData.value.avatar_url
             }));
         }
     } catch (error) {
@@ -1775,17 +1795,11 @@ const formatDate = (dateString) => {
     }
 };
 
-// Initialize component
-onMounted(() => {
+onMounted(async () => {
     if (!authStore.isAuthenticated) {
         router.push('/login');
         return;
     }
-    console.log('Component mounted, loading profile data');
-    loadProfileData();
-});
-
-onMounted(async () => {
     await loadProfileData();
 });
 
@@ -2222,14 +2236,15 @@ const getAvatarUrl = (avatarUrl) => {
     if (!avatarUrl) return '';
 
     try {
-        // If it's already a full URL (including Cloudinary), return as is
+        // If it's a Cloudinary URL or any other full URL, return as is
         if (avatarUrl.startsWith('http')) {
             return avatarUrl;
         }
 
-        // For database-stored avatar URLs
-        const baseUrl = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
-        return `${baseUrl}/uploads/avatars/${avatarUrl}`;
+        // For database-stored avatar URLs, clean the path and construct full URL
+        const cleanAvatarUrl = avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/');
+        const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
+        return `${baseUrl}/uploads/avatars/${cleanAvatarUrl}`;
     } catch (error) {
         console.error('Error constructing avatar URL:', error);
         return '';
@@ -2242,7 +2257,14 @@ const handleAvatarError = (event) => {
         constructedUrl: getAvatarUrl(profileData.value.avatar_url)
     });
     
-    // Only clear the avatar URL if it's not a Cloudinary URL
+    // Attempt to reload the image once with a cache-busting parameter
+    if (!event.target.dataset.retried) {
+        event.target.dataset.retried = 'true';
+        event.target.src = `${getAvatarUrl(profileData.value.avatar_url)}?t=${Date.now()}`;
+        return;
+    }
+    
+    // Only clear the avatar URL if it's not a Cloudinary URL and retry failed
     if (!profileData.value.avatar_url?.includes('cloudinary.com')) {
         profileData.value.avatar_url = '';
     }
@@ -2280,11 +2302,18 @@ const saveAvatar = async () => {
 
         const response = await userService.updateAvatar(formData);
         if (response.success) {
+            // Update both the profile data and auth store
             profileData.value.avatar_url = response.avatarUrl;
+            authStore.updateUser({ ...authStore.user, avatar_url: response.avatarUrl });
+            
             // Clean up
             URL.revokeObjectURL(profileData.value.tempAvatarUrl);
             delete profileData.value.pendingAvatar;
             delete profileData.value.tempAvatarUrl;
+            
+            // Store the avatar URL in localStorage for persistence
+            localStorage.setItem('userAvatar', response.avatarUrl);
+            
             notificationStore.success('Profile photo updated successfully');
             closeAvatarModal();
         }
@@ -2307,9 +2336,14 @@ onMounted(async () => {
         // Load initial profile data
         const response = await userService.getProfile();
         if (response?.success && response?.user) {
+            // Get stored avatar URL from localStorage as fallback
+            const storedAvatarUrl = localStorage.getItem('userAvatar');
+            
             profileData.value = {
                 ...response.user,
-                emergencyContacts: response.user.emergencyContacts || []
+                emergencyContacts: response.user.emergencyContacts || [],
+                // Use the response avatar_url or fallback to stored URL
+                avatar_url: response.user.avatar_url || storedAvatarUrl || ''
             };
             
             // Verify avatar URL is working
@@ -2317,10 +2351,18 @@ onMounted(async () => {
                 const img = new Image();
                 img.onload = () => {
                     console.log('Avatar loaded successfully:', profileData.value.avatar_url);
+                    // Store working avatar URL
+                    localStorage.setItem('userAvatar', profileData.value.avatar_url);
                 };
                 img.onerror = () => {
                     console.error('Failed to load avatar:', profileData.value.avatar_url);
-                    profileData.value.avatar_url = ''; // Clear invalid URL
+                    // Try stored URL as fallback
+                    if (storedAvatarUrl && storedAvatarUrl !== profileData.value.avatar_url) {
+                        profileData.value.avatar_url = storedAvatarUrl;
+                    } else {
+                        profileData.value.avatar_url = '';
+                        localStorage.removeItem('userAvatar');
+                    }
                 };
                 img.src = getAvatarUrl(profileData.value.avatar_url);
             }
