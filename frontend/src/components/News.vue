@@ -14,12 +14,7 @@
       <div class="news-filters">
         <div class="search-bar">
           <i class="fas fa-search"></i>
-          <input 
-            type="text" 
-            v-model="searchQuery" 
-            placeholder="Search posts..."
-            @input="filterPosts"
-          >
+          <input type="text" v-model="searchQuery" placeholder="Search posts..." @input="filterPosts">
         </div>
         <div class="filter-dropdown">
           <select v-model="filterType">
@@ -94,7 +89,12 @@
         <div v-else v-for="post in processedPosts" :key="post.id" class="news-card">
           <div class="post-header">
             <div class="author-info">
-              <i class="fas fa-user-circle"></i>
+              <div class="author-avatar">
+                <img v-if="post.author_avatar" :src="getAvatarUrl(post.author_avatar)" :alt="post.author"
+                  @error="handleAvatarError($event, post)"
+                  :class="{ 'avatar-image': true, 'hidden': post.avatarError }" />
+                <i v-if="!post.author_avatar || post.avatarError" class="fas fa-user-circle"></i>
+              </div>
               <div>
                 <h3>{{ post.author }}</h3>
                 <div class="post-meta">
@@ -425,7 +425,11 @@ const loadPosts = async () => {
           liked: isLiked,
           likes: parseInt(post.likes) || 0,
           likeLoading: false,
-          status: post.status || 'pending'
+          status: post.status || 'pending',
+          author_avatar: post.author_avatar || null,
+          imageError: false,
+          imageLoaded: false,
+          avatarError: false
         };
       });
     }
@@ -507,7 +511,7 @@ const processedPosts = computed(() => {
   // Apply search filter
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase();
-    filtered = filtered.filter(post => 
+    filtered = filtered.filter(post =>
       post.title.toLowerCase().includes(query) ||
       post.content.toLowerCase().includes(query) ||
       post.author.toLowerCase().includes(query)
@@ -517,7 +521,7 @@ const processedPosts = computed(() => {
   // Apply type filter
   switch (filterType.value) {
     case 'recent':
-      filtered = [...filtered].sort((a, b) => 
+      filtered = [...filtered].sort((a, b) =>
         new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt)
       );
       break;
@@ -872,6 +876,11 @@ const getAvatarUrl = (avatarUrl) => {
   if (!avatarUrl) return '';
 
   try {
+    // If it's a temporary preview URL (blob URL)
+    if (avatarUrl.startsWith('blob:')) {
+      return avatarUrl;
+    }
+
     // If it's a Cloudinary URL or any other full URL, return as is
     if (avatarUrl.startsWith('http')) {
       return avatarUrl;
@@ -885,6 +894,24 @@ const getAvatarUrl = (avatarUrl) => {
     console.error('Error constructing avatar URL:', error);
     return '';
   }
+};
+
+
+const handleAvatarError = (event, post) => {
+  console.error('Avatar loading error:', {
+    postId: post.id,
+    author: post.author,
+    avatarUrl: post.author_avatar
+  });
+  
+  // Attempt to reload the image once with a cache-busting parameter
+  if (!event.target.dataset.retried) {
+    event.target.dataset.retried = 'true';
+    event.target.src = `${getAvatarUrl(post.author_avatar)}?t=${Date.now()}`;
+    return;
+  }
+  
+  post.avatarError = true;
 };
 
 </script>
@@ -2074,5 +2101,37 @@ const getAvatarUrl = (avatarUrl) => {
     flex-direction: column;
     gap: 0.75rem;
   }
+}
+
+.author-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+}
+
+.author-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.author-avatar i {
+  font-size: 1.75rem;
+  color: #64748b;
+}
+
+.author-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatar-image.hidden {
+  display: none;
 }
 </style>
