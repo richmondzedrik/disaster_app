@@ -33,19 +33,31 @@
 
         <!-- Admin Navigation -->
         <template v-else-if="isAdmin">
+          <!-- Primary Admin Actions -->
           <router-link to="/admin/dashboard" class="nav-link">
-            <i class="fas fa-users-cog"></i> Admin Panel
+            <i class="fas fa-users-cog"></i> Dashboard
           </router-link>
-          <router-link to="/news" class="nav-link">
-            <i class="fas fa-newspaper"></i> News
-          </router-link>
-          <router-link to="/hazard-map" class="nav-link">
-            <i class="fas fa-map-marked-alt"></i> Hazard Map
-          </router-link>
-          <router-link to="/evacuation-route" class="nav-link">
-            <i class="fas fa-route"></i> Evacuation Route
-          </router-link>
-          <!-- Admin Dropdown -->
+          
+          <!-- Content Management Dropdown -->
+          <div ref="contentDropdownRef" class="nav-dropdown" :class="{ active: isContentDropdownActive }">
+            <button class="dropdown-btn" @click="toggleContentDropdown">
+              <i class="fas fa-file-alt"></i> Content
+              <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="dropdown-content">
+              <router-link to="/news" class="dropdown-item">
+                <i class="fas fa-newspaper"></i> News
+              </router-link>
+              <router-link to="/hazard-map" class="dropdown-item">
+                <i class="fas fa-map-marked-alt"></i> Hazard Map
+              </router-link>
+              <router-link to="/evacuation-route" class="dropdown-item">
+                <i class="fas fa-route"></i> Evacuation Route
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Admin Profile Dropdown -->
           <div ref="adminDropdownRef" class="nav-dropdown" :class="{ active: isAdminDropdownActive }">
             <button class="dropdown-btn" @click="toggleAdminDropdown">
               <i class="fas fa-user-shield"></i> Admin
@@ -64,27 +76,41 @@
 
         <!-- User Navigation -->
         <template v-else>
+          <!-- Primary User Actions -->
           <router-link to="/dashboard" class="nav-link">
             <i class="fas fa-home"></i> Dashboard
           </router-link>
-          <router-link to="/hazard-map" class="nav-link">
-            <i class="fas fa-map-marked-alt"></i> Hazard Map
-          </router-link>
+          
+          <!-- Alert Center -->
           <router-link to="/alerts" class="nav-link">
             <i class="fas fa-bell"></i> Alerts
             <span v-if="alertCount > 0" class="alert-badge">{{ alertCount }}</span>
           </router-link>
-          <router-link to="/news" class="nav-link">
-            <i class="fas fa-newspaper"></i> News
-          </router-link>
-          <router-link to="/checklist" class="nav-link">
-            <i class="fas fa-tasks"></i> Checklist
-          </router-link>
-          <router-link to="/evacuation-route" class="nav-link">
-            <i class="fas fa-route"></i> Evacuation Route
-          </router-link>
-          <!-- User Dropdown -->
-          <div ref="userDropdownRef" class="nav-dropdown" :class="{ active: isUserDropdownActive }">
+
+          <!-- Resources Dropdown -->
+          <div ref="resourcesDropdownRef" class="nav-dropdown resources" :class="{ active: isResourcesDropdownActive }">
+            <button class="dropdown-btn" @click="toggleResourcesDropdown">
+              <i class="fas fa-book"></i> Resources
+              <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="dropdown-content">
+              <router-link to="/hazard-map" class="dropdown-item">
+                <i class="fas fa-map-marked-alt"></i> Hazard Map
+              </router-link>
+              <router-link to="/evacuation-route" class="dropdown-item">
+                <i class="fas fa-route"></i> Evacuation Route
+              </router-link>
+              <router-link to="/news" class="dropdown-item">
+                <i class="fas fa-newspaper"></i> News
+              </router-link>
+              <router-link to="/checklist" class="dropdown-item">
+                <i class="fas fa-tasks"></i> Checklist
+              </router-link>
+            </div>
+          </div>
+
+          <!-- User Profile Dropdown -->
+          <div ref="userDropdownRef" class="nav-dropdown profile" :class="{ active: isUserDropdownActive }">
             <button class="dropdown-btn" @click="toggleUserDropdown">
               <i class="fas fa-user-circle"></i>
               <span>{{ displayName }}</span>
@@ -93,9 +119,7 @@
             <div class="dropdown-content">
               <div class="profile-header">
                 <div class="user-info">
-                  <div class="avatar"> 
-                    {{ getUserInitials }}
-                  </div>
+                  <div class="avatar">{{ getUserInitials }}</div>
                   <div class="user-details">
                     <div class="user-name">{{ user.name }}</div>
                     <div class="user-email">{{ user.email }}</div>
@@ -104,13 +128,11 @@
               </div>
               
               <router-link to="/profile" class="dropdown-item">
-                <i class="fas fa-user-cog"></i>
-                Profile Settings
+                <i class="fas fa-user-cog"></i> Profile Settings
               </router-link>
               
               <router-link to="/notifications" class="dropdown-item notification-item">
-                <i class="fas fa-bell"></i>
-                Notifications
+                <i class="fas fa-bell"></i> Notifications
                 <span v-if="unreadNotifications > 0" class="notification-badge">
                   {{ unreadNotifications }}
                 </span>
@@ -119,8 +141,7 @@
               <div class="dropdown-divider"></div>
               
               <button @click="handleLogout" class="dropdown-item logout-btn">
-                <i class="fas fa-sign-out-alt"></i>
-                Logout
+                <i class="fas fa-sign-out-alt"></i> Logout
               </button>
             </div>
           </div>
@@ -153,6 +174,10 @@ const adminDropdownRef = ref(null);
 const userDropdownRef = ref(null);
 const isAdminDropdownActive = ref(false);
 const isUserDropdownActive = ref(false);
+const contentDropdownRef = ref(null);
+const resourcesDropdownRef = ref(null);
+const isContentDropdownActive = ref(false);
+const isResourcesDropdownActive = ref(false);
 
 // Computed properties
 const isAuthenticated = computed(() => authStore.isAuthenticated);
@@ -188,6 +213,12 @@ const handleClickOutside = (event) => {
   }
   if (userDropdownRef.value && !userDropdownRef.value.contains(event.target)) {
     isUserDropdownActive.value = false;
+  }
+  if (contentDropdownRef.value && !contentDropdownRef.value.contains(event.target)) {
+    isContentDropdownActive.value = false;
+  }
+  if (resourcesDropdownRef.value && !resourcesDropdownRef.value.contains(event.target)) {
+    isResourcesDropdownActive.value = false;
   }
 };
 
@@ -302,9 +333,10 @@ const toggleMobileMenu = () => {
 
 // Watch for route changes
 watch(() => route.path, () => {
-  // Close dropdowns and mobile menu when route changes
   isAdminDropdownActive.value = false;
   isUserDropdownActive.value = false;
+  isContentDropdownActive.value = false;
+  isResourcesDropdownActive.value = false;
   isMobileMenuOpen.value = false;
   document.body.classList.remove('menu-open');
 });
@@ -316,6 +348,19 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
 });
+
+// Add these methods
+const toggleContentDropdown = (event) => {
+  event.stopPropagation();
+  isContentDropdownActive.value = !isContentDropdownActive.value;
+  isAdminDropdownActive.value = false;
+};
+
+const toggleResourcesDropdown = (event) => {
+  event.stopPropagation();
+  isResourcesDropdownActive.value = !isResourcesDropdownActive.value;
+  isUserDropdownActive.value = false;
+};
 </script>
 
 <style scoped>
@@ -1075,6 +1120,119 @@ onUnmounted(() => {
 @supports (-webkit-overflow-scrolling: touch) {
   .nav-links {
     -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Resources Dropdown Specific Styles */
+.nav-dropdown.resources .dropdown-btn {
+  background: linear-gradient(135deg, rgba(0, 209, 209, 0.1) 0%, rgba(64, 82, 214, 0.1) 100%);
+  border: 1px solid rgba(0, 209, 209, 0.2);
+}
+
+.nav-dropdown.resources .dropdown-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 209, 209, 0.15) 0%, rgba(64, 82, 214, 0.15) 100%);
+}
+
+.nav-dropdown.resources .dropdown-content {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(0, 209, 209, 0.15);
+  padding: 0.5rem;
+}
+
+.nav-dropdown.resources .dropdown-item {
+  border-radius: 8px;
+  margin-bottom: 0.25rem;
+  padding: 0.75rem 1rem;
+}
+
+.nav-dropdown.resources .dropdown-item i {
+  color: #00D1D1;
+  background: rgba(0, 209, 209, 0.1);
+  padding: 0.5rem;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Profile Dropdown Specific Styles */
+.nav-dropdown.profile .dropdown-btn {
+  background: white;
+  border: 1px solid rgba(64, 82, 214, 0.2);
+  box-shadow: 0 2px 8px rgba(64, 82, 214, 0.1);
+}
+
+.nav-dropdown.profile .dropdown-btn:hover {
+  border-color: #4052D6;
+}
+
+.nav-dropdown.profile .dropdown-content {
+  background: white;
+  border: none;
+  box-shadow: 0 4px 20px rgba(64, 82, 214, 0.15);
+}
+
+.nav-dropdown.profile .profile-header {
+  background: linear-gradient(135deg, #4052D6 0%, #00D1D1 100%);
+  margin: -0.75rem -0.75rem 0.75rem -0.75rem;
+  padding: 1.5rem;
+  border-radius: 12px 12px 0 0;
+  color: white;
+}
+
+.nav-dropdown.profile .user-info {
+  gap: 1rem;
+}
+
+.nav-dropdown.profile .avatar {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.nav-dropdown.profile .user-name {
+  color: white;
+  font-weight: 600;
+}
+
+.nav-dropdown.profile .user-email {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.nav-dropdown.profile .dropdown-item {
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.nav-dropdown.profile .dropdown-item i {
+  color: #4052D6;
+}
+
+.nav-dropdown.profile .dropdown-divider {
+  background: rgba(64, 82, 214, 0.1);
+}
+
+.nav-dropdown.profile .logout-btn {
+  color: #DC2626;
+}
+
+.nav-dropdown.profile .logout-btn i {
+  color: #DC2626;
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+  .nav-dropdown.resources .dropdown-content,
+  .nav-dropdown.profile .dropdown-content {
+    background: white;
+    border-radius: 12px;
+    margin: 0.5rem 0;
+  }
+  
+  .nav-dropdown.profile .profile-header {
+    margin: 0 0 0.75rem 0;
+    border-radius: 8px;
   }
 }
 </style>
