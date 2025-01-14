@@ -49,10 +49,11 @@ router.get('/api/admin/news/posts', auth.authMiddleware, async (req, res) => {
                 u.username as author_username,
                 u.id as author_id,
                 p.created_at,
-                COUNT(DISTINCT l.id) as likes,
+                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
+                (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND deleted_by IS NULL) as comment_count,
                 GROUP_CONCAT(DISTINCT l.user_id) as liked_by
             FROM posts p
-            JOIN users u ON p.author_id = u.id
+            LEFT JOIN users u ON p.author_id = u.id
             LEFT JOIN likes l ON p.id = l.post_id
             GROUP BY p.id, u.username, u.id
             ORDER BY p.created_at DESC
@@ -274,10 +275,11 @@ router.get('/admin/posts', auth.authMiddleware, async (req, res) => {
         u.username as author_username,
         u.id as author_id,
         p.created_at,
-        COUNT(DISTINCT l.id) as likes,
+        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
+        (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND deleted_by IS NULL) as comment_count,
         GROUP_CONCAT(DISTINCT l.user_id) as liked_by
       FROM posts p
-      JOIN users u ON p.author_id = u.id
+      LEFT JOIN users u ON p.author_id = u.id
       LEFT JOIN likes l ON p.id = l.post_id
       GROUP BY p.id, u.username, u.id
       ORDER BY p.created_at DESC
@@ -289,7 +291,10 @@ router.get('/admin/posts', auth.authMiddleware, async (req, res) => {
         ...post,
         created_at: new Date(post.created_at).toISOString(),
         likes: parseInt(post.likes) || 0,
-        liked_by: post.liked_by ? post.liked_by.split(',').map(id => parseInt(id)) : []
+        comment_count: parseInt(post.comment_count) || 0,
+        liked_by: post.liked_by ? post.liked_by.split(',').map(id => parseInt(id)) : [],
+        author: post.author_username || 'Unknown Author',
+        author_username: post.author_username || 'Unknown Author'
       }))
     });
   } catch (error) {
