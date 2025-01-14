@@ -5,6 +5,13 @@ const auth = require('../middleware/auth');
 const validation = require('../middleware/validation');
 const db = require('../db/connection');
 const User = require('../models/User');
+const multer = require('multer');
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB limit
+    }
+});
 
 // Public routes
 router.post('/register', authController.register);
@@ -155,5 +162,8 @@ router.get('/emergency-contacts', auth.authMiddleware, async (req, res) => {
         });
     }
 });
+
+// Add this route
+router.post('/avatar', auth.authMiddleware, upload.single('avatar'), authController.updateAvatar);
 
 module.exports = router; 

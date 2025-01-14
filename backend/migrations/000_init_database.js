@@ -29,11 +29,12 @@ async function up() {
                 notifications BOOLEAN DEFAULT true,
                 location VARCHAR(255) NULL,
                 emergency_contacts JSON NULL DEFAULT ('[]'),
+                avatar_url VARCHAR(255) NULL,
                 last_login TIMESTAMP NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 status ENUM('active', 'inactive', 'suspended') DEFAULT 'active'
-            ) 
+            )
         `);
 
         // Add checklist_progress table

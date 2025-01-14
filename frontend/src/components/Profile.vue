@@ -34,7 +34,21 @@
             <!-- Profile Header -->
             <div class="profile-header">
                 <div class="profile-avatar">
-                    <i class="fas fa-user-circle"></i>
+                    <div class="avatar-container">
+                        <img v-if="profileData.avatar_url" :src="profileData.avatar_url" alt="Profile Avatar" class="avatar-image" />
+                        <i v-else class="fas fa-user-circle"></i>
+                        <div class="avatar-overlay" @click="triggerFileInput">
+                            <i class="fas fa-camera"></i>
+                            <span>Change Photo</span>
+                        </div>
+                    </div>
+                    <input 
+                        type="file" 
+                        ref="fileInput" 
+                        class="hidden-file-input" 
+                        accept="image/*"
+                        @change="handleAvatarUpload" 
+                    />
                     <div class="profile-status">
                         <h2>{{ profileData.username || 'User' }}</h2>
                         <span class="email-badge" :class="{ verified: user?.email_verified }">
@@ -1227,6 +1241,50 @@
 .verify-btn:hover:not(:disabled) i {
     transform: scale(1.1);
 }
+
+.avatar-container {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    opacity: 0;
+    transition: opacity 0.3s;
+    cursor: pointer;
+}
+
+.avatar-overlay:hover {
+    opacity: 1;
+}
+
+.avatar-overlay i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.hidden-file-input {
+    display: none;
+}
 </style>
 
 <script setup>
@@ -1958,6 +2016,43 @@ const loadEmergencyContactsFromDB = async () => {
     } catch (error) {
         console.error('Error refreshing emergency contacts:', error);
         notificationStore.error('Failed to refresh emergency contacts');
+    }
+};
+
+const fileInput = ref(null);
+
+const triggerFileInput = () => {
+    fileInput.value.click();
+};
+
+const handleAvatarUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        notificationStore.error('Image size should be less than 5MB');
+        return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        notificationStore.error('Please upload an image file');
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        const response = await userService.updateAvatar(formData);
+        if (response.success) {
+            profileData.value.avatar_url = response.avatarUrl;
+            notificationStore.success('Profile photo updated successfully');
+        }
+    } catch (error) {
+        console.error('Avatar upload error:', error);
+        notificationStore.error('Failed to update profile photo');
     }
 };
 </script>

@@ -9,6 +9,7 @@ const db = require('../db/connection');
 const bcrypt = require('bcryptjs');
 const express = require('express');
 const app = express();
+const cloudinary = require('../config/cloudinary');
 
 // Add this before defining routes
 app.set('trust proxy', 1);
@@ -585,6 +586,49 @@ exports.checkUsername = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to check username availability'
+        });
+    }
+};
+
+exports.updateAvatar = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'No image file provided'
+            });
+        }
+
+        const userId = req.user.userId;
+
+        // Upload to Cloudinary
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+        
+        const cloudinaryResponse = await cloudinary.uploader.upload(dataURI, {
+            folder: 'disaster-app/avatars',
+            transformation: [
+                { width: 400, height: 400, crop: 'fill' },
+                { quality: 'auto' }
+            ]
+        });
+
+        // Update user's avatar_url in database
+        await db.execute(
+            'UPDATE users SET avatar_url = ? WHERE id = ?',
+            [cloudinaryResponse.secure_url, userId]
+        );
+
+        res.json({
+            success: true,
+            message: 'Avatar updated successfully',
+            avatarUrl: cloudinaryResponse.secure_url
+        });
+    } catch (error) {
+        console.error('Update avatar error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update avatar'
         });
     }
 }; 

@@ -152,5 +152,34 @@ export const userService = {
             console.error('Update notification preferences error:', error);
             throw error;
         }
+    },
+
+    updateAvatar: async function(formData) {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('No authentication token found');
+            }
+
+            const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+            const response = await api.post(`${baseURL}/auth/avatar`, formData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            if (!response.data.success) {
+                throw new Error(response.data.message || 'Failed to update avatar');
+            }
+
+            return response.data;
+        } catch (error) {
+            console.error('Avatar update error:', error);
+            if (error.response?.status === 404) {
+                throw new Error('Avatar upload service not found. Please check API configuration.');
+            }
+            throw error;
+        }
     }
 }; 
