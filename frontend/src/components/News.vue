@@ -10,6 +10,26 @@
         </button>
       </div>
 
+      <!-- Add search and filter controls -->
+      <div class="news-filters">
+        <div class="search-bar">
+          <i class="fas fa-search"></i>
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            placeholder="Search posts..."
+            @input="filterPosts"
+          >
+        </div>
+        <div class="filter-dropdown">
+          <select v-model="filterType">
+            <option value="all">All Posts</option>
+            <option value="recent">Most Recent</option>
+            <option value="popular">Most Popular</option>
+          </select>
+        </div>
+      </div>
+
       <div v-if="isAdmin" class="admin-controls">
         <div class="filter-controls">
           <button v-for="status in ['all', 'pending', 'approved']" :key="status" @click="postStatus = status"
@@ -263,6 +283,8 @@ const imagePreview = ref(null);
 const imageLoading = ref(true);
 const imageError = ref(false);
 const imageLoaded = ref(false);
+const searchQuery = ref('');
+const filterType = ref('all');
 
 // Computed
 const user = computed(() => authStore.user);
@@ -480,9 +502,35 @@ const deletePost = async (postId) => {
 
 
 const processedPosts = computed(() => {
-  return filteredPosts.value.map(post => ({
+  let filtered = filteredPosts.value;
+
+  // Apply search filter
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(post => 
+      post.title.toLowerCase().includes(query) ||
+      post.content.toLowerCase().includes(query) ||
+      post.author.toLowerCase().includes(query)
+    );
+  }
+
+  // Apply type filter
+  switch (filterType.value) {
+    case 'recent':
+      filtered = [...filtered].sort((a, b) => 
+        new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt)
+      );
+      break;
+    case 'popular':
+      filtered = [...filtered].sort((a, b) => b.likes - a.likes);
+      break;
+    default:
+      // 'all' - keep default order
+      break;
+  }
+
+  return filtered.map(post => ({
     ...post,
-    // Ensure liked status is properly converted to boolean
     liked: post.liked === true || post.liked === 1 || post.liked === "true"
   }));
 });
@@ -1948,5 +1996,78 @@ const testNotificationSystem = async () => {
   color: #00D1D1;
   background: none;
   -webkit-text-fill-color: initial;
+}
+
+/* Add these new styles to your existing styles */
+.news-filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 92, 92, 0.06);
+  border: 1px solid rgba(0, 173, 173, 0.1);
+}
+
+.search-bar {
+  flex: 1;
+  position: relative;
+}
+
+.search-bar i {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 1px solid rgba(0, 173, 173, 0.2);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #334155;
+  background: #f8fafc;
+  transition: all 0.3s ease;
+}
+
+.search-bar input:focus {
+  outline: none;
+  border-color: #00D1D1;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(0, 209, 209, 0.1);
+}
+
+.filter-dropdown select {
+  padding: 0.75rem 2rem 0.75rem 1rem;
+  border: 1px solid rgba(0, 173, 173, 0.2);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #334155;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1.5em;
+}
+
+.filter-dropdown select:focus {
+  outline: none;
+  border-color: #00D1D1;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(0, 209, 209, 0.1);
+}
+
+@media (max-width: 640px) {
+  .news-filters {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
 }
 </style>
