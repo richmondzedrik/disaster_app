@@ -17,7 +17,7 @@ router.get('/posts', async (req, res) => {
                 p.*,
                 u.username as author,
                 u.id as author_id,
-                p.created_at,
+                DATE_FORMAT(p.created_at, '%Y-%m-%d %H:%i:%s') as created_at,
                 (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND deleted_by IS NULL) as comment_count
             FROM posts p
             LEFT JOIN users u ON p.author_id = u.id

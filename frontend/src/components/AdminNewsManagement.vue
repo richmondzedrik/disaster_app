@@ -16,7 +16,16 @@
           No news posts found
         </div>
         <div v-else class="posts-container">
-          <!-- Posts list will be implemented here -->
+            <div v-for="post in posts" :key="post.id" class="post-item">
+                <div class="post-header">
+                    <h3>{{ post.title }}</h3>
+                    <span class="post-date">Created: {{ new Date(post.created_at).toLocaleString() }}</span>
+                </div>
+                <div class="post-meta">
+                    <span class="author">By: {{ post.author || 'Unknown Author' }}</span>
+                    <span class="comments">Comments: {{ post.comment_count || 0 }}</span>
+                </div>
+            </div>
         </div>
       </div>
     </div>
@@ -98,5 +107,32 @@
     text-align: center;
     padding: 2rem;
     color: #666;
+  }
+  
+  .post-item {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 1rem;
+  }
+  
+  .post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  .post-date {
+    color: #666;
+    font-size: 0.9rem;
+  }
+  
+  .post-meta {
+    display: flex;
+    gap: 1rem;
+    color: #666;
+    font-size: 0.9rem;
   }
   </style>
