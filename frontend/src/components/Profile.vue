@@ -1378,10 +1378,7 @@ const hasChanges = computed(() => {
         username: profileData.value.username?.trim() || '',
         phone: profileData.value.phone?.trim() || '',
         location: profileData.value.location?.trim() || '',
-        notifications: {
-            email: !!profileData.value.notifications?.email,
-            push: !!profileData.value.notifications?.push
-        },
+        notifications: profileData.value.notifications || {},
         emergencyContacts: (profileData.value.emergencyContacts || [])
             .map(contact => ({
                 name: contact.name?.trim() || '',
@@ -1395,10 +1392,7 @@ const hasChanges = computed(() => {
         username: originalData.value.username || '',
         phone: originalData.value.phone || '',
         location: originalData.value.location || '',
-        notifications: {
-            email: !!originalData.value.notifications?.email,
-            push: !!originalData.value.notifications?.push
-        },
+        notifications: originalData.value.notifications || {},
         emergencyContacts: (originalData.value.emergencyContacts || [])
             .map(contact => ({
                 name: contact.name || '',
@@ -1446,7 +1440,7 @@ const loadProfileData = async () => {
             // Store original emergency contacts
             originalEmergencyContacts.value = JSON.parse(JSON.stringify(userData.emergencyContacts || []));
 
-            // Update profile data
+            // Update profile data including avatar_url
             profileData.value = {
                 ...profileData.value,
                 username: userData.username || '',
@@ -1455,7 +1449,10 @@ const loadProfileData = async () => {
                 location: userData.location || '',
                 notifications: userData.notifications || { email: true, push: true },
                 emergencyContacts: userData.emergencyContacts || [],
-                avatar_url: userData.avatar_url || null // Add this line to persist avatar
+                avatar_url: userData.avatar_url || null,
+                // Clear any pending avatar data on load
+                pendingAvatar: null,
+                tempAvatarUrl: null
             };
 
             // Store original data for change detection
@@ -1658,6 +1655,21 @@ const saveChanges = async () => {
     try {
         saveLoading.value = true;
 
+        // Handle avatar upload first if there's a pending avatar
+        if (profileData.value.pendingAvatar) {
+            const formData = new FormData();
+            formData.append('avatar', profileData.value.pendingAvatar);
+            
+            const avatarResponse = await userService.updateAvatar(formData);
+            if (avatarResponse.success) {
+                profileData.value.avatar_url = avatarResponse.avatarUrl;
+                // Clean up
+                URL.revokeObjectURL(profileData.value.tempAvatarUrl);
+                delete profileData.value.pendingAvatar;
+                delete profileData.value.tempAvatarUrl;
+            }
+        }
+
         if (!validateForm()) {
             saveLoading.value = false;
             return;
@@ -1679,19 +1691,14 @@ const saveChanges = async () => {
 
         const response = await userService.updateProfile(updateData);
 
-        originalData.value = {
-            username: updateData.username,
-            phone: updateData.phone,
-            location: updateData.location,
-            notifications: { ...updateData.notifications },
-            emergencyContacts: updateData.emergencyContacts.map(contact => ({ ...contact }))
-        };
-
         if (response?.user) {
             authStore.updateUser(response.user);
+            originalData.value = {
+                ...originalData.value,
+                ...updateData
+            };
+            notificationStore.success('Profile updated successfully');
         }
-
-        notificationStore.success('Profile updated successfully');
 
     } catch (error) {
         console.error('Save profile error:', error);
