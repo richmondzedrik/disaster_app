@@ -35,20 +35,17 @@
             <div class="profile-header">
                 <div class="profile-avatar">
                     <div class="avatar-container">
-                        <img v-if="profileData.avatar_url" :src="profileData.avatar_url" alt="Profile Avatar" class="avatar-image" />
+                        <img v-if="profileData.tempAvatarUrl || profileData.avatar_url"
+                            :src="profileData.tempAvatarUrl || profileData.avatar_url" alt="Profile Avatar"
+                            class="avatar-image" />
                         <i v-else class="fas fa-user-circle"></i>
                         <div class="avatar-overlay" @click="triggerFileInput">
                             <i class="fas fa-camera"></i>
                             <span>Change Photo</span>
                         </div>
                     </div>
-                    <input 
-                        type="file" 
-                        ref="fileInput" 
-                        class="hidden-file-input" 
-                        accept="image/*"
-                        @change="handleAvatarUpload" 
-                    />
+                    <input type="file" ref="fileInput" class="hidden-file-input" accept="image/*"
+                        @change="handleAvatarUpload" />
                     <div class="profile-status">
                         <h2>{{ profileData.username || 'User' }}</h2>
                         <span class="email-badge" :class="{ verified: user?.email_verified }">
@@ -574,6 +571,7 @@
     opacity: 0.7;
     cursor: not-allowed;
 }
+
 /* Add styles for toggle switch, buttons, and other elements */
 
 .profile-stats {
@@ -1374,6 +1372,7 @@ const validateForm = () => {
 const originalData = ref(null);
 const hasChanges = computed(() => {
     if (!originalData.value) return false;
+    if (profileData.value.pendingAvatar) return true;
 
     const currentData = {
         username: profileData.value.username?.trim() || '',
@@ -1455,7 +1454,8 @@ const loadProfileData = async () => {
                 phone: userData.phone || '',
                 location: userData.location || '',
                 notifications: userData.notifications || { email: true, push: true },
-                emergencyContacts: userData.emergencyContacts || []
+                emergencyContacts: userData.emergencyContacts || [],
+                avatar_url: userData.avatar_url || null // Add this line to persist avatar
             };
 
             // Store original data for change detection
@@ -1859,21 +1859,21 @@ const saveEmergencyContact = () => {
 // Add after line 1416
 const toggleNotifications = async () => {
     if (notificationLoading.value) return;
-    
+
     try {
         notificationLoading.value = true;
         const newStatus = !profileData.value.notifications;
-        
+
         const response = await userService.updateProfile({
             ...profileData.value,
             notifications: newStatus
         });
-        
+
         if (response?.success) {
             profileData.value.notifications = newStatus;
             notificationStore.success(
-                newStatus ? 'Successfully subscribed to notifications' : 
-                           'Successfully unsubscribed from notifications'
+                newStatus ? 'Successfully subscribed to notifications' :
+                    'Successfully unsubscribed from notifications'
             );
         }
     } catch (error) {
@@ -1972,6 +1972,21 @@ const saveProfile = async () => {
     try {
         loading.value = true;
 
+        // Handle avatar upload first if there's a pending avatar
+        if (profileData.value.pendingAvatar) {
+            const formData = new FormData();
+            formData.append('avatar', profileData.value.pendingAvatar);
+            
+            const avatarResponse = await userService.updateAvatar(formData);
+            if (avatarResponse.success) {
+                profileData.value.avatar_url = avatarResponse.avatarUrl;
+                // Clean up
+                URL.revokeObjectURL(profileData.value.tempAvatarUrl);
+                delete profileData.value.pendingAvatar;
+                delete profileData.value.tempAvatarUrl;
+            }
+        }
+
         // Validate emergency contacts before saving
         const validContacts = profileData.value.emergencyContacts.filter(
             contact => contact && contact.name && contact.phone && contact.relation
@@ -1983,6 +1998,12 @@ const saveProfile = async () => {
         });
 
         if (response?.success) {
+            // Update original data with all current values including avatar_url
+            originalData.value = {
+                ...originalData.value,
+                ...profileData.value,
+                emergencyContacts: JSON.parse(JSON.stringify(validContacts))
+            };
             originalEmergencyContacts.value = JSON.parse(JSON.stringify(validContacts));
             notificationStore.success('Profile updated successfully');
         }
@@ -2041,18 +2062,9 @@ const handleAvatarUpload = async (event) => {
         return;
     }
 
-    try {
-        const formData = new FormData();
-        formData.append('avatar', file);
-
-        const response = await userService.updateAvatar(formData);
-        if (response.success) {
-            profileData.value.avatar_url = response.avatarUrl;
-            notificationStore.success('Profile photo updated successfully');
-        }
-    } catch (error) {
-        console.error('Avatar upload error:', error);
-        notificationStore.error('Failed to update profile photo');
-    }
+    // Store the file temporarily
+    profileData.value.pendingAvatar = file;
+    // Create a temporary URL for preview
+    profileData.value.tempAvatarUrl = URL.createObjectURL(file);
 };
 </script>
