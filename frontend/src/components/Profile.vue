@@ -36,8 +36,12 @@
                 <div class="profile-avatar">
                     <div class="avatar-container">
                         <img v-if="profileData.tempAvatarUrl || profileData.avatar_url"
-                            :src="profileData.tempAvatarUrl || profileData.avatar_url" alt="Profile Avatar"
-                            class="avatar-image" />
+                            :src="profileData.tempAvatarUrl || getAvatarUrl(profileData.avatar_url)"
+                            alt="Profile Avatar"
+                            class="avatar-image"
+                            @error="handleAvatarError"
+                            @load="handleAvatarLoad"
+                        />
                         <i v-else class="fas fa-user-circle"></i>
                         <div class="avatar-overlay" @click="triggerFileInput">
                             <i class="fas fa-camera"></i>
@@ -1449,14 +1453,21 @@ const loadProfileData = async () => {
                 location: userData.location || '',
                 notifications: userData.notifications || { email: true, push: true },
                 emergencyContacts: userData.emergencyContacts || [],
+                // Ensure avatar_url is properly set from the response
                 avatar_url: userData.avatar_url || null,
-                // Clear any pending avatar data on load
+                // Reset any pending avatar data
                 pendingAvatar: null,
                 tempAvatarUrl: null
             };
 
+            // Log avatar URL for debugging
+            console.log('Loaded avatar URL:', userData.avatar_url);
+
             // Store original data for change detection
-            originalData.value = JSON.parse(JSON.stringify(profileData.value));
+            originalData.value = JSON.parse(JSON.stringify({
+                ...profileData.value,
+                avatar_url: userData.avatar_url
+            }));
         }
     } catch (error) {
         console.error('Load profile error:', error);
@@ -2074,4 +2085,47 @@ const handleAvatarUpload = async (event) => {
     // Create a temporary URL for preview
     profileData.value.tempAvatarUrl = URL.createObjectURL(file);
 };
+
+const getAvatarUrl = (avatarUrl) => {
+    if (!avatarUrl) return '';
+
+    try {
+        // If it's a Cloudinary URL, return as is
+        if (avatarUrl.includes('cloudinary.com')) {
+            return avatarUrl;
+        }
+
+        // If it's any other full URL, return as is
+        if (avatarUrl.startsWith('http')) {
+            return avatarUrl;
+        }
+
+        // Fallback for any legacy images
+        const cleanImageUrl = avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/');
+        const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
+        return `${baseUrl}/uploads/${cleanImageUrl}`;
+    } catch (error) {
+        console.error('Error constructing avatar URL:', error);
+        return '';
+    }
+};
+
+const handleAvatarError = (event) => {
+    console.error('Avatar loading error:', {
+        tempUrl: profileData.value.tempAvatarUrl,
+        avatarUrl: profileData.value.avatar_url,
+        constructedUrl: getAvatarUrl(profileData.value.avatar_url),
+        error: event?.target?.error
+    });
+    event.target.src = 'https://via.placeholder.com/100';
+};
+
+const handleAvatarLoad = () => {
+    console.log('Avatar loaded successfully:', {
+        tempUrl: profileData.value.tempAvatarUrl,
+        avatarUrl: profileData.value.avatar_url,
+        constructedUrl: getAvatarUrl(profileData.value.avatar_url)
+    });
+};
+
 </script>
