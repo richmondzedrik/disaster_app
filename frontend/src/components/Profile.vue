@@ -2222,15 +2222,14 @@ const getAvatarUrl = (avatarUrl) => {
     if (!avatarUrl) return '';
 
     try {
-        // If it's a Cloudinary URL or full URL, return as is
-        if (avatarUrl.includes('cloudinary.com') || avatarUrl.startsWith('http')) {
+        // If it's already a full URL (including Cloudinary), return as is
+        if (avatarUrl.startsWith('http')) {
             return avatarUrl;
         }
 
-        // For both development and production
+        // For database-stored avatar URLs
         const baseUrl = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
-        const cleanUrl = avatarUrl.replace(/^\/+/, '');
-        return `${baseUrl}/uploads/${cleanUrl}`;
+        return `${baseUrl}/uploads/avatars/${avatarUrl}`;
     } catch (error) {
         console.error('Error constructing avatar URL:', error);
         return '';
@@ -2239,11 +2238,14 @@ const getAvatarUrl = (avatarUrl) => {
 
 const handleAvatarError = (event) => {
     console.error('Avatar loading error:', {
-        avatarUrl: profileData.value.avatar_url,
+        originalUrl: profileData.value.avatar_url,
         constructedUrl: getAvatarUrl(profileData.value.avatar_url)
     });
-    // Clear the invalid avatar URL
-    profileData.value.avatar_url = '';
+    
+    // Only clear the avatar URL if it's not a Cloudinary URL
+    if (!profileData.value.avatar_url?.includes('cloudinary.com')) {
+        profileData.value.avatar_url = '';
+    }
     event.target.style.display = 'none';
 };
 
