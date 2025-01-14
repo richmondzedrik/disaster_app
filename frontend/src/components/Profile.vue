@@ -43,9 +43,14 @@
                             @load="handleAvatarLoad"
                         />
                         <i v-else class="fas fa-user-circle"></i>
-                        <div class="avatar-overlay" @click="triggerFileInput">
-                            <i class="fas fa-camera"></i>
-                            <span>Change Photo</span>
+                        <div class="avatar-actions">
+                            <div class="avatar-overlay" @click="triggerFileInput">
+                                <i class="fas fa-camera"></i>
+                                <span>Change Photo</span>
+                            </div>
+                            <button class="refresh-avatar-btn" @click="refreshAvatar" title="Refresh Avatar">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
                         </div>
                     </div>
                     <input type="file" ref="fileInput" class="hidden-file-input" accept="image/*"
@@ -1287,6 +1292,37 @@
 .hidden-file-input {
     display: none;
 }
+
+.avatar-actions {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.refresh-avatar-btn {
+    background: rgba(0, 209, 209, 0.8);
+    color: white;
+    border: none;
+    padding: 4px;
+    width: 100%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.refresh-avatar-btn:hover {
+    background: rgba(0, 209, 209, 1);
+}
+
+.refresh-avatar-btn i {
+    font-size: 0.875rem;
+}
 </style>
 
 <script setup>
@@ -1460,8 +1496,12 @@ const loadProfileData = async () => {
                 tempAvatarUrl: null
             };
 
-            // Log avatar URL for debugging
-            console.log('Loaded avatar URL:', userData.avatar_url);
+            // Log avatar URL for debugging with more details
+            console.log('Profile Data Loaded:', {
+                avatarUrl: userData.avatar_url,
+                fullUserData: userData,
+                constructedUrl: getAvatarUrl(userData.avatar_url)
+            });
 
             // Store original data for change detection
             originalData.value = JSON.parse(JSON.stringify({
@@ -2091,7 +2131,7 @@ const getAvatarUrl = (avatarUrl) => {
 
     try {
         // If it's a Cloudinary URL, return as is
-        if (avatarUrl.includes('cloudinary.com')) {
+        if (avatarUrl.includes('cloudinary.com') || avatarUrl.includes('res.cloudinary.com')) {
             return avatarUrl;
         }
 
@@ -2100,10 +2140,13 @@ const getAvatarUrl = (avatarUrl) => {
             return avatarUrl;
         }
 
-        // Fallback for any legacy images
-        const cleanImageUrl = avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/');
-        const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
-        return `${baseUrl}/uploads/${cleanImageUrl}`;
+        // For development environment
+        if (import.meta.env.DEV) {
+            return `${import.meta.env.VITE_API_URL}/uploads/${avatarUrl}`;
+        }
+
+        // For production environment
+        return `https://disaster-app-backend.onrender.com/uploads/${avatarUrl}`;
     } catch (error) {
         console.error('Error constructing avatar URL:', error);
         return '';
@@ -2126,6 +2169,21 @@ const handleAvatarLoad = () => {
         avatarUrl: profileData.value.avatar_url,
         constructedUrl: getAvatarUrl(profileData.value.avatar_url)
     });
+};
+
+const refreshAvatar = async () => {
+    try {
+        const response = await userService.getProfile();
+        if (response?.success && response.user?.avatar_url) {
+            profileData.value.avatar_url = response.user.avatar_url;
+            // Force refresh by adding timestamp
+            profileData.value.avatar_url = `${getAvatarUrl(response.user.avatar_url)}?t=${Date.now()}`;
+            notificationStore.success('Avatar refreshed successfully');
+        }
+    } catch (error) {
+        console.error('Refresh avatar error:', error);
+        notificationStore.error('Failed to refresh avatar');
+    }
 };
 
 </script>
