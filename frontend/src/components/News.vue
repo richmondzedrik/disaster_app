@@ -77,10 +77,15 @@
               <i class="fas fa-user-circle"></i>
               <div>
                 <h3>{{ post.author }}</h3>
-                <span class="post-date">{{ formatDate(post.createdAt) }}</span>
-                <span v-if="post.status === 'pending'" class="pending-badge">
-                  Pending Approval
-                </span>
+                <div class="post-meta">
+                  <span class="post-date">
+                    <i class="fas fa-calendar-alt"></i>
+                    {{ formatDate(post.created_at || post.createdAt) }}
+                  </span>
+                  <span v-if="post.status === 'pending'" class="pending-badge">
+                    Pending Approval
+                  </span>
+                </div>
               </div>
             </div>
             <div v-if="isAuthenticated && canEditPost(post)" class="post-actions">
@@ -95,12 +100,6 @@
 
           <div class="post-content">
             <h2>{{ post.title }}</h2>
-            <div class="post-metadata">
-              <span class="post-date">
-                <i class="fas fa-calendar-alt"></i>
-                {{ formatDate(post.createdAt) }}
-              </span>
-            </div>
             <p>{{ post.content }}</p>
             <div v-if="post.image_url" class="post-image">
               <img :src="getImageUrl(post.image_url).url" :crossorigin="getImageUrl(post.image_url).crossorigin"
@@ -1908,22 +1907,35 @@ const testNotificationSystem = async () => {
   width: 100%;
 }
 
-.post-metadata {
+.test-email-btn {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+}
+
+.test-email-btn:hover {
+  background: #45a049;
+}
+
+.post-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.post-date {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin: 0.5rem 0;
   color: #64748b;
-  font-size: 0.9rem;
-}
-
-.post-metadata .post-date {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.post-metadata i {
-  color: #00D1D1;
+  font-size: 0.875rem;
 }
 </style>
