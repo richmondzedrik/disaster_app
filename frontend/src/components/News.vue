@@ -867,18 +867,23 @@ onMounted(() => {
   }
 });
 
-const testNotificationSystem = async () => {
+// Add this function in the script setup section, after the imports
+const getAvatarUrl = (avatarUrl) => {
+  if (!avatarUrl) return '';
+
   try {
-    const response = await newsService.testNotificationSystem();
-    if (response.success) {
-      notificationStore.success('Notification system test completed successfully');
-      console.log('Test details:', response.details);
-    } else {
-      throw new Error(response.message);
+    // If it's a Cloudinary URL or any other full URL, return as is
+    if (avatarUrl.startsWith('http')) {
+      return avatarUrl;
     }
+
+    // For database-stored avatar URLs, clean the path and construct full URL
+    const cleanAvatarUrl = avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/');
+    const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
+    return `${baseUrl}/uploads/avatars/${cleanAvatarUrl}`;
   } catch (error) {
-    console.error('Test notification system error:', error);
-    notificationStore.error('Failed to test notification system');
+    console.error('Error constructing avatar URL:', error);
+    return '';
   }
 };
 

@@ -307,25 +307,21 @@
         <div v-if="showAvatarModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>
-                        <i class="fas fa-camera"></i>
-                        Change Profile Photo
-                    </h3>
-                    <button class="close-btn" @click="closeAvatarModal">
+                    <h3>Update Profile Photo</h3>
+                    <button class="close-btn" @click="closeAvatarModal" :disabled="avatarLoading">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="avatar-preview">
-                        <img v-if="profileData.tempAvatarUrl || profileData.avatar_url"
-                            :src="profileData.tempAvatarUrl || getAvatarUrl(profileData.avatar_url)"
-                            alt="Profile Avatar" class="preview-image" @error="handleAvatarError" />
-                        <i v-else class="fas fa-user-circle"></i>
+                        <img v-if="profileData.tempAvatarUrl" 
+                            :src="profileData.tempAvatarUrl" 
+                            class="preview-image" 
+                            alt="Preview" />
+                        <i v-else class="fas fa-user"></i>
                     </div>
                     <div class="avatar-upload-controls">
-                        <input type="file" ref="fileInput" class="hidden-file-input" accept="image/*"
-                            @change="handleAvatarUpload" />
-                        <button class="upload-btn" @click="triggerFileInput">
+                        <button class="upload-btn" @click="triggerFileInput" :disabled="avatarLoading">
                             <i class="fas fa-upload"></i>
                             Choose Photo
                         </button>
@@ -333,11 +329,16 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" @click="closeAvatarModal">
+                    <button class="btn btn-secondary" @click="closeAvatarModal" :disabled="avatarLoading">
                         Cancel
                     </button>
-                    <button class="btn btn-primary" @click="saveAvatar" :disabled="!profileData.pendingAvatar">
-                        Save Changes
+                    <button 
+                        class="btn btn-primary" 
+                        @click="saveAvatar" 
+                        :disabled="!profileData.pendingAvatar || avatarLoading"
+                    >
+                        <i :class="['fas', avatarLoading ? 'fa-spinner fa-spin' : 'fa-save']"></i>
+                        {{ avatarLoading ? 'Saving...' : 'Save Changes' }}
                     </button>
                 </div>
             </div>
@@ -1421,6 +1422,41 @@
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     line-height: 1;
 }
+.btn-primary {
+    background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background: linear-gradient(135deg, #a8d5d5 0%, #9ba3d6 100%);
+}
+
+.btn-secondary {
+    background: #e2e8f0;
+    color: #4a5568;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
 </style>
 
 <script setup>
@@ -1444,6 +1480,7 @@ const showPasswordModal = ref(false);
 const passwordLoading = ref(false);
 const phoneError = ref('');
 const notificationLoading = ref(false);
+const avatarLoading = ref(false);
 
 // Add this new ref for save operation loading
 const saveLoading = ref(false);
@@ -2294,9 +2331,10 @@ const closeAvatarModal = () => {
 };
 
 const saveAvatar = async () => {
-    if (!profileData.value.pendingAvatar) return;
+    if (!profileData.value.pendingAvatar || avatarLoading.value) return;
 
     try {
+        avatarLoading.value = true;
         const formData = new FormData();
         formData.append('avatar', profileData.value.pendingAvatar);
 
@@ -2320,6 +2358,8 @@ const saveAvatar = async () => {
     } catch (error) {
         console.error('Avatar update error:', error);
         notificationStore.error('Failed to update profile photo');
+    } finally {
+        avatarLoading.value = false;
     }
 };
 
