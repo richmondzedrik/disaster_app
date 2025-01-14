@@ -35,22 +35,18 @@
             <div class="profile-header">
                 <div class="profile-avatar">
                     <div class="avatar-container">
-                        <img v-if="profileData.tempAvatarUrl || profileData.avatar_url"
-                            :src="profileData.tempAvatarUrl || getAvatarUrl(profileData.avatar_url)"
+                        <img v-if="profileData.avatar_url"
+                            :src="getAvatarUrl(profileData.avatar_url)"
                             alt="Profile Avatar"
                             class="avatar-image"
                             @error="handleAvatarError"
-                            @load="handleAvatarLoad"
-                        />
-                        <i v-else class="fas fa-user-circle"></i>
-                        <div class="avatar-actions">
-                            <div class="avatar-overlay" @click="triggerFileInput">
-                                <i class="fas fa-camera"></i>
-                                <span>Change Photo</span>
-                            </div>
-                            <button class="refresh-avatar-btn" @click="refreshAvatar" title="Refresh Avatar">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
+                            @load="handleAvatarLoad" />
+                        <div v-else class="avatar-placeholder">
+                            <span>{{ getInitials(profileData.username || 'User') }}</span>
+                        </div>
+                        <div class="avatar-overlay" @click="openAvatarModal">
+                            <i class="fas fa-camera"></i>
+                            <span>Change Photo</span>
                         </div>
                     </div>
                     <input type="file" ref="fileInput" class="hidden-file-input" accept="image/*"
@@ -302,6 +298,46 @@
                     <button class="btn btn-primary" @click="saveEmergencyContact"
                         :disabled="!isEmergencyContactFormValid">
                         {{ editingContactIndex === -1 ? 'Add' : 'Save' }} Contact
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Avatar Change Modal -->
+        <div v-if="showAvatarModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-camera"></i>
+                        Change Profile Photo
+                    </h3>
+                    <button class="close-btn" @click="closeAvatarModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="avatar-preview">
+                        <img v-if="profileData.tempAvatarUrl || profileData.avatar_url"
+                            :src="profileData.tempAvatarUrl || getAvatarUrl(profileData.avatar_url)"
+                            alt="Profile Avatar" class="preview-image" @error="handleAvatarError" />
+                        <i v-else class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="avatar-upload-controls">
+                        <input type="file" ref="fileInput" class="hidden-file-input" accept="image/*"
+                            @change="handleAvatarUpload" />
+                        <button class="upload-btn" @click="triggerFileInput">
+                            <i class="fas fa-upload"></i>
+                            Choose Photo
+                        </button>
+                        <p class="upload-hint">Maximum file size: 5MB</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closeAvatarModal">
+                        Cancel
+                    </button>
+                    <button class="btn btn-primary" @click="saveAvatar" :disabled="!profileData.pendingAvatar">
+                        Save Changes
                     </button>
                 </div>
             </div>
@@ -1289,6 +1325,11 @@
     margin-bottom: 0.5rem;
 }
 
+.avatar-overlay span {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
 .hidden-file-input {
     display: none;
 }
@@ -1303,25 +1344,76 @@
     gap: 4px;
 }
 
-.refresh-avatar-btn {
-    background: rgba(0, 209, 209, 0.8);
-    color: white;
-    border: none;
-    padding: 4px;
-    width: 100%;
-    cursor: pointer;
-    transition: all 0.3s ease;
+.avatar-preview {
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #f8fafc;
     display: flex;
     align-items: center;
     justify-content: center;
+    border: 3px solid rgba(0, 209, 209, 0.2);
 }
 
-.refresh-avatar-btn:hover {
-    background: rgba(0, 209, 209, 1);
+.preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
-.refresh-avatar-btn i {
+.avatar-preview i {
+    font-size: 6rem;
+    color: #cbd5e1;
+}
+
+.avatar-upload-controls {
+    text-align: center;
+}
+
+.upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.upload-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 209, 209, 0.2);
+}
+
+.upload-hint {
+    margin-top: 0.75rem;
+    color: #64748b;
     font-size: 0.875rem;
+}
+
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #00D1D1, #4052D6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.avatar-placeholder span {
+    opacity: 0.9;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 </style>
 
@@ -1710,7 +1802,7 @@ const saveChanges = async () => {
         if (profileData.value.pendingAvatar) {
             const formData = new FormData();
             formData.append('avatar', profileData.value.pendingAvatar);
-            
+
             const avatarResponse = await userService.updateAvatar(formData);
             if (avatarResponse.success) {
                 profileData.value.avatar_url = avatarResponse.avatarUrl;
@@ -2034,7 +2126,7 @@ const saveProfile = async () => {
         if (profileData.value.pendingAvatar) {
             const formData = new FormData();
             formData.append('avatar', profileData.value.pendingAvatar);
-            
+
             const avatarResponse = await userService.updateAvatar(formData);
             if (avatarResponse.success) {
                 profileData.value.avatar_url = avatarResponse.avatarUrl;
@@ -2130,23 +2222,15 @@ const getAvatarUrl = (avatarUrl) => {
     if (!avatarUrl) return '';
 
     try {
-        // If it's a Cloudinary URL, return as is
-        if (avatarUrl.includes('cloudinary.com') || avatarUrl.includes('res.cloudinary.com')) {
+        // If it's a Cloudinary URL or full URL, return as is
+        if (avatarUrl.includes('cloudinary.com') || avatarUrl.startsWith('http')) {
             return avatarUrl;
         }
 
-        // If it's any other full URL, return as is
-        if (avatarUrl.startsWith('http')) {
-            return avatarUrl;
-        }
-
-        // For development environment
-        if (import.meta.env.DEV) {
-            return `${import.meta.env.VITE_API_URL}/uploads/${avatarUrl}`;
-        }
-
-        // For production environment
-        return `https://disaster-app-backend.onrender.com/uploads/${avatarUrl}`;
+        // For both development and production
+        const baseUrl = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
+        const cleanUrl = avatarUrl.replace(/^\/+/, '');
+        return `${baseUrl}/uploads/${cleanUrl}`;
     } catch (error) {
         console.error('Error constructing avatar URL:', error);
         return '';
@@ -2155,35 +2239,95 @@ const getAvatarUrl = (avatarUrl) => {
 
 const handleAvatarError = (event) => {
     console.error('Avatar loading error:', {
-        tempUrl: profileData.value.tempAvatarUrl,
         avatarUrl: profileData.value.avatar_url,
-        constructedUrl: getAvatarUrl(profileData.value.avatar_url),
-        error: event?.target?.error
+        constructedUrl: getAvatarUrl(profileData.value.avatar_url)
     });
-    event.target.src = 'https://via.placeholder.com/100';
+    // Clear the invalid avatar URL
+    profileData.value.avatar_url = '';
+    event.target.style.display = 'none';
 };
 
 const handleAvatarLoad = () => {
     console.log('Avatar loaded successfully:', {
-        tempUrl: profileData.value.tempAvatarUrl,
         avatarUrl: profileData.value.avatar_url,
         constructedUrl: getAvatarUrl(profileData.value.avatar_url)
     });
 };
 
-const refreshAvatar = async () => {
+const showAvatarModal = ref(false);
+
+const openAvatarModal = () => {
+    showAvatarModal.value = true;
+};
+
+const closeAvatarModal = () => {
+    showAvatarModal.value = false;
+    if (profileData.value.tempAvatarUrl) {
+        URL.revokeObjectURL(profileData.value.tempAvatarUrl);
+        profileData.value.tempAvatarUrl = null;
+    }
+    profileData.value.pendingAvatar = null;
+};
+
+const saveAvatar = async () => {
+    if (!profileData.value.pendingAvatar) return;
+
     try {
-        const response = await userService.getProfile();
-        if (response?.success && response.user?.avatar_url) {
-            profileData.value.avatar_url = response.user.avatar_url;
-            // Force refresh by adding timestamp
-            profileData.value.avatar_url = `${getAvatarUrl(response.user.avatar_url)}?t=${Date.now()}`;
-            notificationStore.success('Avatar refreshed successfully');
+        const formData = new FormData();
+        formData.append('avatar', profileData.value.pendingAvatar);
+
+        const response = await userService.updateAvatar(formData);
+        if (response.success) {
+            profileData.value.avatar_url = response.avatarUrl;
+            // Clean up
+            URL.revokeObjectURL(profileData.value.tempAvatarUrl);
+            delete profileData.value.pendingAvatar;
+            delete profileData.value.tempAvatarUrl;
+            notificationStore.success('Profile photo updated successfully');
+            closeAvatarModal();
         }
     } catch (error) {
-        console.error('Refresh avatar error:', error);
-        notificationStore.error('Failed to refresh avatar');
+        console.error('Avatar update error:', error);
+        notificationStore.error('Failed to update profile photo');
     }
 };
 
+const getInitials = (name) => {
+    return name
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .substring(0, 2);
+};
+
+onMounted(async () => {
+    try {
+        // Load initial profile data
+        const response = await userService.getProfile();
+        if (response?.success && response?.user) {
+            profileData.value = {
+                ...response.user,
+                emergencyContacts: response.user.emergencyContacts || []
+            };
+            
+            // Verify avatar URL is working
+            if (profileData.value.avatar_url) {
+                const img = new Image();
+                img.onload = () => {
+                    console.log('Avatar loaded successfully:', profileData.value.avatar_url);
+                };
+                img.onerror = () => {
+                    console.error('Failed to load avatar:', profileData.value.avatar_url);
+                    profileData.value.avatar_url = ''; // Clear invalid URL
+                };
+                img.src = getAvatarUrl(profileData.value.avatar_url);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        notificationStore.error('Failed to load profile data');
+    } finally {
+        initialLoading.value = false;
+    }
+});
 </script>
