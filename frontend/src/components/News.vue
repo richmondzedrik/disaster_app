@@ -90,10 +90,19 @@
           <div class="post-header">
             <div class="author-info">
               <div class="author-avatar">
-                <img v-if="post.author_avatar" :src="getAvatarUrl(post.author_avatar)" :alt="post.author"
+                <img 
+                  v-if="post.author_avatar && !post.avatarError" 
+                  :src="getAvatarUrl(post.author_avatar)" 
+                  :alt="post.author"
                   @error="handleAvatarError($event, post)"
-                  :class="{ 'avatar-image': true, 'hidden': post.avatarError }" />
-                <i v-if="!post.author_avatar || post.avatarError" class="fas fa-user-circle"></i>
+                  @load="(event) => console.log('Avatar loaded successfully:', { 
+                    postId: post.id, 
+                    author: post.author, 
+                    url: event.target.src 
+                  })"
+                  class="avatar-image" 
+                />
+                <i v-else class="fas fa-user-circle"></i>
               </div>
               <div>
                 <h3>{{ post.author }}</h3>
@@ -318,8 +327,6 @@ const filteredPosts = computed(() => {
   return filtered.filter(post => post.status === 'approved');
 });
 
-
-
 const showAddPostModal = ref(false);
 const isLoggedIn = computed(() => authStore.isLoggedIn);
 const resetForm = () => {
@@ -503,7 +510,6 @@ const deletePost = async (postId) => {
     loading.value = false;
   }
 };
-
 
 const processedPosts = computed(() => {
   let filtered = filteredPosts.value;
@@ -873,44 +879,73 @@ onMounted(() => {
 
 // Add this function in the script setup section, after the imports
 const getAvatarUrl = (avatarUrl) => {
-  if (!avatarUrl) return '';
+  console.log('Getting avatar URL for:', avatarUrl);
+  
+  if (!avatarUrl) {
+    console.log('No avatar URL provided');
+    return '';
+  }
 
   try {
     // If it's a temporary preview URL (blob URL)
     if (avatarUrl.startsWith('blob:')) {
+      console.log('Using blob URL:', avatarUrl);
       return avatarUrl;
     }
 
     // If it's a Cloudinary URL or any other full URL, return as is
     if (avatarUrl.startsWith('http')) {
+      console.log('Using full URL:', avatarUrl);
       return avatarUrl;
     }
 
     // For database-stored avatar URLs, clean the path and construct full URL
     const cleanAvatarUrl = avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/');
     const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
-    return `${baseUrl}/uploads/avatars/${cleanAvatarUrl}`;
+    
+    // Check if the URL already includes 'uploads/avatars'
+    const avatarPath = cleanAvatarUrl.includes('uploads/avatars') 
+      ? cleanAvatarUrl 
+      : `uploads/avatars/${cleanAvatarUrl}`;
+    
+    const finalUrl = `${baseUrl}/${avatarPath}`;
+    console.log('Constructed avatar URL:', finalUrl);
+    return finalUrl;
   } catch (error) {
     console.error('Error constructing avatar URL:', error);
     return '';
   }
 };
 
-
 const handleAvatarError = (event, post) => {
-  console.error('Avatar loading error:', {
+  console.log('Avatar error handler triggered for post:', {
     postId: post.id,
     author: post.author,
-    avatarUrl: post.author_avatar
+    originalAvatarUrl: post.author_avatar,
+    constructedUrl: getAvatarUrl(post.author_avatar),
+    error: event?.target?.error
   });
   
   // Attempt to reload the image once with a cache-busting parameter
   if (!event.target.dataset.retried) {
+    console.log('Attempting to retry loading avatar with cache-busting');
     event.target.dataset.retried = 'true';
-    event.target.src = `${getAvatarUrl(post.author_avatar)}?t=${Date.now()}`;
+    const currentUrl = getAvatarUrl(post.author_avatar);
+    const retryUrl = `${currentUrl}?t=${Date.now()}`;
+    console.log('Retry URL:', retryUrl);
+    event.target.src = retryUrl;
+    return;
+  }
+
+  // If retry failed, check localStorage for cached avatar
+  const cachedAvatar = localStorage.getItem(`userAvatar_${post.authorId}`);
+  if (cachedAvatar && !post.avatarError) {
+    console.log('Using cached avatar from localStorage:', cachedAvatar);
+    event.target.src = cachedAvatar;
     return;
   }
   
+  console.log('All avatar loading attempts failed, showing fallback icon');
   post.avatarError = true;
 };
 
@@ -951,6 +986,12 @@ const handleAvatarError = (event, post) => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+}
+
+.news-header h1 {
+  color: #005C5C;
+  font-size: 2rem;
+  font-weight: 700;
 }
 
 .news-header h1 {
@@ -1047,7 +1088,6 @@ const handleAvatarError = (event, post) => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
-
 
 .author-info i {
   font-size: 2.5rem;
@@ -1562,8 +1602,6 @@ const handleAvatarError = (event, post) => {
   color: #00D1D1;
 }
 
-
-
 .interaction-btn i {
   font-size: 1.1rem;
 }
@@ -1820,7 +1858,6 @@ const handleAvatarError = (event, post) => {
 .interaction-btn.disabled:hover {
   background: rgba(0, 173, 173, 0.05);
 }
-
 
 .interaction-btn .fa-heart.fa-spin {
   animation: heartBeat 1s infinite;
@@ -2129,6 +2166,14 @@ const handleAvatarError = (event, post) => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 .avatar-image.hidden {
