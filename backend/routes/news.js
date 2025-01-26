@@ -336,8 +336,8 @@ router.post('/posts', auth.authMiddleware, upload.single('image'), async (req, r
         const status = req.user.role === 'admin' ? 'approved' : 'pending';
         
         const [result] = await db.execute(
-            'INSERT INTO posts (title, content, author_id, status, image_url) VALUES (?, ?, ?, ?, ?)',
-            [title, content, req.user.userId, status, imageUrl]
+            'INSERT INTO posts (title, content, author_id, status, image_url, author_avatar) VALUES (?, ?, ?, ?, ?, ?)',
+            [title, content, req.user.userId, status, imageUrl, req.user.avatar_url || null]
         );
 
         if (!result.insertId) {

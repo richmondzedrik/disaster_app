@@ -128,6 +128,24 @@ async function up() {
             )
         `);
 
+        // Add posts table
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS posts (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                author_id INT NOT NULL,
+                author_avatar VARCHAR(255) NULL,
+                title VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                likes INT DEFAULT 0,
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                image_url VARCHAR(255) DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
+                CHECK (status IN ('pending', 'approved', 'rejected'))
+            )
+        `);
+
         // Add likes table
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS likes (

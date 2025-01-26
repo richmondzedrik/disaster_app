@@ -351,6 +351,12 @@ const createPost = async () => {
       formData.append('image', imageFile.value);
     }
 
+    // Add author's avatar URL if available
+    const currentUser = authStore.user;
+    if (currentUser?.avatar_url) {
+      formData.append('author_avatar', currentUser.avatar_url);
+    }
+
     const response = await newsService.createPost(formData);
     console.log('Post creation response:', response);
 
@@ -412,13 +418,30 @@ const loadPosts = async () => {
     ]);
 
     if (postsResponse.success) {
-      posts.value = postsResponse.posts.map(post => {
+      posts.value = await Promise.all(postsResponse.posts.map(async post => {
         const isLiked = likedPostsResponse.success &&
           likedPostsResponse.likedPosts.includes(post.id);
 
         // Try to get cached avatar from localStorage
         const cachedAvatar = localStorage.getItem(`userAvatar_${post.author_id}`);
-        const defaultAvatar = `${import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '')}/uploads/avatars/default.png`;
+        
+        // Verify if the avatar URL is valid
+        let validatedAvatarUrl = post.author_avatar;
+        if (validatedAvatarUrl) {
+          try {
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = getAvatarUrl(validatedAvatarUrl);
+            });
+            // If image loads successfully, cache it
+            localStorage.setItem(`userAvatar_${post.author_id}`, validatedAvatarUrl);
+          } catch (error) {
+            console.log('Avatar validation failed for post:', post.id);
+            validatedAvatarUrl = cachedAvatar || null;
+          }
+        }
 
         return {
           ...post,
@@ -430,11 +453,11 @@ const loadPosts = async () => {
           likes: parseInt(post.likes) || 0,
           likeLoading: false,
           status: post.status || 'pending',
-          author_avatar: post.author_avatar || cachedAvatar || defaultAvatar,
+          author_avatar: validatedAvatarUrl || cachedAvatar || null,
           authorId: post.author_id || post.authorId,
           avatarError: false
         };
-      });
+      }));
     }
   } catch (error) {
     console.error('Error loading posts:', error);
@@ -875,118 +898,70 @@ onMounted(() => {
 
 // Add this function in the script setup section, after the imports
 const getAvatarUrl = (avatarUrl) => {
-  console.log('Getting avatar URL for:', avatarUrl);
-  
-  if (!avatarUrl) {
-    // Check if we're in development or production
-    const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
-    const defaultAvatarUrl = `${baseUrl}/uploads/avatars/default.png`;
-    console.log('Using default avatar URL:', defaultAvatarUrl);
-    return defaultAvatarUrl;
-  }
-
   try {
-    // If it's already a full URL but doesn't point to our backend
-    if (avatarUrl.startsWith('http') && !avatarUrl.includes('disaster-app-backend.onrender.com')) {
-      console.log('External URL detected:', avatarUrl);
+    // If no avatar URL is provided, check localStorage first
+    if (!avatarUrl) {
+      const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
+      return `${baseUrl}/uploads/avatars/default.png`;
+    }
+
+    // If it's already a full URL (including Cloudinary)
+    if (avatarUrl.startsWith('http')) {
       return avatarUrl;
     }
 
     // For database-stored avatar URLs
     const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
-    
-    // If the URL is already a full backend URL, return it as is
-    if (avatarUrl.startsWith(baseUrl)) {
-      console.log('Full backend URL detected:', avatarUrl);
-      return avatarUrl;
-    }
-
-    // Clean and construct the URL for database-stored paths
     const cleanAvatarUrl = avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/');
-    const avatarPath = cleanAvatarUrl.includes('uploads/avatars') 
-      ? cleanAvatarUrl 
-      : `uploads/avatars/${cleanAvatarUrl}`;
-    
-    const finalUrl = `${baseUrl}/${avatarPath}`;
-    console.log('Constructed avatar URL:', {
-      original: avatarUrl,
-      cleaned: cleanAvatarUrl,
-      baseUrl,
-      finalUrl
-    });
-    
-    return finalUrl;
+    return `${baseUrl}/uploads/avatars/${cleanAvatarUrl}`;
   } catch (error) {
-    console.error('Error constructing avatar URL:', {
-      avatarUrl,
-      error: error.message,
-      stack: error.stack
-    });
+    console.error('Error constructing avatar URL:', error);
     const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
     return `${baseUrl}/uploads/avatars/default.png`;
   }
 };
 
 const handleAvatarError = (event, post) => {
-  if (!post) {
-    console.log('No post provided to handleAvatarError');
-    return;
-  }
+  if (!post) return;
   
+  // Log error details
   console.error('Avatar loading error:', {
     postId: post.id,
     author: post.author,
-    originalAvatarUrl: post.author_avatar,
-    constructedUrl: getAvatarUrl(post.author_avatar),
-    errorType: event?.target?.error?.type,
-    errorMessage: event?.target?.error?.message,
-    environment: import.meta.env.MODE
+    originalUrl: post.author_avatar,
+    constructedUrl: getAvatarUrl(post.author_avatar)
   });
   
-  // Attempt to reload the image once with a cache-busting parameter
-  if (!event.target.dataset.retried) {
-    console.log('Attempting first retry with cache-busting');
-    event.target.dataset.retried = 'true';
-    const currentUrl = getAvatarUrl(post.author_avatar);
-    const retryUrl = `${currentUrl}?t=${Date.now()}`;
-    console.log('Retry URL:', retryUrl);
-    event.target.src = retryUrl;
-    return;
-  }
-
-  // If retry failed, check localStorage for cached avatar
+  // Try to get cached avatar from localStorage
   const cachedAvatar = localStorage.getItem(`userAvatar_${post.authorId}`);
-  if (cachedAvatar && !post.avatarError) {
-    console.log('Using cached avatar from localStorage:', {
-      authorId: post.authorId,
-      cachedUrl: cachedAvatar
-    });
+  
+  // If we have a cached avatar and haven't tried it yet, use it
+  if (cachedAvatar && !event.target.dataset.triedCache) {
+    event.target.dataset.triedCache = 'true';
     event.target.src = cachedAvatar;
     return;
   }
   
-  console.log('All avatar loading attempts failed, showing fallback icon for:', {
-    postId: post.id,
-    author: post.author
-  });
+  // If no cached avatar or cache failed, try with cache-busting
+  if (!event.target.dataset.retried) {
+    event.target.dataset.retried = 'true';
+    const currentUrl = getAvatarUrl(post.author_avatar);
+    event.target.src = `${currentUrl}?t=${Date.now()}`;
+    return;
+  }
+  
+  // If all attempts fail, show fallback icon
   post.avatarError = true;
 };
 
 const handleAvatarLoad = (event, post) => {
   if (!post) return;
   
-  console.log('Avatar loaded successfully:', {
-    postId: post.id,
-    author: post.author,
-    avatarUrl: post.author_avatar,
-    constructedUrl: getAvatarUrl(post.author_avatar),
-    environment: import.meta.env.MODE
-  });
-
+  post.avatarError = false;
+  
   // Cache the successful avatar URL
-  if (post.authorId && post.author_avatar) {
-    localStorage.setItem(`userAvatar_${post.authorId}`, getAvatarUrl(post.author_avatar));
-    console.log('Cached avatar URL in localStorage for user:', post.authorId);
+  if (post.authorId && event.target.src) {
+    localStorage.setItem(`userAvatar_${post.authorId}`, event.target.src);
   }
 };
 
