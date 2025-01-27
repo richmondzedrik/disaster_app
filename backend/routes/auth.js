@@ -166,4 +166,56 @@ router.get('/emergency-contacts', auth.authMiddleware, async (req, res) => {
 // Add this route
 router.post('/avatar', auth.authMiddleware, upload.single('avatar'), authController.updateAvatar);
 
+// Add this route after line 31 (after the other protected routes)
+router.delete('/delete-account', auth.authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        
+        // Get database connection
+        const connection = await db.getConnection();
+        
+        try {
+            // Start transaction
+            await connection.beginTransaction();
+            
+            // Delete user's data from related tables
+            await connection.query('DELETE FROM comments WHERE user_id = ?', [userId]);
+            await connection.query('DELETE FROM likes WHERE user_id = ?', [userId]);
+            await connection.query('DELETE FROM posts WHERE author_id = ?', [userId]);
+            
+            // Finally delete the user
+            const [result] = await connection.query('DELETE FROM users WHERE id = ?', [userId]);
+            
+            if (result.affectedRows === 0) {
+                await connection.rollback();
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+            
+            // Commit the transaction
+            await connection.commit();
+            
+            res.json({
+                success: true,
+                message: 'Account deleted successfully'
+            });
+            
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+        
+    } catch (error) {
+        console.error('Delete account error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete account'
+        });
+    }
+});
+
 module.exports = router; 
