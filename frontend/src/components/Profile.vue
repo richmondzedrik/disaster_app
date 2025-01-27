@@ -244,7 +244,67 @@
 
         <!-- Password Change Modal -->
         <div v-if="showPasswordModal" class="modal">
-            <!-- Modal content here (unchanged) -->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-key"></i>
+                        Change Password
+                    </h3>
+                    <button class="close-btn" @click="closePasswordModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form @submit.prevent="handlePasswordChange" class="password-form">
+                        <div class="form-group">
+                            <label for="currentPassword">Current Password</label>
+                            <input 
+                                type="password" 
+                                id="currentPassword"
+                                v-model="passwordForm.currentPassword"
+                                required
+                                :disabled="passwordLoading"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="newPassword">New Password</label>
+                            <input 
+                                type="password" 
+                                id="newPassword"
+                                v-model="passwordForm.newPassword"
+                                required
+                                :disabled="passwordLoading"
+                                minlength="8"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm New Password</label>
+                            <input 
+                                type="password" 
+                                id="confirmPassword"
+                                v-model="passwordForm.confirmPassword"
+                                required
+                                :disabled="passwordLoading"
+                            />
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closePasswordModal" :disabled="passwordLoading">
+                        Cancel
+                    </button>
+                    <button 
+                        class="btn btn-primary" 
+                        @click="handlePasswordChange"
+                        :disabled="passwordLoading || !isPasswordFormValid"
+                    >
+                        <i :class="['fas', passwordLoading ? 'fa-spinner fa-spin' : 'fa-save']"></i>
+                        {{ passwordLoading ? 'Changing...' : 'Change Password' }}
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Emergency Contact Modal -->
@@ -339,6 +399,52 @@
                     >
                         <i :class="['fas', avatarLoading ? 'fa-spinner fa-spin' : 'fa-save']"></i>
                         {{ avatarLoading ? 'Saving...' : 'Save Changes' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Account Modal -->
+        <div v-if="showDeleteModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Delete Account
+                    </h3>
+                    <button class="close-btn" @click="closeDeleteModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="delete-warning">
+                        <p>Warning: This action cannot be undone!</p>
+                        <ul>
+                            <li>All your personal data will be permanently deleted</li>
+                            <li>Your emergency contacts will be removed</li>
+                            <li>You will lose access to all features</li>
+                        </ul>
+                    </div>
+                    <div class="confirmation-input">
+                        <label>Type "DELETE" to confirm:</label>
+                        <input 
+                            type="text" 
+                            v-model="deleteConfirmation"
+                            placeholder="Type DELETE"
+                            :class="{ 'error': deleteError }"
+                        />
+                        <span class="error-message" v-if="deleteError">{{ deleteError }}</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closeDeleteModal">Cancel</button>
+                    <button 
+                        class="btn btn-danger" 
+                        @click="executeAccountDeletion"
+                        :disabled="deleteConfirmation !== 'DELETE' || deleteLoading"
+                    >
+                        <i :class="['fas', deleteLoading ? 'fa-spinner fa-spin' : 'fa-trash-alt']"></i>
+                        {{ deleteLoading ? 'Deleting...' : 'Delete Account' }}
                     </button>
                 </div>
             </div>
@@ -1457,6 +1563,62 @@
     opacity: 0.7;
     cursor: not-allowed;
 }
+
+.delete-warning {
+    background: #fff5f5;
+    border: 1px solid #feb2b2;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.delete-warning p {
+    color: #c53030;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.delete-warning ul {
+    color: #742a2a;
+    margin-left: 1.5rem;
+}
+
+.confirmation-input {
+    margin-top: 1rem;
+}
+
+.confirmation-input label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.confirmation-input input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.confirmation-input input.error {
+    border-color: #fc8181;
+}
+
+.btn-danger {
+    background-color: #f56565;
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: #c53030;
+}
+
+.btn-danger:disabled {
+    background-color: #feb2b2;
+    cursor: not-allowed;
+}
 </style>
 
 <script setup>
@@ -1478,9 +1640,14 @@ const loading = ref(false);
 const verificationLoading = ref(false);
 const showPasswordModal = ref(false);
 const passwordLoading = ref(false);
+const passwordForm = ref({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+});
 const phoneError = ref('');
 const notificationLoading = ref(false);
-const avatarLoading = ref(false);
+const avatarLoading = ref(false);    
 
 // Add this new ref for save operation loading
 const saveLoading = ref(false);
@@ -1681,25 +1848,42 @@ const passwordData = ref({
     confirmPassword: ''
 });
 
+// Password form validation
 const isPasswordFormValid = computed(() => {
-    return passwordData.value.newPassword.length >= 8 &&
-        passwordData.value.newPassword === passwordData.value.confirmPassword;
+    return passwordForm.value.currentPassword &&
+           passwordForm.value.newPassword &&
+           passwordForm.value.newPassword === passwordForm.value.confirmPassword &&
+           passwordForm.value.newPassword.length >= 8;
 });
 
 const handlePasswordChange = async () => {
-    if (!isPasswordFormValid.value || passwordLoading.value) return;
+    if (!isPasswordFormValid.value) {
+        notificationStore.error('Please check your password inputs');
+        return;
+    }
 
     try {
         passwordLoading.value = true;
-        await authService.changePassword(
-            passwordData.value.currentPassword,
-            passwordData.value.newPassword
+        const response = await authService.changePassword(
+            passwordForm.value.currentPassword,
+            passwordForm.value.newPassword
         );
-        notificationStore.success('Password changed successfully');
-        showPasswordModal.value = false;
-        passwordData.value = { currentPassword: '', newPassword: '', confirmPassword: '' };
+        
+        if (response.success) {
+            notificationStore.success('Password changed successfully');
+            showPasswordModal.value = false;
+            // Reset form
+            passwordForm.value = {
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: ''
+            };
+        } else {
+            throw new Error(response.message || 'Failed to change password');
+        }
     } catch (error) {
-        notificationStore.error('Failed to change password');
+        const message = error.response?.data?.message || error.message || 'Failed to change password';
+        notificationStore.error(message);
     } finally {
         passwordLoading.value = false;
     }
@@ -2414,4 +2598,71 @@ onMounted(async () => {
         initialLoading.value = false;
     }
 });
+
+// Add these refs
+const showDeleteModal = ref(false);
+const deleteConfirmation = ref('');
+const deleteError = ref('');
+const deleteLoading = ref(false);
+
+// Add these methods
+const executeAccountDeletion = async () => {
+    if (deleteConfirmation.value !== 'DELETE') {
+        deleteError.value = 'Please type DELETE to confirm';
+        return;
+    }
+
+    try {
+        deleteLoading.value = true;
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/users/delete`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            notificationStore.success('Account deleted successfully');
+            // Clear auth store and redirect to home
+            authStore.logout();
+            router.push('/');
+        } else {
+            throw new Error(data.message || 'Failed to delete account');
+        }
+    } catch (error) {
+        console.error('Delete account error:', error);
+        deleteError.value = error.message || 'Failed to delete account';
+        notificationStore.error(error.message || 'Failed to delete account');
+    } finally {
+        deleteLoading.value = false;
+    }
+};
+
+const confirmDeleteAccount = () => {
+    showDeleteModal.value = true;
+    deleteConfirmation.value = '';
+    deleteError.value = '';
+};
+
+const closeDeleteModal = () => {
+    showDeleteModal.value = false;
+    deleteConfirmation.value = '';
+    deleteError.value = '';
+};
+
+const changePassword = () => {
+    showPasswordModal.value = true;
+};
+
+const closePasswordModal = () => {
+    showPasswordModal.value = false;
+    passwordForm.value = {
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+    };
+};
 </script>

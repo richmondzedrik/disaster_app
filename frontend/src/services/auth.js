@@ -59,6 +59,32 @@ export const authService = {
             }
             throw error;
         }
+    },
+
+    async changePassword(currentPassword, newPassword) {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('No authentication token found');
+            }
+
+            const response = await axios.post(
+                `${API_URL}/auth/change-password`,
+                {
+                    currentPassword,
+                    newPassword
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Change password error:', error);
+            throw error.response?.data || error;
+        }
     }
 };
 

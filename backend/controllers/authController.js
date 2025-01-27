@@ -568,7 +568,52 @@ exports.updateProfile = async (req, res) => {
 };
 
 exports.changePassword = async (req, res) => {
-    // ... existing code ...
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const userId = req.user.userId;
+
+        // Get user from database
+        const [rows] = await db.execute(
+            'SELECT password FROM users WHERE id = ?',
+            [userId]
+        );
+
+        if (!rows.length) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Verify current password
+        const isValidPassword = await bcrypt.compare(currentPassword, rows[0].password);
+        if (!isValidPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Current password is incorrect'
+            });
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update password in database
+        await db.execute(
+            'UPDATE users SET password = ? WHERE id = ?',
+            [hashedPassword, userId]
+        );
+
+        res.json({
+            success: true,
+            message: 'Password changed successfully'
+        });
+    } catch (error) {
+        console.error('Change password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to change password'
+        });
+    }
 };
 
 exports.checkUsername = async (req, res) => {
