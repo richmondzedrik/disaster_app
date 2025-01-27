@@ -126,12 +126,14 @@ const handleSubmit = async () => {
 
     loading.value = true;
     try {
-        const response = await axios.post(`${import.meta.env.VITE_API_URL}/contact`, {
+        const baseUrl = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
+        const response = await axios.post(`${baseUrl}/api/contact/send`, {
             name: formData.value.name,
             email: formData.value.email,
             subject: formData.value.subject,
             message: formData.value.message,
-            toEmail: 'richmondzedrik@gmail.com'
+            toEmail: 'richmondzedrik@gmail.com',
+            fromEmail: formData.value.email
         });
 
         if (response.data.success) {
@@ -143,7 +145,8 @@ const handleSubmit = async () => {
         }
     } catch (error) {
         console.error('Contact form error:', error);
-        notificationStore.error(error.response?.data?.message || 'Failed to send message. Please try again.');
+        const errorMessage = error.response?.data?.message || 'Failed to send message. Please try again later.';
+        notificationStore.error(errorMessage);
     } finally {
         loading.value = false;
     }
