@@ -71,21 +71,21 @@
                     <i class="fas fa-map-marker-alt"></i>
                     <div>
                         <h3>Address</h3>
-                        <p>123 Emergency Ave, Safety City, SC 12345</p>
+                        <p>Old APH Compound, Abra-Ilocos Norte Road Calaba, Bangued, Abra</p>
                     </div>
                 </div>
                 <div class="info-item">
                     <i class="fas fa-phone"></i>
                     <div>
-                        <h3>Phone</h3>
-                        <p>+1 (555) 123-4567</p>
+                        <h3>Hotlines</h3>
+                        <p>(074) 752-8158 / 0955-164-5794</p>
                     </div>
                 </div>
                 <div class="info-item">
                     <i class="fas fa-envelope"></i>
                     <div>
                         <h3>Email</h3>
-                        <p>contact@AlertoAbra.com</p>
+                        <p>pdrrmc.abra@yahoo.com.ph</p>
                     </div>
                 </div>
             </div>
@@ -96,6 +96,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useNotificationStore } from '../stores/notification';
+import axios from 'axios';
 
 const notificationStore = useNotificationStore();
 const loading = ref(false);
@@ -106,21 +107,43 @@ const formData = ref({
     message: ''
 });
 
+const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+};
+
 const handleSubmit = async () => {
+    // Form validation
     if (!formData.value.name || !formData.value.email || !formData.value.subject || !formData.value.message) {
         notificationStore.error('Please fill in all fields');
         return;
     }
 
+    if (!validateEmail(formData.value.email)) {
+        notificationStore.error('Please enter a valid email address');
+        return;
+    }
+
     loading.value = true;
     try {
-        // Here you would typically make an API call to send the message
-        // For now, we'll simulate a successful submission
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        notificationStore.success('Message sent successfully! We\'ll get back to you soon.');
-        formData.value = { name: '', email: '', subject: '', message: '' };
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/contact`, {
+            name: formData.value.name,
+            email: formData.value.email,
+            subject: formData.value.subject,
+            message: formData.value.message,
+            toEmail: 'richmondzedrik@gmail.com'
+        });
+
+        if (response.data.success) {
+            notificationStore.success('Message sent successfully! We\'ll get back to you soon.');
+            // Reset form
+            formData.value = { name: '', email: '', subject: '', message: '' };
+        } else {
+            throw new Error(response.data.message || 'Failed to send message');
+        }
     } catch (error) {
-        notificationStore.error('Failed to send message. Please try again.');
+        console.error('Contact form error:', error);
+        notificationStore.error(error.response?.data?.message || 'Failed to send message. Please try again.');
     } finally {
         loading.value = false;
     }

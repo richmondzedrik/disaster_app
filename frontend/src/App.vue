@@ -112,6 +112,12 @@
               <router-link to="/checklist" class="dropdown-item">
                 <i class="fas fa-tasks"></i> Checklist
               </router-link>
+              <router-link to="/contact" class="dropdown-item">
+                <i class="fas fa-envelope"></i> Contact Us
+              </router-link>
+              <router-link to="/about" class="dropdown-item">
+                <i class="fas fa-info-circle"></i> About Us
+              </router-link>
             </div>
           </div>
 
