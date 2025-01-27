@@ -4,7 +4,8 @@
       <!-- Brand Logo -->
       <div class="nav-brand">
         <router-link to="/">
-          <i class="fas fa-shield-alt"></i> AlertoAbra
+          <img src="https://res.cloudinary.com/dmgivh17b/image/upload/v1737989135/disaster-app/wlltguhlrboshbqeilwt.png" alt="AlertoAbra Logo" class="brand-logo" />
+          AlertoAbra
         </router-link>
         <!-- Add mobile menu button -->
         <button class="mobile-menu-btn" @click="toggleMobileMenu" :aria-expanded="isMobileMenuOpen">
@@ -1239,5 +1240,12 @@ const toggleResourcesDropdown = (event) => {
     margin: 0 0 0.75rem 0;
     border-radius: 8px;
   }
+}
+
+/* Add this to your existing styles */
+.brand-logo {
+  height: 48px;
+  width: auto;
+  margin-right: 0.75rem;
 }
 </style>
