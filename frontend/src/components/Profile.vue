@@ -2822,7 +2822,7 @@ const executeAccountDeletion = async () => {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/delete-account`, {
             method: 'DELETE',
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
         });
