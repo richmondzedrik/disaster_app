@@ -150,9 +150,9 @@ export const checklistService = {
 
   async deleteCustomItem(itemId) {
     try {
-      const headers = getHeaders(); 
+      const headers = getHeaders();
       const response = await axios.delete(
-        `${API_URL}/checklist/custom/${itemId}`,
+        `${API_URL}/api/checklist/custom/${itemId}`,
         { headers }
       );
 
@@ -174,7 +174,7 @@ export const checklistService = {
     try {
       const headers = getHeaders();
       const response = await axios.put(
-        `${API_URL}/checklist/custom/${itemId}`,
+        `${API_URL}/api/checklist/custom/${itemId}`,
         { item },
         { headers }
       );

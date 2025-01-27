@@ -120,10 +120,23 @@
                         </div>
                         <div class="form-group">
                             <label for="phone">Phone Number</label>
-                            <input type="tel" id="phone" v-model="profileData.phone" :disabled="loading"
-                                placeholder="+63XXXXXXXXXX" @input="validatePhoneNumber" />
+                            <div class="phone-input-container">
+                                <div class="country-prefix">
+                                    <span class="flag">🇵🇭</span>
+                                    <span class="prefix">+63</span>
+                                </div>
+                                <input 
+                                    type="tel" 
+                                    id="phone" 
+                                    v-model="localPhoneNumber"
+                                    :disabled="loading"
+                                    placeholder="9XXXXXXXXX"
+                                    maxlength="10"
+                                    @input="handlePhoneInput" 
+                                />
+                            </div>
                             <span class="input-hint" :class="{ error: phoneError }">
-                                {{ phoneError || 'Format: +63XXXXXXXXXX' }}
+                                {{ phoneError || 'Format: 9XXXXXXXXX' }}
                             </span>
                         </div>
                         <div class="form-group">
@@ -1810,6 +1823,42 @@
         justify-content: center;
     }
 }
+
+.phone-input-container {
+    display: flex;
+    align-items: center;
+    border: 2px solid rgba(0, 173, 173, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.country-prefix {
+    display: flex;
+    align-items: center;
+    padding: 0.875rem 0.5rem;
+    background: #f8fafc;
+    border-right: 2px solid rgba(0, 173, 173, 0.2);
+    gap: 0.5rem;
+}
+
+.flag {
+    font-size: 1.2rem;
+}
+
+.prefix {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.phone-input-container input {
+    border: none;
+    border-radius: 0;
+    flex: 1;
+}
+
+.phone-input-container input:focus {
+    box-shadow: none;
+}
 </style>
 
 <script setup>
@@ -2026,10 +2075,12 @@ const loadProfileData = async () => {
 
 // Phone validation
 const validatePhoneNumber = () => {
-    const phoneRegex = /^\+63[0-9]{10}$/;
-    phoneError.value = profileData.value.phone && !phoneRegex.test(profileData.value.phone)
-        ? 'Invalid Philippine phone number format'
-        : '';
+    const phoneRegex = /^\+639\d{9}$/;
+    if (profileData.value.phone && !phoneRegex.test(profileData.value.phone)) {
+        phoneError.value = 'Invalid Philippine mobile number format';
+    } else {
+        phoneError.value = '';
+    }
 };
 
 // Add these constants at the top of the script section
@@ -2881,5 +2932,39 @@ const closePasswordModal = () => {
         newPassword: '',
         confirmPassword: ''
     };
+};
+
+// Add this with your other refs
+const localPhoneNumber = ref('');
+
+// Add this to your mounted hook or where you load profile data
+watch(() => profileData.value.phone, (newPhone) => {
+    if (newPhone) {
+        // Remove +63 prefix if it exists and set to localPhoneNumber
+        localPhoneNumber.value = newPhone.startsWith('+63') ? 
+            newPhone.substring(3) : newPhone;
+    }
+}, { immediate: true });
+
+const handlePhoneInput = (event) => {
+    // Remove any non-numeric characters
+    let value = event.target.value.replace(/\D/g, '');
+    
+    // Ensure the first digit is 9
+    if (value.length > 0 && value[0] !== '9') {
+        value = '9' + value.substring(1);
+    }
+    
+    // Limit to 10 digits
+    value = value.substring(0, 10);
+    
+    // Update local phone number
+    localPhoneNumber.value = value;
+    
+    // Update the main profile data with complete number
+    profileData.value.phone = value ? `+63${value}` : '';
+    
+    // Validate the complete number
+    validatePhoneNumber();
 };
 </script>

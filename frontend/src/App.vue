@@ -20,6 +20,9 @@
           <router-link to="/about" class="nav-link">
             <i class="fas fa-info-circle"></i> About
           </router-link>
+          <router-link to="/news" class="nav-link">
+            <i class="fas fa-newspaper"></i> News
+          </router-link>
           <router-link to="/contact" class="nav-link">
             <i class="fas fa-envelope"></i> Contact
           </router-link>
@@ -81,6 +84,11 @@
             <i class="fas fa-home"></i> Dashboard
           </router-link>
           
+          <!-- News Link -->
+          <router-link to="/news" class="nav-link">
+            <i class="fas fa-newspaper"></i> News
+          </router-link>
+          
           <!-- Alert Center -->
           <router-link to="/alerts" class="nav-link">
             <i class="fas fa-bell"></i> Alerts
@@ -99,9 +107,6 @@
               </router-link>
               <router-link to="/evacuation-route" class="dropdown-item">
                 <i class="fas fa-route"></i> Evacuation Route
-              </router-link>
-              <router-link to="/news" class="dropdown-item">
-                <i class="fas fa-newspaper"></i> News
               </router-link>
               <router-link to="/checklist" class="dropdown-item">
                 <i class="fas fa-tasks"></i> Checklist
