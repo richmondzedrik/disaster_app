@@ -162,17 +162,36 @@
                 </section>
 
                 <!-- Security Settings -->
-                <section class="profile-section">
+                <section class="profile-section security-section">
                     <h3><i class="fas fa-shield-alt"></i> Security Settings</h3>
                     <div class="security-options">
-                        <button @click="changePassword" class="btn btn-secondary">
-                            <i class="fas fa-key"></i>
-                            Change Password
-                        </button>
-                        <button @click="confirmDeleteAccount" class="btn btn-danger">
-                            <i class="fas fa-trash-alt"></i>
-                            Delete Account
-                        </button>
+                        <div class="security-card">
+                            <div class="security-info">
+                                <i class="fas fa-key"></i>
+                                <div class="security-text">
+                                    <h4>Password</h4>
+                                    <p>Update your password regularly to keep your account secure</p>
+                                </div>
+                            </div>
+                            <button @click="changePassword" class="btn btn-secondary">
+                                <i class="fas fa-key"></i>
+                                Change Password
+                            </button>
+                        </div>
+
+                        <div class="security-card danger-zone">
+                            <div class="security-info">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <div class="security-text">
+                                    <h4>Danger Zone</h4>
+                                    <p>Permanently delete your account and all associated data</p>
+                                </div>
+                            </div>
+                            <button @click="confirmDeleteAccount" class="btn btn-danger">
+                                <i class="fas fa-trash-alt"></i>
+                                Delete Account
+                            </button>
+                        </div>
                     </div>
                 </section>
 
@@ -264,6 +283,7 @@
                                 v-model="passwordForm.currentPassword"
                                 required
                                 :disabled="passwordLoading"
+                                :maxlength="PASSWORD_MAX_LENGTH"
                             />
                         </div>
 
@@ -275,8 +295,27 @@
                                 v-model="passwordForm.newPassword"
                                 required
                                 :disabled="passwordLoading"
-                                minlength="8"
+                                :minlength="PASSWORD_MIN_LENGTH"
+                                :maxlength="PASSWORD_MAX_LENGTH"
                             />
+                            <div class="password-requirements">
+                                <div class="requirement" :class="{ valid: passwordValidation.length }">
+                                    <i :class="['fas', passwordValidation.length ? 'fa-check' : 'fa-times']"></i>
+                                    At least 6 characters
+                                </div>
+                                <div class="requirement" :class="{ valid: passwordValidation.uppercase }">
+                                    <i :class="['fas', passwordValidation.uppercase ? 'fa-check' : 'fa-times']"></i>
+                                    One uppercase letter
+                                </div>
+                                <div class="requirement" :class="{ valid: passwordValidation.lowercase }">
+                                    <i :class="['fas', passwordValidation.lowercase ? 'fa-check' : 'fa-times']"></i>
+                                    One lowercase letter
+                                </div>
+                                <div class="requirement" :class="{ valid: passwordValidation.number }">
+                                    <i :class="['fas', passwordValidation.number ? 'fa-check' : 'fa-times']"></i>
+                                    One number
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -287,7 +326,13 @@
                                 v-model="passwordForm.confirmPassword"
                                 required
                                 :disabled="passwordLoading"
+                                :maxlength="PASSWORD_MAX_LENGTH"
                             />
+                            <div v-if="passwordForm.confirmPassword" class="confirm-message" 
+                                 :class="{ error: passwordForm.newPassword !== passwordForm.confirmPassword }">
+                                <i :class="['fas', passwordForm.newPassword === passwordForm.confirmPassword ? 'fa-check' : 'fa-times']"></i>
+                                {{ passwordForm.newPassword === passwordForm.confirmPassword ? 'Passwords match' : 'Passwords do not match' }}
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -716,7 +761,7 @@
 
 .toggle-btn:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 209, 209, 0.2);
 }
 
 .toggle-btn:disabled {
@@ -1114,16 +1159,6 @@
 
     to {
         opacity: 1;
-    }
-}
-
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
     }
 }
 
@@ -1549,19 +1584,22 @@
 }
 
 .btn-secondary {
-    background: #e2e8f0;
-    color: #4a5568;
+    background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
+    color: white;
     border: none;
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
     font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
-.btn-secondary:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
+.btn-secondary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 209, 209, 0.2);
 }
 
 .delete-warning {
@@ -1618,6 +1656,159 @@
 .btn-danger:disabled {
     background-color: #feb2b2;
     cursor: not-allowed;
+}
+
+.password-requirements {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.requirement {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #dc3545;
+    margin-bottom: 0.25rem;
+}
+
+.requirement.valid {
+    color: #28a745;
+}
+
+.confirm-message {
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #28a745;
+    font-size: 0.9rem;
+}
+
+.confirm-message.error {
+    color: #dc3545;
+}
+
+.security-section {
+    background: linear-gradient(to right, rgba(0, 209, 209, 0.02), rgba(64, 82, 214, 0.02));
+    border: 1px solid rgba(0, 173, 173, 0.1);
+    border-radius: 12px;
+    margin: 1rem 0;
+}
+
+.security-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem 0;
+}
+
+.security-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 173, 173, 0.1);
+    transition: all 0.3s ease;
+}
+
+.security-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 92, 92, 0.05);
+}
+
+.security-info {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.security-info i {
+    font-size: 1.5rem;
+    color: #00D1D1;
+    background: rgba(0, 209, 209, 0.1);
+    padding: 1rem;
+    border-radius: 12px;
+}
+
+.security-text h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+}
+
+.security-text p {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.95rem;
+}
+
+.security-card.danger-zone {
+    border-color: rgba(220, 53, 69, 0.1);
+}
+
+.security-card.danger-zone .security-info i {
+    color: #dc3545;
+    background: rgba(220, 53, 69, 0.1);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 209, 209, 0.2);
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+}
+
+@media (max-width: 640px) {
+    .security-card {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .security-info {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .btn-secondary,
+    .btn-danger {
+        width: 100%;
+        justify-content: center;
+    }
 }
 </style>
 
@@ -1841,24 +2032,32 @@ const validatePhoneNumber = () => {
         : '';
 };
 
-// Password management
-const passwordData = ref({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-});
+// Add these constants at the top of the script section
+const PASSWORD_MIN_LENGTH = 6;
+const PASSWORD_MAX_LENGTH = 16;
 
-// Password form validation
+const passwordValidation = computed(() => ({
+    length: passwordForm.value.newPassword.length >= PASSWORD_MIN_LENGTH,
+    uppercase: /[A-Z]/.test(passwordForm.value.newPassword),
+    lowercase: /[a-z]/.test(passwordForm.value.newPassword),
+    number: /[0-9]/.test(passwordForm.value.newPassword)
+}));
+
 const isPasswordFormValid = computed(() => {
     return passwordForm.value.currentPassword &&
            passwordForm.value.newPassword &&
+           passwordForm.value.confirmPassword &&
            passwordForm.value.newPassword === passwordForm.value.confirmPassword &&
-           passwordForm.value.newPassword.length >= 8;
+           passwordForm.value.newPassword.length >= PASSWORD_MIN_LENGTH &&
+           passwordForm.value.newPassword.length <= PASSWORD_MAX_LENGTH &&
+           passwordValidation.value.uppercase &&
+           passwordValidation.value.lowercase &&
+           passwordValidation.value.number;
 });
 
 const handlePasswordChange = async () => {
     if (!isPasswordFormValid.value) {
-        notificationStore.error('Please check your password inputs');
+        notificationStore.error('Please check your password requirements');
         return;
     }
 
@@ -2614,20 +2813,33 @@ const executeAccountDeletion = async () => {
 
     try {
         deleteLoading.value = true;
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/users/delete`, {
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+            throw new Error('Authentication required');
+        }
+
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/delete-account`, {
             method: 'DELETE',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
         });
 
         const data = await response.json();
         
-        if (response.ok && data.success) {
-            notificationStore.success('Account deleted successfully');
-            // Clear auth store and redirect to home
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to delete account');
+        }
+
+        if (data.success) {
+            // Clear all local storage data
+            localStorage.clear();
+            // Clear auth store
             authStore.logout();
+            notificationStore.success('Account deleted successfully');
+            // Redirect to home
             router.push('/');
         } else {
             throw new Error(data.message || 'Failed to delete account');
@@ -2636,6 +2848,11 @@ const executeAccountDeletion = async () => {
         console.error('Delete account error:', error);
         deleteError.value = error.message || 'Failed to delete account';
         notificationStore.error(error.message || 'Failed to delete account');
+        
+        if (error.message.includes('Authentication')) {
+            authStore.logout();
+            router.push('/login');
+        }
     } finally {
         deleteLoading.value = false;
     }
