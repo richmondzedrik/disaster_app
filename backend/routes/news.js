@@ -48,6 +48,7 @@ router.get('/api/admin/news/posts', auth.authMiddleware, async (req, res) => {
                 p.*,
                 u.username as author_username,
                 u.id as author_id,
+                u.avatar_url as author_avatar,
                 p.created_at,
                 (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
                 (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND deleted_by IS NULL) as comment_count,
@@ -55,7 +56,7 @@ router.get('/api/admin/news/posts', auth.authMiddleware, async (req, res) => {
             FROM posts p
             LEFT JOIN users u ON p.author_id = u.id
             LEFT JOIN likes l ON p.id = l.post_id
-            GROUP BY p.id, u.username, u.id
+            GROUP BY p.id, u.username, u.id, u.avatar_url
             ORDER BY p.created_at DESC
         `);
         
@@ -274,6 +275,7 @@ router.get('/admin/posts', auth.authMiddleware, async (req, res) => {
         p.*,
         u.username as author_username,
         u.id as author_id,
+        u.avatar_url as author_avatar,
         p.created_at,
         (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
         (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND deleted_by IS NULL) as comment_count,
@@ -281,7 +283,7 @@ router.get('/admin/posts', auth.authMiddleware, async (req, res) => {
       FROM posts p
       LEFT JOIN users u ON p.author_id = u.id
       LEFT JOIN likes l ON p.id = l.post_id
-      GROUP BY p.id, u.username, u.id
+      GROUP BY p.id, u.username, u.id, u.avatar_url
       ORDER BY p.created_at DESC
     `);
     
@@ -335,9 +337,21 @@ router.post('/posts', auth.authMiddleware, upload.single('image'), async (req, r
         // Set status based on user role
         const status = req.user.role === 'admin' ? 'approved' : 'pending';
         
+        const [userResult] = await db.execute(
+            'SELECT avatar_url FROM users WHERE id = ?',
+            [req.user.userId]
+        );
+
         const [result] = await db.execute(
             'INSERT INTO posts (title, content, author_id, status, image_url, author_avatar) VALUES (?, ?, ?, ?, ?, ?)',
-            [title, content, req.user.userId, status, imageUrl, req.user.avatar_url || null]
+            [
+                title, 
+                content, 
+                req.user.userId, 
+                status, 
+                imageUrl, 
+                userResult[0]?.avatar_url || null
+            ]
         );
 
         if (!result.insertId) {
@@ -614,6 +628,7 @@ router.get('/public', async (req, res) => {
             SELECT 
                 p.*,
                 u.username as author,
+                u.avatar_url as author_avatar,
                 COUNT(DISTINCT l.id) as likes,
                 COUNT(DISTINCT c.id) as comment_count,
                 ${userId ? 'EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = ?) as liked' : 'FALSE as liked'}
@@ -622,7 +637,7 @@ router.get('/public', async (req, res) => {
             LEFT JOIN likes l ON p.id = l.post_id
             LEFT JOIN comments c ON p.id = c.post_id
             WHERE p.status = 'approved'
-            GROUP BY p.id
+            GROUP BY p.id, u.username, u.avatar_url
             ORDER BY p.created_at DESC
         `;
 
