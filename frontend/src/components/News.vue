@@ -126,18 +126,23 @@
           <div class="post-content">
             <h2>{{ post.title }}</h2>
             <p>{{ post.content }}</p>
-            <div v-if="post.image_url || post.video_url" class="post-image">
-              <img v-if="post.image_url" 
+            <div v-if="post.image_url || post.video_url" class="post-media">
+              <!-- Handle images -->
+              <img v-if="isMediaImage(post.image_url)" 
                 :src="getImageUrl(post.image_url).url" 
                 :crossorigin="getImageUrl(post.image_url).crossorigin"
                 @error="handleImageError($event, post)" 
                 @load="handleImageLoad($event, post)" 
                 alt="Post image" 
                 class="post-img" />
-              <video v-if="post.video_url" 
-                :src="getImageUrl(post.video_url).url" 
+              
+              <!-- Handle videos -->
+              <video v-if="isMediaVideo(post.image_url)" 
+                :src="getImageUrl(post.image_url).url" 
                 controls 
-                class="post-video">
+                class="post-video"
+                @error="handleVideoError($event, post)"
+                @loadeddata="handleVideoLoad($event, post)">
               </video>
             </div>
           </div>
@@ -303,6 +308,7 @@ const filterType = ref('all');
 const mediaFile = ref(null);
 const mediaPreview = ref(null);
 const isImage = ref(true);
+const uploadProgress = ref(0);
 
 // Computed
 const user = computed(() => authStore.user);
@@ -1003,6 +1009,37 @@ const handleAvatarLoad = (event, post) => {
   }
 };
 
+const isMediaImage = (url) => {
+  if (!url) return false;
+  return url.match(/\.(jpg|jpeg|png|gif|webp)$/i) || 
+         url.includes('/image/upload/');
+};
+
+const isMediaVideo = (url) => {
+  if (!url) return false;
+  return url.match(/\.(mp4|webm|ogg)$/i) || 
+         url.includes('/video/upload/');
+};
+
+const handleVideoError = (event, post) => {
+  if (!post) return;
+  
+  console.error('Failed to load video for post:', {
+    postId: post.id,
+    videoUrl: post.image_url,
+    error: event?.target?.error || event
+  });
+  
+  post.videoError = true;
+  post.videoLoaded = false;
+};
+
+const handleVideoLoad = (event, post) => {
+  if (!post) return;
+  post.videoLoaded = true;
+  post.videoError = false;
+};
+
 </script>
 
 <style scoped>
@@ -1568,9 +1605,20 @@ const handleAvatarLoad = (event, post) => {
   justify-content: center;
 }
 
-.post-image {
+.post-media {
   margin: 1rem 0;
   width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.post-media img,
+.post-media video {
+  max-width: 100%;
+  max-height: 500px;
+  border-radius: 12px;
+  object-fit: contain;
 }
 
 .image-container {
