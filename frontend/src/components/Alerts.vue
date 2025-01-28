@@ -127,7 +127,21 @@ const formatPriority = (priority) => {
 };
 
 const markAsRead = async (alertId) => {
-  await alertStore.markAsRead(alertId);
+  try {
+    await alertStore.markAsRead(alertId);
+    // Update the local alerts array to reflect the change
+    alerts.value = alerts.value.map(alert => {
+      if (alert.id === alertId) {
+        return { ...alert, is_read: true };
+      }
+      return alert;
+    });
+    // Trigger a refresh of the alerts count in the store
+    await alertStore.fetchAlertCount();
+  } catch (error) {
+    console.error('Error marking alert as read:', error);
+    notificationStore.error('Failed to mark alert as read');
+  }
 };
 
 onMounted(() => {
