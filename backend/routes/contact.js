@@ -10,10 +10,12 @@ const transporter = nodemailer.createTransport({
     port: 587,
     secure: false,
     auth: {
-        user: config.smtp.user,
-        pass: config.smtp.pass
+        user: process.env.GMAIL_USER || config.smtp.user,
+        pass: process.env.GMAIL_APP_PASSWORD || config.smtp.pass
     },
-    debug: true // Enable debug logs
+    tls: {
+        rejectUnauthorized: false
+    }
 });
 
 // Verify transporter configuration
@@ -31,7 +33,7 @@ router.post('/send', async (req, res) => {
 
         // Email to admin
         const adminMailOptions = {
-            from: config.smtp.from || config.smtp.user,
+            from: `"AlertoAbra" <${process.env.GMAIL_USER || config.smtp.user}>`,
             to: adminEmail,
             subject: `New Contact Form Message: ${subject}`,
             html: `
@@ -45,7 +47,7 @@ router.post('/send', async (req, res) => {
 
         // Auto-reply to user
         const userMailOptions = {
-            from: config.smtp.from || config.smtp.user,
+            from: `"AlertoAbra" <${process.env.GMAIL_USER || config.smtp.user}>`,
             to: email,
             subject: 'Thank you for contacting AlertoAbra',
             html: `
