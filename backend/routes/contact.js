@@ -1,13 +1,27 @@
 const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer');
+const config = require('../config/config');
 
-// Configure nodemailer
+// Configure nodemailer with Gmail
 const transporter = nodemailer.createTransport({
-    service: 'yahoo',
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
     auth: {
-        user: process.env.EMAIL_USER || 'pdrrmc.abra@yahoo.com.ph',
-        pass: process.env.EMAIL_PASSWORD // Set this in your environment variables
+        user: config.smtp.user,
+        pass: config.smtp.pass
+    },
+    debug: true // Enable debug logs
+});
+
+// Verify transporter configuration
+transporter.verify((error, success) => {
+    if (error) {
+        console.error('SMTP Configuration Error:', error);
+    } else {
+        console.log('SMTP Server is ready to send emails');
     }
 });
 
@@ -17,7 +31,7 @@ router.post('/send', async (req, res) => {
 
         // Email to admin
         const adminMailOptions = {
-            from: process.env.EMAIL_USER || 'pdrrmc.abra@yahoo.com.ph',
+            from: config.smtp.from || config.smtp.user,
             to: adminEmail,
             subject: `New Contact Form Message: ${subject}`,
             html: `
@@ -31,7 +45,7 @@ router.post('/send', async (req, res) => {
 
         // Auto-reply to user
         const userMailOptions = {
-            from: process.env.EMAIL_USER || 'pdrrmc.abra@yahoo.com.ph',
+            from: config.smtp.from || config.smtp.user,
             to: email,
             subject: 'Thank you for contacting AlertoAbra',
             html: `
