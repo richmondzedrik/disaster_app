@@ -92,12 +92,33 @@ export const useAlertStore = defineStore('alert', () => {
     }
   };
 
+  const markAsRead = async (alertId) => {
+    try {
+      const response = await alertService.markAlertAsRead(alertId);
+      if (response.success) {
+        alerts.value = alerts.value.map(alert => 
+          alert.id === alertId 
+            ? { ...alert, is_read: true }
+            : alert
+        );
+        notificationStore.success('Alert marked as read');
+        return true;
+      }
+      throw new Error(response.message || 'Failed to mark alert as read');
+    } catch (error) {
+      console.error('Error marking alert as read:', error);
+      notificationStore.error(error.message || 'Failed to mark alert as read');
+      return false;
+    }
+  };
+
   return {
     alerts,
     isLoading,
     fetchAlerts,
     createAlert,
     toggleAlertStatus,
-    deleteAlert
+    deleteAlert,
+    markAsRead
   };
 }); 

@@ -9,7 +9,7 @@
       </div>
       <div v-else class="alerts-list">
         <div v-for="alert in sortedAlerts" :key="alert.id" 
-             :class="['alert', `alert-${alert.type}`, `priority-${alert.priority}`]">
+             :class="['alert', `alert-${alert.type}`, `priority-${alert.priority}`, { 'is-read': alert.is_read }]">
           <div class="alert-content">
             <div class="alert-header">
               <span class="alert-type">{{ formatAlertType(alert.type) }}</span>
@@ -18,7 +18,20 @@
             <p class="alert-message">{{ alert.message }}</p>
             <div class="alert-footer">
               <span class="alert-priority">Priority: {{ formatPriority(alert.priority) }}</span>
-              <span class="alert-author">By: {{ alert.created_by_username || 'System' }}</span>
+              <div class="alert-actions">
+                <button 
+                  v-if="!alert.is_read"
+                  @click="markAsRead(alert.id)" 
+                  class="action-btn read-btn"
+                  title="Mark as read"
+                >
+                  <i class="fas fa-check"></i> Mark as Read
+                </button>
+                <span v-else class="read-status">
+                  <i class="fas fa-check-circle"></i> Read
+                </span>
+                <span class="alert-author">By: {{ alert.created_by_username || 'System' }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -32,9 +45,11 @@ import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useNotificationStore } from '../stores/notification';
 import alertService from '../services/alertService'; 
+import { useAlertStore } from '../stores/alert';
 
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
+const alertStore = useAlertStore();
 
 const alerts = ref([]);
 const loading = ref(true);
@@ -109,6 +124,10 @@ const formatPriority = (priority) => {
     2: 'High'
   };
   return priorities[priority] || 'Unknown';
+};
+
+const markAsRead = async (alertId) => {
+  await alertStore.markAsRead(alertId);
 };
 
 onMounted(() => {
@@ -198,5 +217,45 @@ onMounted(() => {
   margin-top: 10px;
   font-size: 0.9em;
   color: #666;
+}
+
+.alert-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.read-btn {
+  background-color: #e2e8f0;
+  color: #475569;
+}
+
+.read-btn:hover {
+  background-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.read-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #16a34a;
+  font-size: 0.875rem;
+}
+
+.is-read {
+  opacity: 0.75;
 }
 </style> 

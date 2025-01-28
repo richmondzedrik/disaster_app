@@ -251,6 +251,18 @@ export const alertService = {
         }
       };
     }
+  },
+
+  async markAlertAsRead(alertId) {
+    try {
+      const response = await api.post(`/api/alerts/${alertId}/read`, {}, {
+        headers: await getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error marking alert as read:', error);
+      throw error;
+    }
   }
 };
 
