@@ -1539,7 +1539,7 @@ const handleAvatarLoad = (event, post) => {
 .image-container {
   position: relative;
   width: 100%;
-  max-height: 400px;
+  max-height: 500px;
   min-height: 200px;
   background: #f8fafc;
   border-radius: 12px;
@@ -1547,18 +1547,35 @@ const handleAvatarLoad = (event, post) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 1rem 0;
 }
 
 .news-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  max-height: 500px;
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
 .news-image.visible {
   opacity: 1;
+}
+
+.post-image {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+.post-image img {
+  max-width: 100%;
+  max-height: 500px;
+  object-fit: contain;
+  border-radius: 12px;
 }
 
 .image-loading,
