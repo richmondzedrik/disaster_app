@@ -14,6 +14,7 @@ const notificationTestRoutes = require('./routes/notificationTests');
 const notificationRoutes = require('./routes/notifications');
 const markersRoutes = require('./routes/markers');
 const hazardZonesRoutes = require('./routes/hazardZones');
+const contactRoutes = require('./routes/contact');
 
 const app = express();
 
@@ -94,6 +95,7 @@ app.use('/auth', authRoutes);
 app.use('/api', notificationTestRoutes);
 app.use('/api/markers', markersRoutes);
 app.use('/api/hazard-zones', hazardZonesRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Route debugging endpoint in development         
 if (process.env.NODE_ENV !== 'production') {
