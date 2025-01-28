@@ -2279,30 +2279,13 @@ const formatDate = (dateString) => {
 
 onMounted(async () => {
     try {
-        // Load initial profile data
-        const response = await userService.getProfile();
-        if (response?.success && response?.user) {
-            profileData.value = {
-                ...response.user,
-                emergencyContacts: response.user.emergencyContacts || [],
-                avatar_url: response.user.avatar_url || ''
-            };
-            
-            // Verify avatar URL is working
-            if (profileData.value.avatar_url) {
-                const img = new Image();
-                img.onload = () => {
-                    console.log('Avatar loaded successfully:', profileData.value.avatar_url);
-                };
-                img.onerror = () => {
-                    console.error('Failed to load avatar:', profileData.value.avatar_url);
-                    profileData.value.avatar_url = '';
-                };
-                img.src = getAvatarUrl(profileData.value.avatar_url);
-            }
-        }
+        initialLoading.value = true;
+        await Promise.all([
+            loadProfileData(),
+            loadEmergencyContactsFromDB() // Add this line
+        ]);
     } catch (error) {
-        console.error('Error loading profile:', error);
+        console.error('Error loading profile data:', error);
         notificationStore.error('Failed to load profile data');
     } finally {
         initialLoading.value = false;
@@ -2688,13 +2671,10 @@ const saveProfile = async () => {
 };
 
 const loadEmergencyContactsFromDB = async () => {
-    if (loading.value) return;
-
     try {
         const response = await userService.getEmergencyContacts();
 
         if (response?.success) {
-            // Update both current and original data to prevent change detection
             const contacts = response.contacts || [];
             profileData.value.emergencyContacts = contacts;
             originalEmergencyContacts.value = JSON.parse(JSON.stringify(contacts));
@@ -2702,11 +2682,10 @@ const loadEmergencyContactsFromDB = async () => {
                 ...originalData.value,
                 emergencyContacts: JSON.parse(JSON.stringify(contacts))
             };
-            notificationStore.success('Emergency contacts refreshed');
         }
     } catch (error) {
-        console.error('Error refreshing emergency contacts:', error);
-        notificationStore.error('Failed to refresh emergency contacts');
+        console.error('Error loading emergency contacts:', error);
+        throw error; // Propagate error to be handled by onMounted
     }
 };
 
