@@ -2023,11 +2023,7 @@ const loadProfileData = async () => {
             // Store original emergency contacts
             originalEmergencyContacts.value = JSON.parse(JSON.stringify(userData.emergencyContacts || []));
 
-            // Get stored avatar URL from localStorage as fallback with user-specific key
-            const avatarKey = `userAvatar_${user.value?.id}`;
-            const storedAvatarUrl = localStorage.getItem(avatarKey);
-            
-            // Update profile data including avatar_url
+            // Update profile data including avatar_url directly from database
             profileData.value = {
                 ...profileData.value,
                 username: userData.username || '',
@@ -2036,30 +2032,10 @@ const loadProfileData = async () => {
                 location: userData.location || '',
                 notifications: userData.notifications || { email: true, push: true },
                 emergencyContacts: userData.emergencyContacts || [],
-                // Use the response avatar_url or fallback to stored URL
-                avatar_url: userData.avatar_url || storedAvatarUrl || null,
+                avatar_url: userData.avatar_url || null,
                 pendingAvatar: null,
                 tempAvatarUrl: null
             };
-
-            // If we have an avatar URL, verify it's working
-            if (profileData.value.avatar_url) {
-                const img = new Image();
-                img.onload = () => {
-                    console.log('Avatar loaded successfully:', profileData.value.avatar_url);
-                    localStorage.setItem('userAvatar', profileData.value.avatar_url);
-                };
-                img.onerror = () => {
-                    console.error('Failed to load avatar:', profileData.value.avatar_url);
-                    if (storedAvatarUrl && storedAvatarUrl !== profileData.value.avatar_url) {
-                        profileData.value.avatar_url = storedAvatarUrl;
-                    } else {
-                        profileData.value.avatar_url = '';
-                        localStorage.removeItem('userAvatar');
-                    }
-                };
-                img.src = getAvatarUrl(profileData.value.avatar_url);
-            }
 
             // Store original data for change detection
             originalData.value = JSON.parse(JSON.stringify({
@@ -2762,24 +2738,13 @@ const getAvatarUrl = (avatarUrl) => {
 const handleAvatarError = async () => {
     console.error('Avatar loading error:', profileData.value.avatar_url);
     
-    // Try to get cached avatar
-    const cachedAvatar = localStorage.getItem('userAvatar');
-    
-    if (cachedAvatar && profileData.value.avatar_url !== cachedAvatar) {
-        profileData.value.avatar_url = cachedAvatar;
-        return;
-    }
-    
-    // If cache fails, use default
+    // If avatar fails to load, use default
     profileData.value.avatar_url = '';
-    localStorage.removeItem('userAvatar');
 };
 
 const handleAvatarLoad = () => {
-    // Cache the successful avatar URL
-    if (profileData.value.avatar_url) {
-        localStorage.setItem('userAvatar', profileData.value.avatar_url);
-    }
+    // Success - no need to cache
+    console.log('Avatar loaded successfully:', profileData.value.avatar_url);
 };
 
 const showAvatarModal = ref(false);
@@ -2815,10 +2780,6 @@ const saveAvatar = async () => {
             URL.revokeObjectURL(profileData.value.tempAvatarUrl);
             delete profileData.value.pendingAvatar;
             delete profileData.value.tempAvatarUrl;
-            
-            // Store the avatar URL in localStorage with user-specific key
-            const avatarKey = `userAvatar_${user.value?.id}`;
-            localStorage.setItem(avatarKey, response.avatarUrl);
             
             notificationStore.success('Profile photo updated successfully');
             closeAvatarModal();
