@@ -126,10 +126,19 @@
           <div class="post-content">
             <h2>{{ post.title }}</h2>
             <p>{{ post.content }}</p>
-            <div v-if="post.image_url" class="post-image">
-              <img :src="getImageUrl(post.image_url).url" :crossorigin="getImageUrl(post.image_url).crossorigin"
-                @error="handleImageError($event, post)" @load="handleImageLoad($event, post)" alt="Post image"
+            <div v-if="post.image_url || post.video_url" class="post-image">
+              <img v-if="post.image_url" 
+                :src="getImageUrl(post.image_url).url" 
+                :crossorigin="getImageUrl(post.image_url).crossorigin"
+                @error="handleImageError($event, post)" 
+                @load="handleImageLoad($event, post)" 
+                alt="Post image" 
                 class="post-img" />
+              <video v-if="post.video_url" 
+                :src="getImageUrl(post.video_url).url" 
+                controls 
+                class="post-video">
+              </video>
             </div>
           </div>
 
@@ -234,12 +243,13 @@
             <textarea id="content" v-model="postForm.content" rows="4" required></textarea>
           </div>
           <div class="form-group">
-            <label for="image">Image (optional)</label>
+            <label for="media">Media (Image or Video - Max 100MB)</label>
             <div class="image-upload">
-              <input type="file" id="image" @change="handleImageUpload" accept="image/*" class="image-input">
-              <div class="upload-preview" v-if="imagePreview">
-                <img :src="imagePreview" alt="Preview">
-                <button type="button" @click="removeImage" class="remove-image">
+              <input type="file" id="media" @change="handleMediaUpload" accept="image/*,video/*" class="image-input">
+              <div v-if="mediaPreview" class="upload-preview">
+                <img v-if="isImage" :src="mediaPreview" alt="Preview">
+                <video v-else :src="mediaPreview" controls></video>
+                <button type="button" @click="removeMedia" class="remove-image">
                   <i class="fas fa-times"></i>
                 </button>
               </div>
@@ -290,6 +300,9 @@ const imageError = ref(false);
 const imageLoaded = ref(false);
 const searchQuery = ref('');
 const filterType = ref('all');
+const mediaFile = ref(null);
+const mediaPreview = ref(null);
+const isImage = ref(true);
 
 // Computed
 const user = computed(() => authStore.user);
@@ -347,8 +360,9 @@ const createPost = async () => {
     formData.append('title', postForm.value.title.trim());
     formData.append('content', postForm.value.content.trim());
 
-    if (imageFile.value) {
-      formData.append('image', imageFile.value);
+    if (mediaFile.value) {
+      formData.append('media', mediaFile.value);
+      formData.append('mediaType', isImage.value ? 'image' : 'video');
     }
 
     // Add author's avatar URL if available
@@ -494,19 +508,28 @@ const canEditPost = (post) => {
   return user.value?.id === post.authorId || user.value?.role === 'admin';
 };
 
-const handleImageUpload = (event) => {
+const handleMediaUpload = (event) => {
   const file = event.target.files[0];
-  if (file) {
-    imageFile.value = file;
-    imagePreview.value = URL.createObjectURL(file);
+  if (!file) return;
+
+  // Check file size (100MB = 100 * 1024 * 1024 bytes)
+  if (file.size > 100 * 1024 * 1024) {
+    notificationStore.error('File size must be less than 100MB');
+    event.target.value = '';
+    return;
   }
+
+  mediaFile.value = file;
+  isImage.value = file.type.startsWith('image/');
+  mediaPreview.value = URL.createObjectURL(file);
 };
 
-const removeImage = () => {
-  imageFile.value = null;
-  imagePreview.value = null;
+const removeMedia = () => {
+  mediaFile.value = null;
+  mediaPreview.value = null;
+  isImage.value = true;
   // Reset the file input
-  const input = document.getElementById('image');
+  const input = document.getElementById('media');
   if (input) input.value = '';
 };
 
@@ -1523,6 +1546,12 @@ const handleAvatarLoad = (event, post) => {
   border-radius: 8px;
 }
 
+.upload-preview video {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+}
+
 .remove-image {
   position: absolute;
   top: -8px;
@@ -2226,5 +2255,12 @@ const handleAvatarLoad = (event, post) => {
 
 .avatar-image.hidden {
   display: none;
+}
+
+.post-content video {
+  max-width: 100%;
+  max-height: 500px;
+  border-radius: 12px;
+  margin: 1rem 0;
 }
 </style>

@@ -163,11 +163,34 @@ export const newsService = {
                 'Content-Type': 'multipart/form-data'
             };
             
+            // Check if media file exists and its type
+            const mediaFile = formData.get('media');
+            if (mediaFile) {
+                // Validate file size (100MB limit)
+                if (mediaFile.size > 100 * 1024 * 1024) {
+                    throw new Error('File size must be less than 100MB');
+                }
+
+                // Validate file type
+                const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                const validVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+                
+                if (!validImageTypes.includes(mediaFile.type) && !validVideoTypes.includes(mediaFile.type)) {
+                    throw new Error('Invalid file type. Only images (JPG, PNG, GIF, WEBP) and videos (MP4, WEBM, MOV) are allowed');
+                }
+            }
+
             const response = await axios.post(`${API_URL}/news/posts`, formData, {
                 headers,
                 withCredentials: true,
-                timeout: 30000, // Increased timeout for file upload
-                validateStatus: status => status < 500
+                timeout: 60000, // Increased timeout for video upload
+                maxContentLength: 104857600, // 100MB in bytes
+                maxBodyLength: 104857600, // 100MB in bytes
+                validateStatus: status => status < 500,
+                onUploadProgress: (progressEvent) => {
+                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    console.log('Upload progress:', percentCompleted);
+                }
             });
 
             if (response.status === 401) {
@@ -183,7 +206,7 @@ export const newsService = {
             return response.data;
         } catch (error) {
             console.error('Error creating post:', error);
-            throw new Error(error.response?.data?.message || 'Failed to create post. Please try again.');
+            throw new Error(error.response?.data?.message || error.message || 'Failed to create post. Please try again.');
         }
     },
 
