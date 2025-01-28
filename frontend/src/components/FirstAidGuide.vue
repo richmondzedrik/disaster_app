@@ -18,6 +18,12 @@
                 {{ step }}
               </li>
             </ul>
+            <div v-if="guide.videoUrl" class="video-container">
+              <a :href="guide.videoUrl" target="_blank" class="video-link">
+                <i class="fas fa-play-circle"></i>
+                Watch Tutorial Video
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -37,7 +43,8 @@
         'Check breathing',
         'Begin chest compressions',
         'Give rescue breaths if trained'
-      ]
+      ],
+      videoUrl: 'https://www.youtube.com/watch?v=hizBdM1Ob68'
     },
     {
       title: 'Bleeding Control',
@@ -49,7 +56,8 @@
         'Elevate the injury if possible',
         'Apply pressure bandage',
         'Seek medical attention'
-      ]
+      ],
+      videoUrl: 'https://www.youtube.com/watch?v=gOWEFgsrNhI'
     },
     {
       title: 'Burns Treatment',
@@ -61,7 +69,8 @@
         'Cover with sterile gauze',
         'Don\'t break blisters',
         'Seek medical attention for severe burns'
-      ]
+      ],
+      videoUrl: 'https://www.youtube.com/watch?v=EaJmzB8YgS0'
     },
     {
       title: 'Choking Response',
@@ -73,7 +82,60 @@
         'Perform abdominal thrusts',
         'Alternate between back blows and thrusts',
         'Call emergency if person becomes unconscious'
-      ]
+      ],
+      videoUrl: 'https://www.youtube.com/watch?v=2dn13zneEjo'
+    },
+    {
+      title: 'Fracture Care',
+      icon: 'fas fa-bone',
+      description: 'Immediate care for suspected fractures:',
+      steps: [
+        'Keep the injured area still',
+        'Apply ice to reduce swelling',
+        'Check circulation beyond the injury',
+        'Immobilize the injured area',
+        'Seek immediate medical attention'
+      ],
+      videoUrl: 'https://www.youtube.com/watch?v=AsZvN7b02S0'
+    },
+    {
+      title: 'Heat Exhaustion',
+      icon: 'fas fa-temperature-high',
+      description: 'Treating heat exhaustion symptoms:',
+      steps: [
+        'Move to a cool place',
+        'Loosen tight clothing',
+        'Apply cool, wet cloths',
+        'Sip water slowly',
+        'Monitor symptoms'
+      ],
+      videoUrl: 'https://www.youtube.com/watch?v=vIXR-RJ3o0w'
+    },
+    {
+      title: 'Seizure Response',
+      icon: 'fas fa-brain',
+      description: 'How to help during a seizure:',
+      steps: [
+        'Clear the area of hazards',
+        'Protect head from injury',
+        'Time the seizure duration',
+        'Never restrain the person',
+        'Place in recovery position after'
+      ],
+      videoUrl: 'https://www.youtube.com/watch?v=FbtLZ4ww6Y4'
+    },
+    {
+      title: 'Allergic Reaction',
+      icon: 'fas fa-allergies',
+      description: 'Managing severe allergic reactions:',
+      steps: [
+        'Identify allergic symptoms',
+        'Use EpiPen if available',
+        'Call emergency services',
+        'Keep person calm',
+        'Monitor breathing and consciousness'
+      ],
+      videoUrl: 'https://www.youtube.com/watch?v=qE8DcgVW44g'
     }
   ]
   </script>
@@ -110,6 +172,12 @@
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     padding: 1.5rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .guide-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
   }
   
   .guide-header {
@@ -147,5 +215,29 @@
   
   .guide-content li:last-child {
     border-bottom: none;
+  }
+  
+  .video-container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+  }
+  
+  .video-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #00D1D1;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
+  }
+  
+  .video-link:hover {
+    color: #008B87;
+  }
+  
+  .video-link i {
+    font-size: 1.2rem;
   }
   </style>

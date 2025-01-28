@@ -275,6 +275,44 @@ router.get('/:id', auth.authMiddleware, async (req, res) => {
   }
 });
 
+// Mark alert as read
+router.post('/:id/read', auth.authMiddleware, async (req, res) => {
+  try {
+    const alertId = req.params.id;
+    const userId = req.user.userId;
+
+    // Check if already read
+    const [existing] = await db.execute(
+      'SELECT * FROM alert_reads WHERE alert_id = ? AND user_id = ?',
+      [alertId, userId]
+    );
+
+    if (existing.length > 0) {
+      return res.json({
+        success: true,
+        message: 'Alert already marked as read'
+      });
+    }
+
+    // Mark as read
+    await db.execute(
+      'INSERT INTO alert_reads (alert_id, user_id) VALUES (?, ?)',
+      [alertId, userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Alert marked as read'
+    });
+  } catch (error) {
+    console.error('Mark alert as read error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark alert as read'
+    });
+  }
+});
+
 // Catch-all route for this router
 router.use((req, res) => {
   res.status(404).json({
