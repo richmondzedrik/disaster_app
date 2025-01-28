@@ -139,9 +139,6 @@ const markAsRead = async (alertId) => {
         return alert;
       });
       
-      // Trigger a refresh of the alerts count in the store
-      await alertStore.fetchAlertCount();
-      
       // Show success notification
       notificationStore.success('Alert marked as read');
     } else {
