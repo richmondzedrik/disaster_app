@@ -425,8 +425,9 @@ const loadPosts = async () => {
         // Try to get cached avatar from localStorage
         const cachedAvatar = localStorage.getItem(`userAvatar_${post.author_id}`);
         
-        // Verify if the avatar URL is valid
-        let validatedAvatarUrl = post.author_avatar;
+        // Use the first available avatar URL
+        let validatedAvatarUrl = post.author_avatar || cachedAvatar;
+
         if (validatedAvatarUrl) {
           try {
             const img = new Image();
@@ -439,7 +440,7 @@ const loadPosts = async () => {
             localStorage.setItem(`userAvatar_${post.author_id}`, validatedAvatarUrl);
           } catch (error) {
             console.log('Avatar validation failed for post:', post.id);
-            validatedAvatarUrl = cachedAvatar || null;
+            validatedAvatarUrl = null;
           }
         }
 
@@ -453,7 +454,7 @@ const loadPosts = async () => {
           likes: parseInt(post.likes) || 0,
           likeLoading: false,
           status: post.status || 'pending',
-          author_avatar: validatedAvatarUrl || cachedAvatar || null,
+          author_avatar: validatedAvatarUrl || null,
           authorId: post.author_id || post.authorId,
           avatarError: false
         };
@@ -905,10 +906,11 @@ onMounted(() => {
 
 // Add this function in the script setup section, after the imports
 const getAvatarUrl = (avatarUrl) => {
+  const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
+  
   try {
-    // If no avatar URL is provided, check localStorage first
+    // If no avatar URL is provided, return default avatar
     if (!avatarUrl) {
-      const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
       return `${baseUrl}/uploads/avatars/default.png`;
     }
 
@@ -918,12 +920,10 @@ const getAvatarUrl = (avatarUrl) => {
     }
 
     // For database-stored avatar URLs
-    const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
     const cleanAvatarUrl = avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/');
     return `${baseUrl}/uploads/avatars/${cleanAvatarUrl}`;
   } catch (error) {
     console.error('Error constructing avatar URL:', error);
-    const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
     return `${baseUrl}/uploads/avatars/default.png`;
   }
 };
@@ -1590,16 +1590,16 @@ const handleAvatarLoad = (event, post) => {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.9);
 }
 
 .image-loading {
+  background: rgba(255, 255, 255, 0.9);
   color: #00D1D1;
 }
 
 .image-error-overlay {
-  color: #dc2626;
   background: rgba(255, 255, 255, 0.95);
+  color: #dc2626;
 }
 
 .image-loading i,
