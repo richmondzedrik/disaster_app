@@ -35,15 +35,17 @@
             <div class="profile-header">
                 <div class="profile-avatar">
                     <div class="avatar-container">
-                        <img v-if="profileData.avatar_url"
-                            :src="getAvatarUrl(profileData.avatar_url)"
-                            alt="Profile Avatar"
-                            class="avatar-image"
-                            @error="handleAvatarError"
-                            @load="handleAvatarLoad"
-                            ref="avatarImage" />
-                        <div v-else class="avatar-placeholder">
-                            <span>{{ getInitials(profileData.username || 'User') }}</span>
+                        <div class="author-avatar">
+                            <img v-if="!avatarError"
+                                :src="getAvatarUrl(profileData.avatar_url)"
+                                alt="Profile Avatar"
+                                @error="handleAvatarError"
+                                @load="handleAvatarLoad"
+                                class="avatar-image"
+                                ref="avatarImage" />
+                            <div v-else class="avatar-placeholder">
+                                <span>{{ getInitials(profileData.username || 'User') }}</span>
+                            </div>
                         </div>
                         <div class="avatar-overlay" @click="openAvatarModal">
                             <i class="fas fa-camera"></i>
@@ -1860,6 +1862,37 @@
 .phone-input-container input:focus {
     box-shadow: none;
 }
+
+.author-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    position: relative;
+}
+
+.avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 600;
+}
 </style>
 
 <script setup>
@@ -2249,14 +2282,10 @@ onMounted(async () => {
         // Load initial profile data
         const response = await userService.getProfile();
         if (response?.success && response?.user) {
-            // Get stored avatar URL from localStorage as fallback
-            const storedAvatarUrl = localStorage.getItem('userAvatar');
-            
             profileData.value = {
                 ...response.user,
                 emergencyContacts: response.user.emergencyContacts || [],
-                // Use the response avatar_url or fallback to stored URL
-                avatar_url: response.user.avatar_url || storedAvatarUrl || ''
+                avatar_url: response.user.avatar_url || ''
             };
             
             // Verify avatar URL is working
@@ -2264,16 +2293,10 @@ onMounted(async () => {
                 const img = new Image();
                 img.onload = () => {
                     console.log('Avatar loaded successfully:', profileData.value.avatar_url);
-                    localStorage.setItem('userAvatar', profileData.value.avatar_url);
                 };
                 img.onerror = () => {
                     console.error('Failed to load avatar:', profileData.value.avatar_url);
-                    if (storedAvatarUrl && storedAvatarUrl !== profileData.value.avatar_url) {
-                        profileData.value.avatar_url = storedAvatarUrl;
-                    } else {
-                        profileData.value.avatar_url = '';
-                        localStorage.removeItem('userAvatar');
-                    }
+                    profileData.value.avatar_url = '';
                 };
                 img.src = getAvatarUrl(profileData.value.avatar_url);
             }
@@ -2715,18 +2738,25 @@ const handleAvatarUpload = async (event) => {
     profileData.value.tempAvatarUrl = URL.createObjectURL(file);
 };
 
+// Add this ref
+const avatarError = ref(false);
+
+// Modify the getAvatarUrl method (replace existing one)
 const getAvatarUrl = (avatarUrl) => {
     const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
     
     try {
+        // If no avatar URL is provided, return default avatar
         if (!avatarUrl) {
             return `${baseUrl}/uploads/avatars/default.png`;
         }
 
+        // If it's already a full URL (including Cloudinary)
         if (avatarUrl.startsWith('http')) {
             return avatarUrl;
         }
 
+        // For database-stored avatar URLs
         const cleanAvatarUrl = avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/');
         return `${baseUrl}/uploads/avatars/${cleanAvatarUrl}`;
     } catch (error) {
@@ -2735,16 +2765,42 @@ const getAvatarUrl = (avatarUrl) => {
     }
 };
 
+// Modify the handleAvatarError method (replace existing one)
 const handleAvatarError = async () => {
-    console.error('Avatar loading error:', profileData.value.avatar_url);
+    // Try to get cached avatar from localStorage
+    const cachedAvatar = localStorage.getItem(`userAvatar_${profileData.value?.id}`);
     
-    // If avatar fails to load, use default
+    // If we have a cached avatar and haven't tried it yet
+    if (cachedAvatar && !profileData.value.retryCount) {
+        profileData.value.retryCount = 1;
+        profileData.value.avatar_url = cachedAvatar;
+        return;
+    }
+    
+    // If no cached avatar or cache failed, try with cache-busting
+    if (!profileData.value.retryCount || profileData.value.retryCount === 1) {
+        profileData.value.retryCount = 2;
+        const currentUrl = getAvatarUrl(profileData.value.avatar_url);
+        profileData.value.avatar_url = `${currentUrl}?t=${Date.now()}`;
+        return;
+    }
+    
+    // If all attempts fail, show fallback
+    avatarError.value = true;
     profileData.value.avatar_url = '';
+    delete profileData.value.retryCount;
 };
 
+// Modify the handleAvatarLoad method (replace existing one)
 const handleAvatarLoad = () => {
-    // Success - no need to cache
-    console.log('Avatar loaded successfully:', profileData.value.avatar_url);
+    avatarError.value = false;
+    
+    // Cache the successful avatar URL
+    if (profileData.value?.id && profileData.value.avatar_url) {
+        localStorage.setItem(`userAvatar_${profileData.value.id}`, profileData.value.avatar_url);
+    }
+    
+    delete profileData.value.retryCount;
 };
 
 const showAvatarModal = ref(false);
@@ -2772,14 +2828,17 @@ const saveAvatar = async () => {
 
         const response = await userService.updateAvatar(formData);
         if (response.success) {
-            // Update both the profile data and auth store
+            // Update the avatar URL immediately
             profileData.value.avatar_url = response.avatarUrl;
+            
+            // Update auth store
             authStore.updateUser({ ...authStore.user, avatar_url: response.avatarUrl });
             
             // Clean up
             URL.revokeObjectURL(profileData.value.tempAvatarUrl);
             delete profileData.value.pendingAvatar;
             delete profileData.value.tempAvatarUrl;
+            delete profileData.value.retryCount;
             
             notificationStore.success('Profile photo updated successfully');
             closeAvatarModal();
@@ -2805,14 +2864,10 @@ onMounted(async () => {
         // Load initial profile data
         const response = await userService.getProfile();
         if (response?.success && response?.user) {
-            // Get stored avatar URL from localStorage as fallback
-            const storedAvatarUrl = localStorage.getItem('userAvatar');
-            
             profileData.value = {
                 ...response.user,
                 emergencyContacts: response.user.emergencyContacts || [],
-                // Use the response avatar_url or fallback to stored URL
-                avatar_url: response.user.avatar_url || storedAvatarUrl || ''
+                avatar_url: response.user.avatar_url || ''
             };
             
             // Verify avatar URL is working
@@ -2820,16 +2875,10 @@ onMounted(async () => {
                 const img = new Image();
                 img.onload = () => {
                     console.log('Avatar loaded successfully:', profileData.value.avatar_url);
-                    localStorage.setItem('userAvatar', profileData.value.avatar_url);
                 };
                 img.onerror = () => {
                     console.error('Failed to load avatar:', profileData.value.avatar_url);
-                    if (storedAvatarUrl && storedAvatarUrl !== profileData.value.avatar_url) {
-                        profileData.value.avatar_url = storedAvatarUrl;
-                    } else {
-                        profileData.value.avatar_url = '';
-                        localStorage.removeItem('userAvatar');
-                    }
+                    profileData.value.avatar_url = '';
                 };
                 img.src = getAvatarUrl(profileData.value.avatar_url);
             }
