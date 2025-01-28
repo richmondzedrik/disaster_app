@@ -61,23 +61,35 @@ export const userService = {
         }
     },
 
-    updateProfile: debounce(async function(data) {
+    updateProfile: async function(data) {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
                 throw new Error('No authentication token found');
             }
 
-            const formattedData = {
-                ...data,
-                notifications: data.notifications,
-                emergency_contacts: Array.isArray(data.emergencyContacts) 
-                    ? data.emergencyContacts.map(contact => ({
+            // Ensure notifications is an object
+            const notifications = typeof data.notifications === 'boolean' 
+                ? { email: data.notifications, push: data.notifications }
+                : data.notifications || { email: true, push: true };
+
+            // Format emergency contacts
+            const emergencyContacts = Array.isArray(data.emergencyContacts) 
+                ? data.emergencyContacts
+                    .filter(contact => contact && contact.name && contact.phone && contact.relation)
+                    .map(contact => ({
                         name: contact.name?.trim(),
                         phone: contact.phone?.trim(),
                         relation: contact.relation?.trim()
                     }))
-                    : []
+                : [];
+
+            const formattedData = {
+                username: data.username?.trim() || '',
+                phone: data.phone?.trim() || '',
+                location: data.location?.trim() || '',
+                notifications,
+                emergencyContacts
             };
 
             const response = await api.put('/auth/profile', formattedData, {
@@ -86,24 +98,21 @@ export const userService = {
                     'Authorization': `Bearer ${token}`
                 }
             });
-            
+
             if (!response.data.success) {
                 throw new Error(response.data.message || 'Failed to update profile');
             }
             
             if (response.data?.user) {
                 const userData = response.data.user;
-                const emergencyContacts = userData.emergency_contacts || userData.emergencyContacts || [];
-                const parsedContacts = typeof emergencyContacts === 'string' 
-                    ? JSON.parse(emergencyContacts) 
-                    : emergencyContacts;  
-
                 return {
                     ...response.data,
                     user: {
                         ...userData,
                         notifications: userData.notifications || { email: true, push: true },
-                        emergencyContacts: parsedContacts
+                        emergencyContacts: Array.isArray(userData.emergencyContacts) 
+                            ? userData.emergencyContacts 
+                            : []
                     }
                 };
             }
@@ -113,7 +122,7 @@ export const userService = {
             console.error('Profile update error:', error);
             throw error;
         }
-    }, 500),
+    },
 
     getEmergencyContacts: async function() {
         try {

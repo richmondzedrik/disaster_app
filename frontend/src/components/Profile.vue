@@ -2294,61 +2294,64 @@ onMounted(async () => {
 
 // Save changes function
 const saveChanges = async () => {
-    if (saveLoading.value || !isFormValid.value || !hasChanges.value) {
+    if (saveLoading.value || !hasChanges.value) {
         return;
     }
 
     try {
         saveLoading.value = true;
 
-        // Handle avatar upload first if there's a pending avatar
-        if (profileData.value.pendingAvatar) {
-            const formData = new FormData();
-            formData.append('avatar', profileData.value.pendingAvatar);
-
-            const avatarResponse = await userService.updateAvatar(formData);
-            if (avatarResponse.success) {
-                profileData.value.avatar_url = avatarResponse.avatarUrl;
-                // Clean up
-                URL.revokeObjectURL(profileData.value.tempAvatarUrl);
-                delete profileData.value.pendingAvatar;
-                delete profileData.value.tempAvatarUrl;
-            }
-        }
-
+        // Validate form first
         if (!validateForm()) {
             saveLoading.value = false;
             return;
         }
 
+        // Format emergency contacts properly
+        const formattedContacts = profileData.value.emergencyContacts
+            ?.filter(contact => contact && contact.name && contact.phone && contact.relation)
+            ?.map(contact => ({
+                name: contact.name?.trim(),
+                phone: contact.phone?.trim(),
+                relation: contact.relation?.trim()
+            })) || [];
+
+        // Prepare update data
         const updateData = {
             username: profileData.value.username?.trim(),
             phone: profileData.value.phone?.trim(),
             location: profileData.value.location?.trim(),
-            notifications: profileData.value.notifications || {},
-            emergencyContacts: profileData.value.emergencyContacts
-                ?.map(contact => ({
-                    name: contact.name?.trim(),
-                    phone: contact.phone?.trim(),
-                    relation: contact.relation?.trim()
-                }))
-                .filter(contact => contact.name && contact.phone && contact.relation) || []
+            notifications: profileData.value.notifications || false,
+            emergencyContacts: formattedContacts
         };
 
+        // Update profile
         const response = await userService.updateProfile(updateData);
 
-        if (response?.user) {
-            authStore.updateUser(response.user);
-            originalData.value = {
-                ...originalData.value,
-                ...updateData
+        if (response?.success) {
+            // Update auth store
+            if (response.user) {
+                authStore.updateUser(response.user);
+            }
+            
+            // Update original data with deep clone
+            originalData.value = JSON.parse(JSON.stringify(updateData));
+            
+            // Update profile data
+            profileData.value = {
+                ...profileData.value,
+                ...response.user,
+                emergencyContacts: formattedContacts
             };
+            
             notificationStore.success('Profile updated successfully');
+        } else {
+            throw new Error(response?.message || 'Failed to update profile');
         }
 
     } catch (error) {
         console.error('Save profile error:', error);
-        notificationStore.error('Failed to update profile');
+        notificationStore.error(error.message || 'Failed to update profile');
     } finally {
         saveLoading.value = false;
     }
