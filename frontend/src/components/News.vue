@@ -355,6 +355,10 @@ const createPost = async () => {
     const currentUser = authStore.user;
     if (currentUser?.avatar_url) {
       formData.append('author_avatar', currentUser.avatar_url);
+    } else {
+      // Get the default avatar URL
+      const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
+      formData.append('author_avatar', `${baseUrl}/uploads/avatars/default.png`);
     }
 
     const response = await newsService.createPost(formData);
@@ -426,22 +430,26 @@ const loadPosts = async () => {
         const cachedAvatar = localStorage.getItem(`userAvatar_${post.author_id}`);
         
         // Use the first available avatar URL
-        let validatedAvatarUrl = post.author_avatar || cachedAvatar;
+        let validatedAvatarUrl = post.author_avatar;
 
-        if (validatedAvatarUrl) {
-          try {
-            const img = new Image();
-            await new Promise((resolve, reject) => {
-              img.onload = resolve;
-              img.onerror = reject;
-              img.src = getAvatarUrl(validatedAvatarUrl);
-            });
-            // If image loads successfully, cache it
-            localStorage.setItem(`userAvatar_${post.author_id}`, validatedAvatarUrl);
-          } catch (error) {
-            console.log('Avatar validation failed for post:', post.id);
-            validatedAvatarUrl = null;
-          }
+        // If no avatar URL is provided, use default
+        if (!validatedAvatarUrl) {
+          const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
+          validatedAvatarUrl = `${baseUrl}/uploads/avatars/default.png`;
+        }
+
+        try {
+          const img = new Image();
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = getAvatarUrl(validatedAvatarUrl);
+          });
+          // If image loads successfully, cache it
+          localStorage.setItem(`userAvatar_${post.author_id}`, validatedAvatarUrl);
+        } catch (error) {
+          console.log('Avatar validation failed for post:', post.id);
+          validatedAvatarUrl = cachedAvatar || post.author_avatar || null;
         }
 
         return {
@@ -454,7 +462,7 @@ const loadPosts = async () => {
           likes: parseInt(post.likes) || 0,
           likeLoading: false,
           status: post.status || 'pending',
-          author_avatar: validatedAvatarUrl || null,
+          author_avatar: validatedAvatarUrl,
           authorId: post.author_id || post.authorId,
           avatarError: false
         };
