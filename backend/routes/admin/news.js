@@ -126,34 +126,30 @@ router.delete('/posts/:id', async (req, res) => {
         // Start transaction
         await connection.beginTransaction();
 
-        try {
-            // First, delete associated records
-            await connection.query('DELETE FROM comments WHERE post_id = ?', [req.params.id]);
-            await connection.query('DELETE FROM likes WHERE post_id = ?', [req.params.id]);
-            
-            // Then delete the post
-            const [result] = await connection.query('DELETE FROM posts WHERE id = ?', [req.params.id]);
+        // First, delete associated records using the connection
+        await connection.query('DELETE FROM comments WHERE post_id = ?', [req.params.id]);
+        await connection.query('DELETE FROM likes WHERE post_id = ?', [req.params.id]);
+        
+        // Then delete the post using the connection
+        const [result] = await connection.query('DELETE FROM posts WHERE id = ?', [req.params.id]);
 
-            if (result.affectedRows === 0) {
-                await connection.rollback();
-                return res.status(404).json({
-                    success: false,
-                    message: 'Post not found'
-                });
-            }
-
-            // Commit the transaction
-            await connection.commit();
-
-            res.json({
-                success: true,
-                message: 'Post deleted successfully'
-            });
-        } catch (error) {
+        if (result.affectedRows === 0) {
             await connection.rollback();
-            throw error;
+            return res.status(404).json({
+                success: false,
+                message: 'Post not found'
+            });
         }
+
+        // Commit the transaction
+        await connection.commit();
+
+        res.json({
+            success: true,
+            message: 'Post deleted successfully'
+        });
     } catch (error) {
+        await connection.rollback();
         console.error('Error deleting post:', error);
         res.status(500).json({
             success: false,
