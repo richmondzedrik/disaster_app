@@ -309,7 +309,7 @@ router.get('/admin/posts', auth.authMiddleware, async (req, res) => {
 });
 
 // Create a new post with image
-router.post('/posts', auth.authMiddleware, upload.single('image'), async (req, res) => {
+router.post('/posts', auth.authMiddleware, upload.single('media'), async (req, res) => {
     try {
         const { title, content } = req.body;
         
