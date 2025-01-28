@@ -518,6 +518,13 @@ const closeModal = () => {
 
 const deletePost = async (postId) => {
   try {
+    // Show warning confirmation dialog
+    const isConfirmed = confirm('Warning: This action cannot be undone! Are you sure you want to delete this post?');
+    
+    if (!isConfirmed) {
+      return;
+    }
+
     loading.value = true;
     await newsService.deletePost(postId);
     notificationStore.success('Post deleted successfully');
