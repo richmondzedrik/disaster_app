@@ -127,11 +127,12 @@ const handleSubmit = async () => {
     loading.value = true;
     try {
         const baseUrl = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
-        const response = await axios.post(`${baseUrl}/contact/send`, {
+        const response = await axios.post(`${baseUrl}/api/contact/send`, {
             name: formData.value.name,
             email: formData.value.email,
             subject: formData.value.subject,
-            message: formData.value.message
+            message: formData.value.message,
+            adminEmail: 'richmondzedrik@gmail.com'
         });
 
         if (response.data.success) {
