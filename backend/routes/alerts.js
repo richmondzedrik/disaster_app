@@ -287,16 +287,10 @@ router.post('/:id/read', auth.authMiddleware, async (req, res) => {
 
     await connection.beginTransaction();
 
-    // Insert into alert_reads table
+    // Insert into alert_reads table only - removed the global update
     await connection.execute(
       'INSERT INTO alert_reads (alert_id, user_id, read_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE read_at = CURRENT_TIMESTAMP',
       [alertId, userId]
-    );
-
-    // Update the is_read flag in alerts table
-    await connection.execute(
-      'UPDATE alerts SET is_read = true WHERE id = ?',
-      [alertId]
     );
 
     // Get the updated alert with read status
@@ -324,7 +318,7 @@ router.post('/:id/read', auth.authMiddleware, async (req, res) => {
       message: 'Alert marked as read',
       alert: {
         ...alerts[0],
-        is_read: true
+        is_read: Boolean(alerts[0].is_read)
       }
     });
   } catch (error) {
