@@ -86,10 +86,10 @@
             <div class="contact-section">
                 <h2><i class="fas fa-envelope"></i> Contact Us</h2>
                 <p>Have questions or suggestions? We'd love to hear from you!</p>
-                <a href="mailto:contact@disasteralert.com" class="contact-button">
+                <router-link to="/contact" class="contact-button">
                     <i class="fas fa-paper-plane"></i>
                     Send us a message
-                </a>
+                </router-link>
             </div>
         </div>
     </div>

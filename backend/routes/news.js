@@ -460,6 +460,14 @@ router.post('/posts/:postId/comments', auth.authMiddleware, async (req, res) => 
             });
         }
 
+        // Adjust maximum length validation (500 characters)
+        if (content.trim().length > 250) {
+            return res.status(400).json({
+                success: false,
+                message: 'Comment must not exceed 250 characters'
+            });
+        }
+
         // Check if post exists and is approved
         const [postResult] = await db.execute(
             'SELECT status FROM posts WHERE id = ?',

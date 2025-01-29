@@ -1,6 +1,21 @@
 <template>
   <div class="dashboard-view">
-    <h1>Admin Dashboard</h1>
+    <div class="welcome-banner">
+      <div class="welcome-content">
+        <h1>Welcome to Admin Dashboard</h1>
+        <p>Monitor and manage your platform's key metrics</p>
+      </div>
+      <div class="quick-actions">
+        <button @click="router.push('/admin/alerts')" class="action-btn">
+          <i class="fas fa-bell"></i>
+          Manage Alerts
+        </button>
+        <button @click="router.push('/admin/users')" class="action-btn">
+          <i class="fas fa-users"></i>
+          Manage Users
+        </button>
+      </div>
+    </div>
     
     <div class="stats-grid">
       <div class="stat-card">
@@ -10,6 +25,7 @@
         <div class="stat-content">
           <h3>Total Users</h3>
           <p>{{ stats.users || 0 }}</p>
+          <span class="stat-label">Active Community Members</span>
         </div>
       </div>
       
@@ -20,6 +36,7 @@
         <div class="stat-content">
           <h3>Total Posts</h3>
           <p>{{ stats.posts || 0 }}</p>
+          <span class="stat-label">Published Updates</span>
         </div>
       </div>
       
@@ -30,37 +47,37 @@
         <div class="stat-content">
           <h3>Active Alerts</h3>
           <p>{{ stats.alerts || 0 }}</p>
+          <span class="stat-label">Current Notifications</span>
         </div>
       </div>
     </div>
 
-    <section class="recent-activity-section">
-      <div class="section-header">
-        <h2>Recent Activity</h2>
-      </div>
-      <div class="activity-grid">
-        <div v-for="activity in recentActivity" 
-             :key="activity.id" 
-             class="activity-card">
-          <div class="activity-icon">
-            <i :class="getActivityIcon(activity.action)"></i>
-          </div>
-          <div class="activity-content">
-            <p class="activity-action">{{ formatAction(activity.action) }}</p>
-            <div class="activity-meta">
-              <span class="activity-user">
-                <i class="fas fa-user"></i>
-                {{ activity.username }}
-              </span>
-              <span class="activity-time">
-                <i class="fas fa-clock"></i>
-                {{ formatDate(activity.timestamp) }}
-              </span>
+    <div class="dashboard-grid">
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h2><i class="fas fa-tasks"></i> Quick Tasks</h2>
+        </div>
+        <div class="card-content">
+          <div class="task-list">
+            <div class="task-item">
+              <i class="fas fa-check-circle"></i>
+              <span>Review pending posts</span>
+              <button @click="router.push('/admin/posts')" class="task-btn">Review</button>
+            </div>
+            <div class="task-item">
+              <i class="fas fa-user-check"></i>
+              <span>Verify new users</span>
+              <button @click="router.push('/admin/users')" class="task-btn">Verify</button>
+            </div>
+            <div class="task-item">
+              <i class="fas fa-bell"></i>
+              <span>Update alert status</span>
+              <button @click="router.push('/admin/alerts')" class="task-btn">Update</button>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   </div>
 </template>
 
@@ -68,9 +85,11 @@
 import { onMounted, computed, ref } from 'vue';
 import { useAdminStore } from '@/stores/admin';
 import { useNotificationStore } from '@/stores/notification';
+import { useRouter } from 'vue-router';
 
 const adminStore = useAdminStore();
 const notificationStore = useNotificationStore();
+const router = useRouter();
 const isLoading = ref(false);
 
 const stats = computed(() => adminStore.stats);
@@ -159,27 +178,60 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-h1 {
-  font-size: 2.5rem;
-  color: #1f2937;
-  margin-bottom: 2rem;
+.welcome-banner {
   background: linear-gradient(135deg, #005C5C 0%, #4052D6 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.welcome-content h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.welcome-content p {
+  opacity: 0.9;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.action-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-  margin-bottom: 3rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .stat-card {
   background: white;
   border-radius: 16px;
-  padding: 2rem;
+  padding: 1.5rem;
   display: flex;
   align-items: center;
   gap: 1.5rem;
@@ -193,98 +245,159 @@ h1 {
 }
 
 .stat-icon {
-  font-size: 2.5rem;
+  font-size: 2rem;
   background: linear-gradient(135deg, #00D1D1 0%, #4052D6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .stat-content h3 {
-  font-size: 1.2rem;
-  color: #4b5563;
-  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
 }
 
 .stat-content p {
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 600;
   color: #1f2937;
+  margin-bottom: 0.25rem;
 }
 
-.recent-activity-section {
+.stat-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+.dashboard-card {
   background: white;
   border-radius: 16px;
-  padding: 2rem;
   box-shadow: 0 4px 20px rgba(0, 92, 92, 0.08);
-  border: 1px solid rgba(0, 173, 173, 0.1);
+  overflow: hidden;
 }
 
-.section-header h2 {
-  font-size: 1.8rem;
-  color: #1f2937;
-  margin-bottom: 2rem;
-  position: relative;
-  padding-bottom: 0.5rem;
-}
-
-.section-header h2::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 60px;
-  height: 3px;
-  background: linear-gradient(90deg, #00D1D1, #4052D6);
-  border-radius: 2px;
-}
-
-.activity-grid {
-  display: grid;
-  gap: 1.5rem;
-}
-
-.activity-card {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
+.card-header {
   padding: 1.5rem;
-  background: linear-gradient(135deg, rgba(0, 209, 209, 0.05) 0%, rgba(64, 82, 214, 0.05) 100%);
-  border-radius: 12px;
-  transition: transform 0.3s ease;
+  border-bottom: 1px solid rgba(0, 173, 173, 0.1);
 }
 
-.activity-card:hover {
-  transform: translateX(5px);
-}
-
-.activity-icon {
-  font-size: 1.5rem;
-  color: #4052D6;
-}
-
-.activity-content {
-  flex: 1;
-}
-
-.activity-action {
-  font-size: 1.1rem;
+.card-header h2 {
+  font-size: 1.25rem;
   color: #1f2937;
-  margin-bottom: 0.5rem;
-}
-
-.activity-meta {
-  display: flex;
-  gap: 1.5rem;
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-.activity-meta i {
-  margin-right: 0.5rem;
-}
-
-.activity-user, .activity-time {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
+}
+
+.card-header i {
+  color: #00D1D1;
+}
+
+.card-content {
+  padding: 1.5rem;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.task-item i {
+  color: #00D1D1;
+}
+
+.task-btn {
+  margin-left: auto;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #00D1D1;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.task-btn:hover {
+  background: #00ADAD;
+  transform: translateY(-2px);
+}
+
+.system-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.metric-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00D1D1, #4052D6);
+  transition: width 0.3s ease;
+}
+
+.status-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.status-badge.online {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+@media (max-width: 768px) {
+  .dashboard-view {
+    padding: 1rem;
+  }
+
+  .welcome-banner {
+    flex-direction: column;
+    gap: 1.5rem;
+    text-align: center;
+  }
+
+  .quick-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -18,6 +18,9 @@
                         v-model="formData.name" 
                         placeholder="Your name"
                         required
+                        maxlength="50"
+                        pattern="[A-Za-z ]+"
+                        @input="validateNameInput"
                     >
                 </div>
 
@@ -31,6 +34,7 @@
                         v-model="formData.email" 
                         placeholder="Your email address"
                         required
+                        maxlength="50"
                     >
                 </div>
 
@@ -44,6 +48,7 @@
                         v-model="formData.subject" 
                         placeholder="Message subject"
                         required
+                        maxlength="100"
                     >
                 </div>
 
@@ -57,6 +62,7 @@
                         placeholder="Your message"
                         rows="5"
                         required
+                        maxlength="1000"
                     ></textarea>
                 </div>
 
@@ -108,8 +114,16 @@ const formData = ref({
 });
 
 const validateEmail = (email) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    return emailRegex.test(email.trim());
+};
+
+const validateNameInput = (event) => {
+    const input = event.target;
+    // Remove any characters that aren't letters or spaces
+    input.value = input.value.replace(/[^A-Za-z ]/g, '');
+    // Update v-model
+    formData.value.name = input.value;
 };
 
 const handleSubmit = async () => {
@@ -120,7 +134,7 @@ const handleSubmit = async () => {
     }
 
     if (!validateEmail(formData.value.email)) {
-        notificationStore.error('Please enter a valid email address');
+        notificationStore.error('Please enter a valid email address (e.g., example@domain.com)');
         return;
     }
 

@@ -180,8 +180,15 @@
               <div v-if="isAuthenticated" class="comment-form">
                 <div class="input-wrapper">
                   <i class="fas fa-user-circle"></i>
-                  <textarea v-model="post.newComment" placeholder="Write a comment..." rows="1"
-                    @input="autoGrow($event.target)"></textarea>
+                  <div class="textarea-container">
+                    <textarea 
+                      v-model="post.newComment" 
+                      placeholder="Write a comment..." 
+                      rows="1"
+                      maxlength="250"
+                      @input="autoGrow($event.target)">
+                    </textarea>
+                  </div>
                 </div>
                 <button @click="addComment(post)" class="post-comment-btn">
                   <i class="fas fa-paper-plane"></i>
@@ -234,7 +241,6 @@
               maxlength="100"
               placeholder="Enter post title"
             >
-            <span class="char-count">{{ postForm.title.length }}/100</span>
           </div>
           <div class="form-group">
             <label for="content">Content</label>
@@ -246,7 +252,6 @@
               maxlength="2000"
               placeholder="Enter post content"
             ></textarea>
-            <span class="char-count">{{ postForm.content.length }}/2000</span>
           </div>
           <div class="form-group">
             <label for="media">Media (Image or Video - Max 100MB)</label>
@@ -896,14 +901,16 @@ const addComment = async (post) => {
     if (response.success) {
       if (!post.comments) post.comments = [];
       post.comments.unshift(response.comment);
-      post.commentCount = (post.commentCount || 0) + 1;
+      
+      // Update the comment count directly from the response
+      post.commentCount = response.commentCount;
 
       const postIndex = posts.value.findIndex(p => p.id === post.id);
       if (postIndex !== -1) {
         posts.value[postIndex] = {
           ...posts.value[postIndex],
           comments: post.comments,
-          commentCount: post.commentCount,
+          commentCount: response.commentCount,
           newComment: ''
         };
       }
@@ -1821,10 +1828,12 @@ const handleVideoLoad = (event, post) => {
 }
 
 .comment {
-  padding: 1rem;
+  background: #f8fafc;
   border-radius: 8px;
-  background: rgba(0, 173, 173, 0.05);
+  padding: 1rem;
   margin-bottom: 1rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .comment-header {
@@ -1855,6 +1864,9 @@ const handleVideoLoad = (event, post) => {
 .comment-content {
   color: #334155;
   line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 0.5rem 0;
 }
 
 .comment-actions {
@@ -2075,15 +2087,15 @@ const handleVideoLoad = (event, post) => {
   padding: 0.75rem;
   border: 1px solid rgba(0, 173, 173, 0.2);
   border-radius: 8px;
-  resize: none;
-  min-height: 42px;
-  max-height: 150px;
+  resize: vertical;
+  min-height: 40px;
+  max-height: 200px;
+  padding: 0.75rem;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.5;
-  color: #334155;
-  background: #f8fafc;
-  transition: all 0.3s ease;
+  overflow-y: auto;
+  word-wrap: break-word;
 }
 
 .comment-form textarea:focus {
@@ -2367,5 +2379,33 @@ const handleVideoLoad = (event, post) => {
 
 .form-group {
   position: relative;
+}
+
+.textarea-container {
+  position: relative;
+  flex: 1;
+}
+
+.textarea-container textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 40px;
+  max-height: 200px;
+  padding: 0.75rem;
+  border: 1px solid rgba(0, 173, 173, 0.2);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  overflow-y: auto;
+  word-wrap: break-word;
+}
+
+.char-count {
+  position: absolute;
+  bottom: -20px;
+  right: 0;
+  font-size: 0.8rem;
+  color: #64748b;
 }
 </style>
