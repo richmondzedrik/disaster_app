@@ -277,7 +277,10 @@ router.post('/posts', async (req, res) => {
     );
 
     // Track the activity
-    await trackActivity(userId, 'create_post', title);
+    await trackActivity(userId, 'create_post', {
+      postId: result.insertId,
+      title: title
+    });
 
     res.json({
       success: true,
@@ -500,7 +503,11 @@ router.post('/alerts', async (req, res) => {
     );
 
     // Track the activity
-    await trackActivity(req.user.userId, 'create_alert', message.substring(0, 100));
+    await trackActivity(req.user.userId, 'create_alert', {
+      alertId: result.insertId,
+      message: message.substring(0, 100),
+      type: type
+    });
 
     const [newAlert] = await db.execute(
       `SELECT a.*, u.username as created_by_username
@@ -609,21 +616,32 @@ router.put('/posts/:id/approve', async (req, res) => {
         // Send notifications if the post author is not an admin
         if (post.author_role !== 'admin') {
             try {
-                await notificationController.notifyNewPost({
-                    body: {
-                        postId: post.id,
-                        title: post.title,
-                        content: post.content,
-                        author: post.author,
-                        status: 'approved',
-                        isAdmin: false
+                const notificationData = {
+                    postId: post.id,
+                    title: post.title,
+                    content: post.content,
+                    author: post.author,
+                    status: 'approved',
+                    isAdmin: false
+                };
+
+                // Make request to notification endpoint
+                const apiUrl = process.env.API_URL || 'https://disaster-app-backend.onrender.com';
+                const notifyResponse = await axios.post(
+                    `${apiUrl}/api/news/notify-subscribers`,
+                    notificationData,
+                    {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': req.headers.authorization
+                        }
                     }
-                }, {
-                    json: () => {} // Mock response object
-                });
+                );
+
+                console.log('Notification response:', notifyResponse.data);
             } catch (notifyError) {
                 console.error('Error sending notifications:', notifyError);
-                // Continue with approval even if notification fails
+                // Don't fail the approval if notifications fail
             }
         }
 

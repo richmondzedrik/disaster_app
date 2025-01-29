@@ -81,21 +81,29 @@ const formatDate = (timestamp) => {
 };
 
 const getActivityIcon = (action) => {
-  const icons = {
-    'approved_post': 'fas fa-check-circle',
-    'created_alert': 'fas fa-bell',
-    'deleted_alert': 'fas fa-trash',
-    'updated_user': 'fas fa-user-edit',
-    default: 'fas fa-history'
-  };
-  return icons[action] || icons.default;
+  switch (action) {
+    case 'deleted_post':
+      return 'fas fa-trash';
+    case 'created_post':
+      return 'fas fa-plus';
+    case 'created_alert':
+      return 'fas fa-bell';
+    default:
+      return 'fas fa-circle';
+  }
 };
 
 const formatAction = (action) => {
-  return action
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+  switch (action) {
+    case 'deleted_post':
+      return 'Deleted a post';
+    case 'created_post':
+      return 'Created a new post';
+    case 'created_alert':
+      return 'Created a new alert';
+    default:
+      return action;
+  }
 };
 
 const fetchData = async () => {
