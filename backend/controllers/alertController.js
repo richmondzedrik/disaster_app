@@ -162,20 +162,31 @@ exports.deleteAlert = async (req, res) => {
 };
 
 exports.markAlertAsRead = async (req, res) => {
+    const connection = await db.getConnection();
     try {
         const alertId = req.params.id;
         const userId = req.user.userId;
 
+        await connection.beginTransaction();
+
         // Insert into alert_reads table
-        await db.query(
+        await connection.query(
             `INSERT INTO alert_reads (user_id, alert_id, read_at) 
              VALUES (?, ?, CURRENT_TIMESTAMP) 
              ON DUPLICATE KEY UPDATE read_at = CURRENT_TIMESTAMP`,
             [userId, alertId]
         );
 
+        // Update the alert table to mark it as read
+        await connection.query(
+            `UPDATE alerts 
+             SET is_read = true 
+             WHERE id = ?`,
+            [alertId]
+        );
+
         // Get the updated alert with read status
-        const [alerts] = await db.query(
+        const [alerts] = await connection.query(
             `SELECT a.*, 
                     CASE WHEN ar.read_at IS NOT NULL THEN TRUE ELSE FALSE END as is_read
              FROM alerts a
@@ -185,11 +196,14 @@ exports.markAlertAsRead = async (req, res) => {
         );
 
         if (alerts.length === 0) {
+            await connection.rollback();
             return res.status(404).json({
                 success: false,
                 message: 'Alert not found'
             });
         }
+
+        await connection.commit();
 
         res.json({
             success: true,
@@ -200,10 +214,15 @@ exports.markAlertAsRead = async (req, res) => {
             }
         });
     } catch (error) {
+        await connection.rollback();
         console.error('Mark alert as read error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to mark alert as read'
         });
+    } finally {
+        if (connection) {
+            await connection.release();
+        }
     }
 }; 
