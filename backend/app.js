@@ -13,7 +13,6 @@ const adminNewsRoutes = require('./routes/admin/news');
 const notificationTestRoutes = require('./routes/notificationTests');
 const notificationRoutes = require('./routes/notifications');
 const markersRoutes = require('./routes/markers');
-const hazardZonesRoutes = require('./routes/hazardZones');
 const contactRoutes = require('./routes/contact');
 
 const app = express();
