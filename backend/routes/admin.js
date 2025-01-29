@@ -325,7 +325,6 @@ router.delete('/posts/:id', async (req, res) => {
     // First, delete associated records
     await connection.query('DELETE FROM comments WHERE post_id = ?', [req.params.id]);
     await connection.query('DELETE FROM likes WHERE post_id = ?', [req.params.id]);
-    await connection.query('DELETE FROM post_saves WHERE post_id = ?', [req.params.id]);
     
     // Then delete the post
     const [result] = await connection.query('DELETE FROM posts WHERE id = ?', [req.params.id]);

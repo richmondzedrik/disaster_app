@@ -160,10 +160,6 @@
               <i class="fas fa-comment"></i>
               <span>{{ post.commentCount || 0 }}</span>
             </button>
-            <button @click="isAuthenticated ? savePost(post) : handleGuestInteraction('save')" class="interaction-btn"
-              :class="{ 'disabled': !isAuthenticated }">
-              <i class="fas fa-bookmark"></i>
-            </button>
           </div>
 
           <div v-if="isAdmin && post.status === 'pending'" class="admin-actions">
