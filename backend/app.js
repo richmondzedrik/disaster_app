@@ -93,7 +93,6 @@ app.use('/api/alerts', require('./routes/alerts'));
 app.use('/auth', authRoutes);
 app.use('/api', notificationTestRoutes);
 app.use('/api/markers', markersRoutes);
-app.use('/api/hazard-zones', hazardZonesRoutes);
 app.use('/api/contact', contactRoutes);
 
 // Route debugging endpoint in development         
