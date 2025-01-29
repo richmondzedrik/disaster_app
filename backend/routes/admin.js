@@ -323,8 +323,8 @@ router.delete('/posts/:id', async (req, res) => {
     await connection.beginTransaction();
     
     // First, delete associated records
-    await connection.query('DELETE FROM post_comments WHERE post_id = ?', [req.params.id]);
-    await connection.query('DELETE FROM post_likes WHERE post_id = ?', [req.params.id]);
+    await connection.query('DELETE FROM comments WHERE post_id = ?', [req.params.id]);
+    await connection.query('DELETE FROM likes WHERE post_id = ?', [req.params.id]);
     await connection.query('DELETE FROM post_saves WHERE post_id = ?', [req.params.id]);
     
     // Then delete the post
@@ -352,7 +352,7 @@ router.delete('/posts/:id', async (req, res) => {
     });
   } catch (error) {
     await connection.rollback();
-    console.error('Delete post error:', error);
+    console.error('Error deleting post:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to delete post'
