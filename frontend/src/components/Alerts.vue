@@ -138,6 +138,16 @@ const markAsRead = async (alertId) => {
           ? { ...alert, is_read: true }
           : alert
       );
+
+      // Get count of remaining unread active alerts
+      const unreadCount = alerts.value.filter(alert => 
+        alert.is_active && !alert.is_read
+      ).length;
+
+      // Dispatch event to update alert badge
+      window.dispatchEvent(new CustomEvent('alertCountUpdate', {
+        detail: { count: unreadCount }
+      }));
     } else {
       throw new Error('Failed to mark alert as read');
     }
