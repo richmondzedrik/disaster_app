@@ -21,7 +21,7 @@ class User {
             const [rows] = await db.execute(
                 `SELECT id, username, email, phone, location, notifications, 
                 emergency_contacts, role, email_verified, created_at, updated_at,
-                COALESCE(last_login, updated_at) as last_login
+                COALESCE(last_login, created_at) as last_login
                 FROM users WHERE id = ?`,
                 [userId]
             );
@@ -36,7 +36,7 @@ class User {
                     ? JSON.parse(user.notifications)
                     : user.notifications || {};
 
-                // Handle emergency contacts - ensure proper parsing
+                // Handle emergency contacts
                 if (user.emergency_contacts) {
                     const contacts = typeof user.emergency_contacts === 'string'
                         ? JSON.parse(user.emergency_contacts)
@@ -56,6 +56,8 @@ class User {
                 // Format last_login
                 if (user.last_login) {
                     user.last_login = new Date(user.last_login).toISOString();
+                } else {
+                    user.last_login = new Date(user.created_at).toISOString();
                 }
 
                 // Remove snake_case version
@@ -65,6 +67,7 @@ class User {
                 console.error('Error parsing JSON fields:', e);
                 user.notifications = {};
                 user.emergencyContacts = [];
+                user.last_login = new Date().toISOString();
             }
 
             return user;
