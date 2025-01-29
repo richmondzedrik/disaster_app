@@ -55,11 +55,13 @@
                     <input type="file" ref="fileInput" class="hidden-file-input" accept="image/*"
                         @change="handleAvatarUpload" />
                     <div class="profile-status">
-                        <h2>{{ profileData.username || 'User' }}</h2>
-                        <span class="email-badge" :class="{ verified: user?.email_verified }">
-                            <i :class="['fas', user?.email_verified ? 'fa-check-circle' : 'fa-exclamation-circle']"></i>
-                            {{ user?.email_verified ? 'Verified' : 'Unverified' }}
-                        </span>
+                        <div class="username-container">
+                            <h2>{{ profileData.username || 'User' }}</h2>
+                            <span class="email-badge" :class="{ verified: user?.email_verified }">
+                                <i :class="['fas', user?.email_verified ? 'fa-check-circle' : 'fa-exclamation-circle']"></i>
+                                {{ user?.email_verified ? 'Verified' : 'Unverified' }}
+                            </span>
+                        </div>
                     </div>
                 </div>
                 <div class="profile-stats">
@@ -547,7 +549,25 @@
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
 }
 
-.profile-status h2 {
+/* Add this new specific selector */
+.email-badge i {
+    font-size: 0.875rem;
+}
+
+.profile-status {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.username-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.username-container h2 {
     margin: 0;
     font-size: 2rem;
     font-weight: 700;
@@ -558,11 +578,10 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    padding: 0.25rem 0.75rem;
     background: rgba(255, 255, 255, 0.15);
     border-radius: 999px;
-    font-size: 0.875rem;
-    margin-top: 0.75rem;
+    font-size: 0.75rem;
     backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
