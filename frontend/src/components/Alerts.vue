@@ -89,7 +89,7 @@ const loadAlerts = async () => {
 
       // Update alert count considering only active and unread alerts
       const unreadCount = alerts.value.filter(alert => 
-        alert.is_active && !alert.is_read && new Date(alert.expiry_date) > new Date()
+        alert.is_active && !alert.is_read
       ).length;
 
       window.dispatchEvent(new CustomEvent('alertCountUpdate', {
