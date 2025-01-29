@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-card">
       <div class="login-header">
-        <i class="fas fa-shield-alt header-icon"></i>
+        <img src="https://res.cloudinary.com/dmgivh17b/image/upload/v1738070429/disaster-app/rjyns1rbxugjxcjw3fi1.png" alt="AlertoAbra Logo" class="header-icon">
         <h2>Welcome Back</h2>
         <p class="subtitle">Sign in to continue to AlertoAbra</p>
       </div>
@@ -244,8 +244,8 @@ onMounted(() => {
 }
 
 .header-icon {
-  font-size: 3rem;
-  color: #00D1D1;
+  width: 80px;
+  height: auto;
   margin-bottom: 1.25rem;
   filter: drop-shadow(0 4px 6px rgba(0, 209, 209, 0.2));
 }

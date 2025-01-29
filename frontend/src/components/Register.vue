@@ -2,7 +2,7 @@
   <div class="register-container">
     <div class="register-card">
       <div class="register-header">
-        <i class="fas fa-shield-alt header-icon"></i>
+        <img src="https://res.cloudinary.com/dmgivh17b/image/upload/v1738070429/disaster-app/rjyns1rbxugjxcjw3fi1.png" alt="AlertoAbra Logo" class="header-icon">
         <h2>Create Account</h2>
         <p class="subtitle">Join AlertoAbra to stay prepared and informed</p>
       </div>
@@ -485,8 +485,8 @@ const showConfirmPassword = ref(false);
 }
 
 .header-icon {
-  font-size: 3rem;
-  color: #00D1D1;
+  width: 80px;
+  height: auto;
   margin-bottom: 1.25rem;
   filter: drop-shadow(0 4px 6px rgba(0, 209, 209, 0.2));
 }

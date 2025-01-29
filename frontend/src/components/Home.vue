@@ -86,7 +86,7 @@
               <i class="fas fa-user-circle"></i>
               {{ post.author }}
             </span>
-            <span class="date">{{ formatDate(post.createdAt) }}</span>
+            <span class="date">{{ formatDate(post.createdAt || post.created_at) }}</span>
           </div>
           <h3>{{ post.title }}</h3>
           <p>{{ post.content.substring(0, 150) }}...</p>
@@ -96,7 +96,6 @@
               <i class="fas fa-arrow-right"></i>
             </button>
             <div class="news-stats">
-              <span><i class="fas fa-eye"></i> {{ post.views || 0 }}</span>
               <span><i class="fas fa-heart"></i> {{ post.likes || 0 }}</span>
             </div>
           </div>
@@ -215,8 +214,8 @@ const fetchRecentNews = async () => {
         return dateB - dateA;
       });
       
-      // Take only the most recent posts (e.g., last 5)
-      recentNews.value = recentNews.value.slice(0, 5);
+      // Take only the 2 most recent posts
+      recentNews.value = recentNews.value.slice(0, 2);
     }
   } catch (error) {
     console.error('Error fetching recent news:', error);
