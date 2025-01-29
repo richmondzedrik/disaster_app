@@ -267,29 +267,39 @@ router.get('/posts', async (req, res) => {
 });
 
 router.post('/posts', async (req, res) => {
+  const connection = await db.getConnection();
   try {
+    await connection.beginTransaction();
+    
     const { title, content, category } = req.body;
     const userId = req.user.userId;
 
-    const [result] = await db.execute(
-      'INSERT INTO posts (title, content, category, user_id) VALUES (?, ?, ?, ?)',
+    const [result] = await connection.execute(
+      'INSERT INTO posts (title, content, category, author_id) VALUES (?, ?, ?, ?)',
       [title, content, category, userId]
     );
 
     // Track the activity
-    await trackActivity(userId, 'created_post', result.insertId);
+    await connection.execute(
+      'INSERT INTO activity_logs (user_id, action, target_type, target_id) VALUES (?, ?, ?, ?)',
+      [userId, 'created_post', 'post', result.insertId]
+    );
 
+    await connection.commit();
     res.json({
       success: true,
       message: 'Post created successfully',
       data: { id: result.insertId }
     });
   } catch (error) {
+    await connection.rollback();
     console.error('Create post error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to create post'
     });
+  } finally {
+    connection.release();
   }
 });
 
@@ -594,117 +604,26 @@ router.delete('/alerts/:id', async (req, res) => {
 
 // Approve a post
 router.put('/posts/:id/approve', async (req, res) => {
-    const connection = await db.getConnection();
-    try {
-        await connection.beginTransaction();
-
-        // First get the post details
-        const [posts] = await connection.execute(
-            `SELECT p.*, u.username as author, u.role as author_role 
-             FROM posts p 
-             JOIN users u ON p.author_id = u.id 
-             WHERE p.id = ?`,
-            [req.params.id]
-        );
-
-        if (!posts[0]) {
-            await connection.rollback();
-            return res.status(404).json({
-                success: false,
-                message: 'Post not found'
-            });
-        }
-
-        const post = posts[0];
-
-        // Update post status
-        const [result] = await connection.execute(
-            'UPDATE posts SET status = "approved", approved_at = NOW(), approved_by = ? WHERE id = ?',
-            [req.user.userId, req.params.id]
-        );
-
-        if (result.affectedRows === 0) {
-            await connection.rollback();
-            return res.status(404).json({
-                success: false,
-                message: 'Post not found'
-            });
-        }
-
-        // Send notifications if the post author is not an admin
-        if (post.author_role !== 'admin') {
-            try {
-                const notificationData = {
-                    postId: post.id,
-                    title: post.title,
-                    content: post.content,
-                    author: post.author,
-                    status: 'approved',
-                    isAdmin: false
-                };
-
-                // Make request to notification endpoint
-                const apiUrl = process.env.API_URL || 'https://disaster-app-backend.onrender.com';
-                const notifyResponse = await axios.post(
-                    `${apiUrl}/api/news/notify-subscribers`,
-                    notificationData,
-                    {
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': req.headers.authorization
-                        }
-                    }
-                );
-
-                console.log('Notification response:', notifyResponse.data);
-            } catch (notifyError) {
-                console.error('Error sending notifications:', notifyError);
-                // Don't fail the approval if notifications fail
-            }
-        }
-
-        // Track the activity
-        await trackActivity(req.user.userId, 'approved_post', req.params.id);
-
-        await connection.commit();
-
-        res.json({
-            success: true,
-            message: 'Post approved successfully'
-        });
-    } catch (error) {
-        await connection.rollback();
-        console.error('Approve post error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to approve post'
-        });
-    } finally {
-        connection.release();
-    }
+  try {
+    await updatePostStatus(req.params.id, req.user.userId, 'approved');
+    res.json({
+      success: true,
+      message: 'Post approved successfully'
+    });
+  } catch (error) {
+    console.error('Approve post error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to approve post'
+    });
+  }
 });
 
 // Reject a post
 router.put('/posts/:id/reject', async (req, res) => {
   try {
-    const postId = req.params.id;
     const { reason } = req.body;
-
-    const [result] = await db.execute(
-      'UPDATE posts SET status = "rejected", rejected_at = NOW(), rejected_by = ?, rejection_reason = ? WHERE id = ?',
-      [req.user.userId, reason || null, postId]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Post not found'
-      });
-    }
-
-    // Track the activity
-    await trackActivity(req.user.userId, 'rejected_post', postId, reason);
-
+    await updatePostStatus(req.params.id, req.user.userId, 'rejected', reason);
     res.json({
       success: true,
       message: 'Post rejected successfully'
@@ -930,6 +849,34 @@ const trackActivity = async (userId, action, targetId = null, details = null) =>
     );
   } catch (error) {
     console.error('Error tracking activity:', error);
+  }
+};
+
+// Add this function to handle post status updates with activity tracking
+const updatePostStatus = async (postId, userId, status, reason = null) => {
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Update the post status
+    await connection.execute(
+      'UPDATE posts SET status = ?, updated_at = NOW() WHERE id = ?',
+      [status, postId]
+    );
+
+    // Track the activity
+    const action = `${status}_post`; // This will create: approved_post, rejected_post, etc.
+    await connection.execute(
+      'INSERT INTO activity_logs (user_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+      [userId, action, 'post', postId, reason]
+    );
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
   }
 };
 
