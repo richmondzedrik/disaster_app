@@ -41,15 +41,6 @@
                 <div class="card-content">
                     <div class="progress-item">
                         <div class="progress-label">
-                            <span>Emergency Plan</span>
-                            <span>{{ planProgress }}%</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" :style="{ width: `${planProgress}%` }"></div>
-                        </div>
-                    </div>
-                    <div class="progress-item">
-                        <div class="progress-label">
                             <span>Supply Checklist</span>
                             <span>{{ supplyProgress }}%</span>
                         </div>
@@ -156,6 +147,11 @@
 
 .action-btn:hover::after {
     left: 100%;
+}
+
+.action-btn:hover i {
+    color: white;
+    transform: scale(1.1) rotate(5deg);
 }
 
 .alert-btn {
@@ -457,7 +453,6 @@ onMounted(async () => {
     }
 });
 
-const planProgress = ref(65);
 const supplyProgress = computed(() => {
     try {
         const progress = localStorage.getItem('checklistProgress');

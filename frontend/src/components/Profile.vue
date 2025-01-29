@@ -116,8 +116,30 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="username">Username</label>
-                            <input type="text" id="username" v-model.trim="profileData.username" :disabled="loading"
-                                placeholder="Enter username" />
+                            <input 
+                                type="text" 
+                                id="username" 
+                                v-model.trim="profileData.username" 
+                                :disabled="loading"
+                                placeholder="Enter username" 
+                                :class="{ 
+                                    'error': usernameError, 
+                                    'success': usernameAvailable === true 
+                                }"
+                            />
+                            <span class="validation-message" :class="{ 
+                                'error': usernameError, 
+                                'success': usernameAvailable === true 
+                            }">
+                                <i v-if="profileData.username && profileData.username !== profileData.originalUsername" 
+                                   :class="['fas', {
+                                       'fa-spinner fa-spin': isCheckingUsername,
+                                       'fa-check': usernameAvailable === true,
+                                       'fa-times': usernameAvailable === false || usernameError
+                                   }]">
+                                </i>
+                                {{ usernameError || (usernameAvailable === true ? 'Username available' : '') }}
+                            </span>
                         </div>
                         <div class="form-group">
                             <label for="email">Email</label>
@@ -2019,12 +2041,36 @@ select option[value=""] {
 select option:not([value=""]) {
   color: #1e293b;
 }
+
+.validation-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.validation-message.error {
+    color: #dc2626;
+}
+
+.validation-message.success {
+    color: #059669;
+}
+
+.validation-message i {
+    font-size: 0.875rem;
+}
+
+input.error {
+    border-color: #dc2626;
+}
 </style>
 
 <script setup>
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '@/stores/auth';
 import { useNotificationStore } from '../stores/notification';
 import { userService } from '../services/userService';
 import { authService } from '../services/auth';
@@ -2420,12 +2466,16 @@ onMounted(async () => {
 
 // Save changes function
 const saveChanges = async () => {
-    if (saveLoading.value || !hasChanges.value) {
+    if (loading.value || !hasChanges.value || !isFormValid.value) return;
+
+    // Check username validation before saving
+    if (usernameError.value || (usernameAvailable.value === false)) {
+        notificationStore.error('Please fix username errors before saving');
         return;
     }
 
     try {
-        saveLoading.value = true;
+        loading.value = true;
 
         // Validate form first
         if (!validateForm()) {
@@ -2479,7 +2529,7 @@ const saveChanges = async () => {
         console.error('Save profile error:', error);
         notificationStore.error(error.message || 'Failed to update profile');
     } finally {
-        saveLoading.value = false;
+        loading.value = false;
     }
 };
 
@@ -2995,6 +3045,7 @@ onMounted(async () => {
         if (response?.success && response?.user) {
             profileData.value = {
                 ...response.user,
+                originalUsername: response.user.username, // Store original username
                 emergencyContacts: response.user.emergencyContacts || [],
                 avatar_url: response.user.avatar_url || ''
             };
@@ -3163,4 +3214,55 @@ const handleEmergencyContactPhoneInput = (event) => {
     emergencyContactErrors.value.phone = '';
   }
 };
+
+// Add these refs
+const usernameAvailable = ref(null);
+const usernameError = ref('');
+const isCheckingUsername = ref(false);
+
+// Add this method
+const checkUsernameAvailability = debounce(async (username) => {
+    if (!username || username === profileData.value.originalUsername) {
+        usernameAvailable.value = null;
+        usernameError.value = '';
+        return;
+    }
+
+    try {
+        isCheckingUsername.value = true;
+        const result = await authStore.checkUsername(username);
+        usernameAvailable.value = result.available;
+        usernameError.value = result.available ? '' : 'Username is already taken';
+    } catch (error) {
+        console.error('Username check error:', error);
+        usernameError.value = 'Error checking username availability';
+        usernameAvailable.value = null;
+    } finally {
+        isCheckingUsername.value = false;
+    }
+}, 500);
+
+// Add this watch
+watch(() => profileData.value.username, (newUsername) => {
+    if (!newUsername) {
+        usernameError.value = '';
+        usernameAvailable.value = null;
+        return;
+    }
+
+    usernameError.value = '';
+    usernameAvailable.value = null;
+    
+    if (newUsername.length < 3) {
+        usernameError.value = newUsername.length > 0 ? 'Username must be at least 3 characters' : '';
+        return;
+    }
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(newUsername)) {
+        usernameError.value = 'Username can only contain letters, numbers, underscores, and hyphens';
+        return;
+    }
+
+    checkUsernameAvailability(newUsername);
+});
 </script>
