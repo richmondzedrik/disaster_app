@@ -164,7 +164,7 @@ exports.deleteAlert = async (req, res) => {
 exports.markAlertAsRead = async (req, res) => {
     try {
         const alertId = req.params.id;
-        const userId = req.user.id;
+        const userId = req.user.userId;
 
         // Insert into alert_reads table
         await db.query(
@@ -177,7 +177,7 @@ exports.markAlertAsRead = async (req, res) => {
         // Get the updated alert with read status
         const [alerts] = await db.query(
             `SELECT a.*, 
-                    CASE WHEN ar.read_at IS NOT NULL THEN 1 ELSE 0 END as is_read
+                    CASE WHEN ar.read_at IS NOT NULL THEN TRUE ELSE FALSE END as is_read
              FROM alerts a
              LEFT JOIN alert_reads ar ON a.id = ar.alert_id AND ar.user_id = ?
              WHERE a.id = ?`,
