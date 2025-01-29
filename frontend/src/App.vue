@@ -279,8 +279,12 @@ const fetchAlertCount = async () => {
   try {
     const { alerts, success } = await alertService.getActiveAlerts();
     if (success) {
-      // Count only active alerts
-      alertCount.value = alerts.filter(alert => alert.is_active).length;
+      // Count only active and unread alerts
+      alertCount.value = alerts.filter(alert => 
+        alert.is_active && 
+        !alert.is_read && 
+        new Date(alert.expiry_date) > new Date()
+      ).length;
     }
   } catch (error) {
     console.error('Error fetching alert count:', error);
