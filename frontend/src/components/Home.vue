@@ -204,23 +204,19 @@ const loadAlerts = async () => {
   }
 };
 
-const latestUpdatesCount = computed(() => {
-  // Count posts from the last 7 days
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  
-  return recentNews.value.filter(post => {
-    const postDate = new Date(post.createdAt || post.created_at);
-    // Only check the date, don't filter by status since public posts are already approved
-    return postDate > sevenDaysAgo;
-  }).length;
-});
-
 const fetchRecentNews = async () => {
   try {
-    const response = await newsService.getRecentPosts();
-    if (response.success) {
-      recentNews.value = response.posts;
+    const response = await newsService.getPublicPosts();
+    if (response.success && response.posts) {
+      // Sort posts by date in descending order (newest first)
+      recentNews.value = response.posts.sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.created_at);
+        const dateB = new Date(b.createdAt || b.created_at);
+        return dateB - dateA;
+      });
+      
+      // Take only the most recent posts (e.g., last 5)
+      recentNews.value = recentNews.value.slice(0, 5);
     }
   } catch (error) {
     console.error('Error fetching recent news:', error);
@@ -228,9 +224,20 @@ const fetchRecentNews = async () => {
   }
 };
 
+const latestUpdatesCount = computed(() => {
+  // Count posts from the last 7 days
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  return recentNews.value.filter(post => {
+    const postDate = new Date(post.createdAt || post.created_at);
+    return postDate >= sevenDaysAgo;
+  }).length;
+});
+
 // Load alerts on mount and when authentication state changes
 onMounted(() => {
-  fetchRecentNews(); // Always fetch news regardless of login status
+  fetchRecentNews();
   if (isLoggedIn.value) {
     loadAlerts();
   }
