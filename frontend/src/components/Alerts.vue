@@ -55,6 +55,13 @@ const alerts = ref([]);
 const loading = ref(true);
 const error = ref('');
 
+const unreadAlerts = computed(() => {
+  return alerts.value.filter(alert => 
+    alert.is_active && !alert.is_read && 
+    new Date(alert.expiry_date) > new Date()
+  ).length;
+});
+
 const sortedAlerts = computed(() => {
   return [...alerts.value].sort((a, b) => {
     // Sort by priority first (higher priority first)
@@ -71,13 +78,11 @@ const loadAlerts = async () => {
     loading.value = true;
     error.value = '';
     
-    // Check authentication first
     if (!authStore.isAuthenticated) {
       throw new Error('Authentication required');
     }
     
     const response = await alertService.getActiveAlerts();
-    console.log('Alerts response:', response);
     
     if (response?.success) {
       alerts.value = response.alerts.map(alert => ({
@@ -87,13 +92,9 @@ const loadAlerts = async () => {
         is_read: Boolean(alert.is_read)
       }));
 
-      // Update alert count considering only active and unread alerts
-      const unreadCount = alerts.value.filter(alert => 
-        alert.is_active && !alert.is_read
-      ).length;
-
+      // Update alert count using computed value
       window.dispatchEvent(new CustomEvent('alertCountUpdate', {
-        detail: { count: unreadCount }
+        detail: { count: unreadAlerts.value }
       }));
     } else {
       throw new Error(response?.message || 'Failed to load alerts');
@@ -141,21 +142,15 @@ const markAsRead = async (alertId) => {
     const response = await alertStore.markAsRead(alertId);
     
     if (response) {
-      // Update the local alerts array immediately
       alerts.value = alerts.value.map(alert => 
         alert.id === alertId 
           ? { ...alert, is_read: true }
           : alert
       );
 
-      // Get count of remaining unread active alerts
-      const unreadCount = alerts.value.filter(alert => 
-        alert.is_active && !alert.is_read
-      ).length;
-
-      // Dispatch event to update alert badge
+      // Update alert count using computed value
       window.dispatchEvent(new CustomEvent('alertCountUpdate', {
-        detail: { count: unreadCount }
+        detail: { count: unreadAlerts.value }
       }));
     } else {
       throw new Error('Failed to mark alert as read');
