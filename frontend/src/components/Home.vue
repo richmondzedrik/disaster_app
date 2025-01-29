@@ -209,10 +209,10 @@ const latestUpdatesCount = computed(() => {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   
-  return recentNews.value.filter(post => 
-    post.status === 'approved' && 
-    new Date(post.created_at) > sevenDaysAgo
-  ).length;
+  return recentNews.value.filter(post => {
+    const postDate = new Date(post.createdAt || post.created_at);
+    return postDate > sevenDaysAgo;
+  }).length;
 });
 
 const fetchRecentNews = async () => {
