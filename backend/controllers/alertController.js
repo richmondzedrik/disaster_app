@@ -164,20 +164,20 @@ exports.deleteAlert = async (req, res) => {
 exports.markAlertAsRead = async (req, res) => {
     try {
         const alertId = req.params.id;
-        const userId = req.user.userId;
+        const userId = req.user.id;
 
         // Insert into alert_reads table
         await db.query(
-            `INSERT INTO alert_reads (user_id, alert_id) 
-             VALUES (?, ?) 
+            `INSERT INTO alert_reads (user_id, alert_id, read_at) 
+             VALUES (?, ?, CURRENT_TIMESTAMP) 
              ON DUPLICATE KEY UPDATE read_at = CURRENT_TIMESTAMP`,
             [userId, alertId]
         );
 
-        // Get the updated alert
+        // Get the updated alert with read status
         const [alerts] = await db.query(
             `SELECT a.*, 
-                    CASE WHEN ar.read_at IS NOT NULL THEN true ELSE false END as \`is_read\`
+                    CASE WHEN ar.read_at IS NOT NULL THEN 1 ELSE 0 END as is_read
              FROM alerts a
              LEFT JOIN alert_reads ar ON a.id = ar.alert_id AND ar.user_id = ?
              WHERE a.id = ?`,
@@ -194,7 +194,10 @@ exports.markAlertAsRead = async (req, res) => {
         res.json({
             success: true,
             message: 'Alert marked as read',
-            alert: alerts[0]
+            alert: {
+                ...alerts[0],
+                is_read: Boolean(alerts[0].is_read)
+            }
         });
     } catch (error) {
         console.error('Mark alert as read error:', error);
