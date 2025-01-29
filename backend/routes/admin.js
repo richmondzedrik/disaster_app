@@ -277,9 +277,10 @@ router.post('/posts', async (req, res) => {
     );
 
     // Track the activity
-    await trackActivity(userId, 'create_post', {
+    await trackActivity(userId, 'created_post', {
       postId: result.insertId,
-      title: title
+      title: title,
+      category: category
     });
 
     res.json({
@@ -503,9 +504,9 @@ router.post('/alerts', async (req, res) => {
     );
 
     // Track the activity
-    await trackActivity(req.user.userId, 'create_alert', {
+    await trackActivity(req.user.userId, 'created_alert', {
       alertId: result.insertId,
-      message: message.substring(0, 100),
+      message: message,
       type: type
     });
 

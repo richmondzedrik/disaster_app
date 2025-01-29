@@ -88,6 +88,10 @@ const getActivityIcon = (action) => {
       return 'fas fa-plus';
     case 'created_alert':
       return 'fas fa-bell';
+    case 'approved_post':
+      return 'fas fa-check';
+    case 'rejected_post':
+      return 'fas fa-times';
     default:
       return 'fas fa-circle';
   }
@@ -101,6 +105,10 @@ const formatAction = (action) => {
       return 'Created a new post';
     case 'created_alert':
       return 'Created a new alert';
+    case 'approved_post':
+      return 'Approved a post';
+    case 'rejected_post':
+      return 'Rejected a post';
     default:
       return action;
   }
