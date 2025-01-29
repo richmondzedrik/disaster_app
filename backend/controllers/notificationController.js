@@ -51,7 +51,7 @@ const notifyNewPost = async (req, res) => {
           html: `
             <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 12px;">
               <div style="text-align: center; margin-bottom: 30px;">
-                <img src="${process.env.FRONTEND_URL}/logo.png" alt="Logo" style="max-width: 150px; margin-bottom: 20px;">
+                <img src="https://res.cloudinary.com/dmgivh17b/image/upload/v1738070429/disaster-app/rjyns1rbxugjxcjw3fi1.png" alt="Logo" style="max-width: 150px; margin-bottom: 20px;">
                 <h1 style="color: #2c3e50; margin: 0; font-size: 24px;">New Post Alert! 📢</h1>
               </div>
               

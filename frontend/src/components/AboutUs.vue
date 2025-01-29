@@ -2,7 +2,7 @@
     <div class="about-container">
         <div class="about-content">
             <div class="about-header">
-                <i class="fas fa-shield-alt header-icon"></i>
+                <img src="https://res.cloudinary.com/dmgivh17b/image/upload/v1738070429/disaster-app/rjyns1rbxugjxcjw3fi1.png" alt="PDRRMC Logo" class="header-logo">
                 <h1>About PDRRMC Abra</h1>
             </div>
 
@@ -63,22 +63,22 @@
                         <div class="member-avatar">
                             <i class="fas fa-user-circle"></i>
                         </div>
-                        <h3>Richmond Zedrik Aspacio</h3>
+                        <h3>Girly Oghoc</h3>
                         <p>Lead Developer</p>
                     </div>
                     <div class="team-member">
                         <div class="member-avatar">
                             <i class="fas fa-user-circle"></i>
                         </div>
-                        <h3>Jane Smith</h3>
-                        <p>Emergency Response Expert</p>
+                        <h3>Carlo Gaban</h3>
+                        <p>Member</p>
                     </div>
                     <div class="team-member">
                         <div class="member-avatar">
                             <i class="fas fa-user-circle"></i>
                         </div>
-                        <h3>Mike Johnson</h3>
-                        <p>Data Analyst</p>
+                        <h3>John Marc Oriol</h3>
+                        <p>Member</p>
                     </div>
                 </div>
             </div>
@@ -115,10 +115,11 @@
     margin-bottom: 3rem;
 }
 
-.header-icon {
-    font-size: 3rem;
-    color: #2563eb;
+.header-logo {
+    width: 80px;
+    height: 80px;
     margin-bottom: 1rem;
+    object-fit: contain;
 }
 
 h1 {
