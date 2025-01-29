@@ -179,6 +179,7 @@ router.put('/posts/:id', async (req, res) => {
             });
         }
 
+        // Keep existing image URL if no new image is uploaded
         let imageUrl = existingPost[0].image_url;
         
         // Handle new image upload if exists
@@ -194,10 +195,15 @@ router.put('/posts/:id', async (req, res) => {
             imageUrl = cloudinaryResponse.secure_url;
         }
 
-        // Update the post
+        // Ensure all values are defined or null before updating
+        const updateTitle = title || existingPost[0].title;
+        const updateContent = content || existingPost[0].content;
+        const updateImageUrl = imageUrl || null;
+
+        // Update the post with non-undefined values
         const [result] = await db.execute(
             'UPDATE posts SET title = ?, content = ?, image_url = ? WHERE id = ?',
-            [title, content, imageUrl, postId]
+            [updateTitle, updateContent, updateImageUrl, postId]
         );
 
         if (result.affectedRows === 0) {
