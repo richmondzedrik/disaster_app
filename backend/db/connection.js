@@ -8,18 +8,56 @@ const pool = mysql.createPool({
       rejectUnauthorized: false,
       minVersion: 'TLSv1.2'
   } : false,
-  connectionLimit: 3,
+  connectionLimit: 5,
   waitForConnections: true,
-  queueLimit: 0
+  queueLimit: 10,
+  acquireTimeout: 10000,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000
 });
 
-// Add cleanup interval
+// Track active connections
+let activeConnections = 0;
+
+// Add connection tracking
+pool.on('acquire', () => {
+    activeConnections++;
+    console.log(`Connection acquired. Active connections: ${activeConnections}`);
+});
+
+pool.on('release', () => {
+    activeConnections--;
+    console.log(`Connection released. Active connections: ${activeConnections}`);
+});
+
+// Add connection error recovery
+pool.on('error', (err) => {
+    console.error('Database pool error:', err);
+    if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
+        console.error('Connection lost. Attempting to reconnect...');
+        // Allow pool to handle reconnection
+    }
+    if (err.code === 'ER_CON_COUNT_ERROR') {
+        console.error('Too many connections. Waiting for available connection...');
+        // Connection will be queued automatically
+    }
+});
+
+// Force release idle connections periodically
 setInterval(async () => {
-  try {
-      await pool.query('SELECT 1');
-  } catch (error) {
-      console.error('Connection cleanup error:', error);
-  }
+    if (activeConnections > 3) { // If more than 60% of connections are active
+        try {
+            await pool.query('SELECT 1'); // Keep one connection alive
+            pool._freeConnections.forEach(conn => {
+                if (conn.lastActiveTime && Date.now() - conn.lastActiveTime > 30000) {
+                    conn.destroy(); // Release connections idle for more than 30 seconds
+                    activeConnections--;
+                }
+            });
+        } catch (error) {
+            console.error('Connection cleanup error:', error);
+        }
+    }
 }, 30000);
 
 // Add connection error handling
@@ -28,20 +66,6 @@ pool.on('connection', (connection) => {
   
   // Set session timeout
   connection.query('SET SESSION wait_timeout=60');
-});
-
-// Handle pool errors
-pool.on('error', (err) => {
-  console.error('Database pool error:', err);
-  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
-      console.error('Database connection was closed.');
-  }
-  if (err.code === 'ER_CON_COUNT_ERROR') {
-      console.error('Database has too many connections.');
-  }
-  if (err.code === 'ECONNREFUSED') {
-      console.error('Database connection was refused.');
-  }
 });
 
 async function testConnection() {
