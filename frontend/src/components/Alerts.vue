@@ -132,22 +132,14 @@ const markAsRead = async (alertId) => {
     const response = await alertStore.markAsRead(alertId);
     
     if (response) {
-      // Update the local alerts array to reflect the change
-      alerts.value = alerts.value.map(alert => {
-        if (alert.id === alertId) {
-          return { ...alert, is_read: true };
-        }
-        return alert;
-      });
+      // The store will handle the state update with the server response
+      // No need for local state manipulation here
     } else {
       throw new Error('Failed to mark alert as read');
     }
   } catch (error) {
     console.error('Error marking alert as read:', error);
     notificationStore.error(error.message || 'Failed to mark alert as read');
-    
-    // Optionally refresh alerts to ensure UI is in sync with server state
-    await loadAlerts();
   }
 };
 

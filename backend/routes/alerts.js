@@ -277,39 +277,64 @@ router.get('/:id', auth.authMiddleware, async (req, res) => {
 
 // Mark alert as read
 router.post('/:id/read', auth.authMiddleware, async (req, res) => {
+  const connection = await db.getConnection();
   try {
     const alertId = req.params.id;
     const userId = req.user.userId;
 
-    // Check if already read
-    const [existing] = await db.execute(
-      'SELECT * FROM alert_reads WHERE alert_id = ? AND user_id = ?',
+    await connection.beginTransaction();
+
+    // Insert into alert_reads table
+    await connection.execute(
+      'INSERT INTO alert_reads (alert_id, user_id, read_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE read_at = CURRENT_TIMESTAMP',
       [alertId, userId]
     );
 
-    if (existing.length > 0) {
-      return res.json({
-        success: true,
-        message: 'Alert already marked as read'
+    // Update the is_read flag in alerts table
+    await connection.execute(
+      'UPDATE alerts SET is_read = true WHERE id = ?',
+      [alertId]
+    );
+
+    // Get the updated alert with read status
+    const [alerts] = await connection.execute(
+      `SELECT a.*, 
+              CASE WHEN ar.read_at IS NOT NULL THEN TRUE ELSE FALSE END as is_read
+       FROM alerts a
+       LEFT JOIN alert_reads ar ON a.id = ar.alert_id AND ar.user_id = ?
+       WHERE a.id = ?`,
+      [userId, alertId]
+    );
+
+    if (alerts.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Alert not found'
       });
     }
 
-    // Mark as read
-    await db.execute(
-      'INSERT INTO alert_reads (alert_id, user_id) VALUES (?, ?)',
-      [alertId, userId]
-    );
+    await connection.commit();
 
     res.json({
       success: true,
-      message: 'Alert marked as read'
+      message: 'Alert marked as read',
+      alert: {
+        ...alerts[0],
+        is_read: true
+      }
     });
   } catch (error) {
+    await connection.rollback();
     console.error('Mark alert as read error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to mark alert as read'
     });
+  } finally {
+    if (connection) {
+      await connection.release();
+    }
   }
 });
 

@@ -98,7 +98,7 @@ export const useAlertStore = defineStore('alert', () => {
       if (response.success) {
         alerts.value = alerts.value.map(alert => 
           alert.id === alertId 
-            ? { ...alert, is_read: true }
+            ? { ...alert, ...response.alert }
             : alert
         );
         notificationStore.success('Alert marked as read');
