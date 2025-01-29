@@ -144,6 +144,49 @@ class Alert {
             connection.release();
         }
     }
+
+    static async markAsRead(alertId, userId) {
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            // Insert or update read status for this user
+            await connection.execute(
+                `INSERT INTO alert_reads (user_id, alert_id, read_at) 
+                 VALUES (?, ?, CURRENT_TIMESTAMP)
+                 ON DUPLICATE KEY UPDATE read_at = CURRENT_TIMESTAMP`,
+                [userId, alertId]
+            );
+
+            // Get the updated alert with read status
+            const [alerts] = await connection.execute(
+                `SELECT a.*, 
+                        CASE WHEN ar.read_at IS NOT NULL THEN TRUE ELSE FALSE END as is_read
+                 FROM alerts a
+                 LEFT JOIN alert_reads ar ON a.id = ar.alert_id AND ar.user_id = ?
+                 WHERE a.id = ?`,
+                [userId, alertId]
+            );
+
+            if (alerts.length === 0) {
+                await connection.rollback();
+                return null;
+            }
+
+            await connection.commit();
+            return {
+                ...alerts[0],
+                is_read: Boolean(alerts[0].is_read)
+            };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            if (connection) {
+                await connection.release();
+            }
+        }
+    }
 }
 
 module.exports = Alert;
