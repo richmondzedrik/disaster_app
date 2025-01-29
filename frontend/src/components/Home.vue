@@ -9,10 +9,10 @@
           Active Protection
         </div>
         <h1>
-          <span class="gradient-text">Disaster Preparedness</span>
-          <br />Platform
+          <span class="gradient-text">AlertoAbra</span>
+          <br />
         </h1>
-        <p class="hero-description">Stay informed, prepared, and safe with our comprehensive disaster management system.</p>
+        <p class="hero-description">Agsagana ita, saan nga inton adda didigra. AlertoAbra, kaduam para iti kaligtasan</p>
         <div class="hero-actions">
           <button @click="$router.push('/login')" class="primary-btn" v-if="!isLoggedIn">
             <i class="fas fa-sign-in-alt"></i>

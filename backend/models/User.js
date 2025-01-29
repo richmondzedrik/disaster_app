@@ -125,11 +125,12 @@ class User {
                 username: profileData.username,
                 phone: profileData.phone,
                 location: profileData.location,
-                // Only stringify if it's not already a string
-                notifications: typeof profileData.notifications === 'string' 
+                // Fix notifications handling
+                notifications: typeof profileData.notifications === 'boolean' 
                     ? profileData.notifications 
-                    : JSON.stringify(profileData.notifications || {}),
-                // Only stringify if it's not already a string
+                    : (typeof profileData.notifications === 'string'
+                        ? profileData.notifications
+                        : JSON.stringify(profileData.notifications || true)),
                 emergency_contacts: typeof emergencyContacts === 'string'
                     ? emergencyContacts
                     : JSON.stringify(emergencyContacts)
