@@ -82,7 +82,7 @@ router.put('/posts/:id', auth.authMiddleware, upload.single('media'), async (req
         const { id } = req.params;
         const { title, content } = req.body;
         
-        // First check if post exists and user has permission
+        // First check if post exists
         const [post] = await db.execute(
             'SELECT * FROM posts WHERE id = ?',
             [id]
@@ -110,10 +110,14 @@ router.put('/posts/:id', auth.authMiddleware, upload.single('media'), async (req
             imageUrl = cloudinaryResponse.secure_url;
         }
 
-        // Update the post
+        // Update the post with the new values, keeping existing values if not provided
+        const updateTitle = title || post[0].title;
+        const updateContent = content || post[0].content;
+        const updateImageUrl = imageUrl || post[0].image_url;
+
         const [result] = await db.execute(
-            'UPDATE posts SET title = ?, content = ?, image_url = ? WHERE id = ?',
-            [title, content, imageUrl, id]
+            'UPDATE posts SET title = ?, content = ?, image_url = ?, updated_at = NOW() WHERE id = ?',
+            [updateTitle, updateContent, updateImageUrl, id]
         );
 
         if (result.affectedRows === 0) {
@@ -123,9 +127,16 @@ router.put('/posts/:id', auth.authMiddleware, upload.single('media'), async (req
             });
         }
 
+        // Fetch the updated post to return
+        const [updatedPost] = await db.execute(
+            'SELECT * FROM posts WHERE id = ?',
+            [id]
+        );
+
         res.json({
             success: true,
-            message: 'Post updated successfully'
+            message: 'Post updated successfully',
+            post: updatedPost[0]
         });
     } catch (error) {
         console.error('Error updating post:', error);
