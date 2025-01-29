@@ -318,26 +318,47 @@ router.put('/posts/:id', async (req, res) => {
 });
 
 router.delete('/posts/:id', async (req, res) => {
+  const connection = await db.getConnection();
   try {
-    const [result] = await db.execute(
-      'DELETE FROM posts WHERE id = ?',
-      [req.params.id]
+    await connection.beginTransaction();
+    
+    // First, delete associated records
+    await connection.query('DELETE FROM post_comments WHERE post_id = ?', [req.params.id]);
+    await connection.query('DELETE FROM post_likes WHERE post_id = ?', [req.params.id]);
+    await connection.query('DELETE FROM post_saves WHERE post_id = ?', [req.params.id]);
+    
+    // Then delete the post
+    const [result] = await connection.query('DELETE FROM posts WHERE id = ?', [req.params.id]);
+
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found'
+      });
+    }
+
+    // Log the activity
+    await connection.query(
+      'INSERT INTO activity_logs (user_id, action, target_type, target_id) VALUES (?, ?, ?, ?)',
+      [req.user.userId, 'deleted_post', 'post', req.params.id]
     );
 
-    if (result.affectedRows > 0) {
-      res.json({
-        success: true,
-        message: 'Post deleted successfully'
-      });
-    } else {
-      throw new Error('Post not found');
-    }
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: 'Post deleted successfully'
+    });
   } catch (error) {
+    await connection.rollback();
     console.error('Delete post error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to delete post'
     });
+  } finally {
+    connection.release();
   }
 });
 
@@ -658,45 +679,6 @@ router.put('/posts/:id/reject', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to reject post'
-    });
-  }
-});
-
-// Delete a post
-router.delete('/posts/:id', async (req, res) => {
-  try {
-    const postId = req.params.id;
-    
-    // First, delete associated records (comments, likes, etc.)
-    await db.execute('DELETE FROM post_comments WHERE post_id = ?', [postId]);
-    await db.execute('DELETE FROM post_likes WHERE post_id = ?', [postId]);
-    await db.execute('DELETE FROM post_saves WHERE post_id = ?', [postId]);
-    
-    // Then delete the post
-    const [result] = await db.execute('DELETE FROM posts WHERE id = ?', [postId]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Post not found'
-      });
-    }
-
-    // Log the activity
-    await db.execute(
-      'INSERT INTO activity_logs (user_id, action, target_type, target_id) VALUES (?, ?, ?, ?)',
-      [req.user.userId, 'deleted_post', 'post', postId]
-    );
-
-    res.json({
-      success: true,
-      message: 'Post deleted successfully'
-    });
-  } catch (error) {
-    console.error('Delete post error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete post'
     });
   }
 });
