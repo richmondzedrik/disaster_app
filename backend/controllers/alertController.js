@@ -177,15 +177,7 @@ exports.markAlertAsRead = async (req, res) => {
             [userId, alertId]
         );
 
-        // Update the alert table to mark it as read
-        await connection.query(
-            `UPDATE alerts 
-             SET is_read = true 
-             WHERE id = ?`,
-            [alertId]
-        );
-
-        // Get the updated alert with read status
+        // Get the updated alert with read status for this specific user
         const [alerts] = await connection.query(
             `SELECT a.*, 
                     CASE WHEN ar.read_at IS NOT NULL THEN TRUE ELSE FALSE END as is_read
