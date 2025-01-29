@@ -162,17 +162,6 @@
             </button>
           </div>
 
-          <div v-if="isAdmin && post.status === 'pending'" class="admin-actions">
-            <button @click="approvePost(post.id)" class="approve-btn">
-              <i class="fas fa-check"></i>
-              Approve
-            </button>
-            <button @click="rejectPost(post.id)" class="reject-btn">
-              <i class="fas fa-times"></i>
-              Reject
-            </button>
-          </div>
-
           <div v-if="post.showComments" class="comments-section">
             <div v-if="post.loadingComments" class="comments-loading">
               <div class="loading-spinner">
@@ -702,34 +691,6 @@ const likePost = async (post) => {
     notificationStore.error('Failed to like post');
   } finally {
     post.likeLoading = false;
-  }
-};
-
-const approvePost = async (postId) => {
-  try {
-    loading.value = true;
-    await newsService.updatePostStatus(postId, 'approved');
-    notificationStore.success('Post approved successfully');
-    loadPosts();
-  } catch (error) {
-    console.error('Error approving post:', error);
-    notificationStore.error('Failed to approve post');
-  } finally {
-    loading.value = false;
-  }
-};
-
-const rejectPost = async (postId) => {
-  try {
-    loading.value = true;
-    await newsService.rejectPost(postId);
-    notificationStore.success('Post rejected successfully');
-    loadPosts();
-  } catch (error) {
-    console.error('Error rejecting post:', error);
-    notificationStore.error('Failed to reject post');
-  } finally {
-    loading.value = false;
   }
 };
 

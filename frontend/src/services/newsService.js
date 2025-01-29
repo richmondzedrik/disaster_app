@@ -266,16 +266,35 @@ export const newsService = {
     },
 
     // Keep existing methods
-    async updatePost(id, formData) {
-        const headers = {
-            ...getHeaders(),
-            'Content-Type': 'multipart/form-data'
-        };
-        const response = await axios.put(`${API_URL}/news/posts/${id}`, formData, {
-            headers,
-            withCredentials: true
-        });
-        return response.data;
+    async updatePost(postId, formData) {
+        try {
+            const headers = {
+                ...getHeaders(),
+                'Content-Type': 'multipart/form-data'
+            };
+            
+            const response = await axios.put(`${API_URL}/admin/news/posts/${postId}`, formData, {
+                headers,
+                withCredentials: true,
+                timeout: 15000,
+                validateStatus: status => status < 500
+            });
+
+            if (response.status === 401) {
+                const authStore = useAuthStore();
+                await authStore.logout();
+                throw new Error('Session expired. Please login again.');
+            }
+
+            if (!response.data.success) {
+                throw new Error(response.data.message || 'Failed to update post');
+            }
+
+            return response.data;
+        } catch (error) {
+            console.error('Error updating post:', error);
+            throw new Error(error.response?.data?.message || error.message || 'Failed to update post');
+        }
     },
 
     async likePost(postId) {

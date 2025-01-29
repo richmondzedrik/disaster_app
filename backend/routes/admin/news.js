@@ -4,6 +4,7 @@ const auth = require('../../middleware/auth');
 const adminMiddleware = require('../../middleware/admin');
 const db = require('../../db/connection');
 const axios = require('axios');
+const cloudinary = require('cloudinary');
 
 // Apply middleware to all routes
 router.use(auth.authMiddleware);
@@ -157,6 +158,65 @@ router.delete('/posts/:id', async (req, res) => {
         });
     } finally {
         connection.release();
+    }
+});
+
+router.put('/posts/:id', async (req, res) => {
+    try {
+        const { title, content } = req.body;
+        const postId = req.params.id;
+
+        // First check if post exists
+        const [existingPost] = await db.execute(
+            'SELECT * FROM posts WHERE id = ?',
+            [postId]
+        );
+
+        if (!existingPost.length) {
+            return res.status(404).json({
+                success: false,
+                message: 'Post not found'
+            });
+        }
+
+        let imageUrl = existingPost[0].image_url;
+        
+        // Handle new image upload if exists
+        if (req.file) {
+            const b64 = Buffer.from(req.file.buffer).toString('base64');
+            const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+            
+            const cloudinaryResponse = await cloudinary.uploader.upload(dataURI, {
+                resource_type: 'auto',
+                folder: 'disaster-app/news'
+            });
+            
+            imageUrl = cloudinaryResponse.secure_url;
+        }
+
+        // Update the post
+        const [result] = await db.execute(
+            'UPDATE posts SET title = ?, content = ?, image_url = ? WHERE id = ?',
+            [title, content, imageUrl, postId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Post not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Post updated successfully'
+        });
+    } catch (error) {
+        console.error('Error updating post:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update post'
+        });
     }
 });
 
