@@ -211,23 +211,9 @@ router.get('/dashboard/stats', auth.authMiddleware, async (req, res) => {
           al.id,
           al.action,
           al.timestamp,
-          u.username,
-          CASE 
-            WHEN al.action = 'create_alert' THEN 'Created new alert'
-            WHEN al.action = 'delete_alert' THEN 'Deleted alert'
-            WHEN al.action = 'update_alert' THEN 'Updated alert status'
-            WHEN al.action = 'create_post' THEN 'Created new post'
-            WHEN al.action = 'delete_post' THEN 'Deleted post'
-            WHEN al.action = 'approve_post' THEN 'Approved post'
-            WHEN al.action = 'reject_post' THEN 'Rejected post'
-            ELSE al.action
-          END as formatted_action
+          u.username
         FROM activity_logs al
         LEFT JOIN users u ON al.user_id = u.id
-        WHERE al.action IN (
-          'create_alert', 'delete_alert', 'update_alert',
-          'create_post', 'delete_post', 'approve_post', 'reject_post'
-        )
         ORDER BY al.timestamp DESC
         LIMIT 10
       `);
@@ -549,12 +535,6 @@ router.put('/alerts/:id/status', async (req, res) => {
       [Boolean(isActive), alertId]
     );
 
-    // Track the activity
-    await db.execute(
-      'INSERT INTO activity_logs (user_id, action) VALUES (?, ?)',
-      [req.user.userId, isActive ? 'update_alert' : 'deactivate_alert']
-    );
-
     res.json({
       success: true,
       message: `Alert ${isActive ? 'activated' : 'deactivated'} successfully`
@@ -572,11 +552,6 @@ router.put('/alerts/:id/status', async (req, res) => {
 router.delete('/alerts/:id', async (req, res) => {
   try {
     await db.execute('DELETE FROM alerts WHERE id = ?', [req.params.id]);
-    // Track the activity
-    await db.execute(
-      'INSERT INTO activity_logs (user_id, action) VALUES (?, ?)',
-      [req.user.userId, 'delete_alert']
-    );
     res.json({
       success: true,
       message: 'Alert deleted successfully'
