@@ -13,27 +13,26 @@ router.get('/test', (req, res) => {
 // Get active alerts
 router.get('/active', auth.authMiddleware, async (req, res) => {
     try {
-        // Add CORS headers
-        res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'https://disasterapp.netlify.app');
-        res.setHeader('Access-Control-Allow-Credentials', 'true');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
+        const userId = req.user.userId;
         const [rows] = await db.execute(`
-            SELECT a.*, u.username as created_by_username 
+            SELECT a.*, 
+                   u.username as created_by_username,
+                   CASE WHEN ar.read_at IS NOT NULL THEN TRUE ELSE FALSE END as is_read
             FROM alerts a
             LEFT JOIN users u ON a.created_by = u.id
+            LEFT JOIN alert_reads ar ON a.id = ar.alert_id AND ar.user_id = ?
             WHERE a.is_active = true 
             AND (a.expiry_date IS NULL OR a.expiry_date > NOW())
             ORDER BY a.priority DESC, a.created_at DESC
-        `);
+        `, [userId]);
         
         res.json({
             success: true,
             alerts: rows.map(alert => ({
                 ...alert,
                 is_active: Boolean(alert.is_active),
-                is_public: Boolean(alert.is_public)
+                is_public: Boolean(alert.is_public),
+                is_read: Boolean(alert.is_read)
             }))
         });
     } catch (error) {
@@ -280,59 +279,59 @@ router.get('/:id', auth.authMiddleware, async (req, res) => {
 
 // Mark alert as read
 router.post('/:id/read', auth.authMiddleware, async (req, res) => {
-  const connection = await db.getConnection();
-  try {
-    const alertId = req.params.id;
-    const userId = req.user.userId;
+    const connection = await db.getConnection();
+    try {
+        const alertId = req.params.id;
+        const userId = req.user.userId;
 
-    await connection.beginTransaction();
+        await connection.beginTransaction();
 
-    // Insert into alert_reads table only - removed the global update
-    await connection.execute(
-      'INSERT INTO alert_reads (alert_id, user_id, read_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE read_at = CURRENT_TIMESTAMP',
-      [alertId, userId]
-    );
+        // Insert into alert_reads table
+        await connection.execute(
+            'INSERT INTO alert_reads (alert_id, user_id, read_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE read_at = CURRENT_TIMESTAMP',
+            [alertId, userId]
+        );
 
-    // Get the updated alert with read status
-    const [alerts] = await connection.execute(
-      `SELECT a.*, 
-              CASE WHEN ar.read_at IS NOT NULL THEN TRUE ELSE FALSE END as is_read
-       FROM alerts a
-       LEFT JOIN alert_reads ar ON a.id = ar.alert_id AND ar.user_id = ?
-       WHERE a.id = ?`,
-      [userId, alertId]
-    );
+        // Get the updated alert with read status
+        const [alerts] = await connection.execute(
+            `SELECT a.*, 
+                    CASE WHEN ar.read_at IS NOT NULL THEN TRUE ELSE FALSE END as is_read
+             FROM alerts a
+             LEFT JOIN alert_reads ar ON a.id = ar.alert_id AND ar.user_id = ?
+             WHERE a.id = ?`,
+            [userId, alertId]
+        );
 
-    if (alerts.length === 0) {
-      await connection.rollback();
-      return res.status(404).json({
-        success: false,
-        message: 'Alert not found'
-      });
+        if (alerts.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({
+                success: false,
+                message: 'Alert not found'
+            });
+        }
+
+        await connection.commit();
+
+        res.json({
+            success: true,
+            message: 'Alert marked as read',
+            alert: {
+                ...alerts[0],
+                is_read: Boolean(alerts[0].is_read)
+            }
+        });
+    } catch (error) {
+        await connection.rollback();
+        console.error('Mark alert as read error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to mark alert as read'
+        });
+    } finally {
+        if (connection) {
+            await connection.release();
+        }
     }
-
-    await connection.commit();
-
-    res.json({
-      success: true,
-      message: 'Alert marked as read',
-      alert: {
-        ...alerts[0],
-        is_read: Boolean(alerts[0].is_read)
-      }
-    });
-  } catch (error) {
-    await connection.rollback();
-    console.error('Mark alert as read error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to mark alert as read'
-    });
-  } finally {
-    if (connection) {
-      await connection.release();
-    }
-  }
 });
 
 // Catch-all route for this router
