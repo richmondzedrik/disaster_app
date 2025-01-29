@@ -276,6 +276,9 @@ router.post('/posts', async (req, res) => {
       [title, content, category, userId]
     );
 
+    // Track the activity
+    await trackActivity(userId, 'create_post', title);
+
     res.json({
       success: true,
       message: 'Post created successfully',
@@ -495,6 +498,9 @@ router.post('/alerts', async (req, res) => {
       [message.trim(), type || 'info', priority || 0, expiry_date || null, 
        is_public || false, req.user.userId]
     );
+
+    // Track the activity
+    await trackActivity(req.user.userId, 'create_alert', message.substring(0, 100));
 
     const [newAlert] = await db.execute(
       `SELECT a.*, u.username as created_by_username
@@ -884,5 +890,17 @@ router.post('/alerts/:id/reactivate', async (req, res) => {
     });
   }
 });
+
+// Add this after the referenced lines:
+const trackActivity = async (userId, action, details = null) => {
+  try {
+    await db.execute(
+      'INSERT INTO admin_activity (user_id, action, details) VALUES (?, ?, ?)',
+      [userId, action, details]
+    );
+  } catch (error) {
+    console.error('Error tracking activity:', error);
+  }
+};
 
 module.exports = router; 
