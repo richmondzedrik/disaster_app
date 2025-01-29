@@ -11,7 +11,7 @@ const pool = mysql.createPool({
   connectionLimit: 5,
   waitForConnections: true,
   queueLimit: 10,
-  acquireTimeout: 10000,
+  connectTimeout: 10000,
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000
 });

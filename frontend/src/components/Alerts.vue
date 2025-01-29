@@ -77,13 +77,14 @@ const loadAlerts = async () => {
     }
     
     const response = await alertService.getActiveAlerts();
-    console.log('Alerts response:', response); // Add this for debugging
+    console.log('Alerts response:', response);
     
     if (response?.success) {
       alerts.value = response.alerts.map(alert => ({
         ...alert,
         is_active: Boolean(alert.is_active),
-        is_public: Boolean(alert.is_public)
+        is_public: Boolean(alert.is_public),
+        is_read: Boolean(alert.is_read)
       }));
     } else {
       throw new Error(response?.message || 'Failed to load alerts');
@@ -138,9 +139,6 @@ const markAsRead = async (alertId) => {
         }
         return alert;
       });
-      
-      // Show success notification
-      notificationStore.success('Alert marked as read');
     } else {
       throw new Error('Failed to mark alert as read');
     }
