@@ -53,14 +53,16 @@ class Alert {
         const connection = await db.getConnection();
         try {
             const [rows] = await connection.execute(
-                `SELECT a.*, u.username as created_by_username 
+                `SELECT a.*, u.username as created_by_username,
+                        CASE WHEN ar.read_at IS NOT NULL THEN TRUE ELSE FALSE END as is_read
                  FROM alerts a 
                  LEFT JOIN users u ON a.user_id = u.id 
+                 LEFT JOIN alert_reads ar ON a.id = ar.alert_id AND ar.user_id = ?
                  WHERE (a.is_public = true OR a.user_id = ?) 
                  AND a.expiry_date > NOW() 
                  AND a.is_active = true 
                  ORDER BY a.priority DESC, a.created_at DESC`,
-                [userId]
+                [userId, userId]
             );
             return rows;
         } finally {
