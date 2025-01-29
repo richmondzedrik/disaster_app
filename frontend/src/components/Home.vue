@@ -12,7 +12,7 @@
           <span class="gradient-text">AlertoAbra</span>
           <br />
         </h1>
-        <p class="hero-description">Agsagana ita, saan nga inton adda didigra. AlertoAbra, kaduam para iti kaligtasan</p>
+        <p class="hero-description">Prepare now, not when disaster strikes. AlertoAbra, your companion in safety.</p>
         <div class="hero-actions">
           <button @click="$router.push('/login')" class="primary-btn" v-if="!isLoggedIn">
             <i class="fas fa-sign-in-alt"></i>
