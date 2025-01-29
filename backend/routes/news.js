@@ -84,14 +84,14 @@ router.put('/posts/:id', auth.authMiddleware, upload.single('media'), async (req
         
         // First check if post exists and user has permission
         const [post] = await db.execute(
-            'SELECT * FROM posts WHERE id = ? AND (author_id = ? OR ? = true)',
-            [id, req.user.userId, req.user.role === 'admin']
+            'SELECT * FROM posts WHERE id = ?',
+            [id]
         );
 
         if (!post.length) {
             return res.status(404).json({
                 success: false,
-                message: 'Post not found or unauthorized'
+                message: 'Post not found'
             });
         }
 
@@ -110,6 +110,7 @@ router.put('/posts/:id', auth.authMiddleware, upload.single('media'), async (req
             imageUrl = cloudinaryResponse.secure_url;
         }
 
+        // Update the post
         const [result] = await db.execute(
             'UPDATE posts SET title = ?, content = ?, image_url = ? WHERE id = ?',
             [title, content, imageUrl, id]
