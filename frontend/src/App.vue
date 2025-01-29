@@ -237,10 +237,24 @@ const handleClickOutside = (event) => {
 // Lifecycle hooks
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
+  
+  if (isAuthenticated.value) {
+    fetchAlertCount();
+  }
+  
+  // Add event listener for alert count updates
+  window.addEventListener('alertCountUpdate', ((event) => {
+    alertCount.value = event.detail.count;
+  }));
 });
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
+  
+  // Add cleanup in onUnmounted
+  window.removeEventListener('alertCountUpdate', ((event) => {
+    alertCount.value = event.detail.count;
+  }));
 });
 
 // Logout handler

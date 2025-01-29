@@ -101,6 +101,15 @@ export const useAlertStore = defineStore('alert', () => {
             ? { ...alert, ...response.alert }
             : alert
         );
+        
+        const activeUnreadAlerts = alerts.value.filter(alert => 
+          alert.is_active && !alert.is_read
+        ).length;
+        
+        window.dispatchEvent(new CustomEvent('alertCountUpdate', {
+          detail: { count: activeUnreadAlerts }
+        }));
+
         notificationStore.success('Alert marked as read');
         return true;
       }
