@@ -99,7 +99,7 @@ const loadAlerts = async () => {
       throw new Error(response?.message || 'Failed to load alerts');
     }
   } catch (err) {
-    console.error('Error loading alerts:', err);
+    console.error('Error loading alerts:', err);       
     error.value = err.message || 'Failed to load alerts. Please try again.';
     notificationStore.error(error.value);
     alerts.value = [];
