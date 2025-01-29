@@ -205,12 +205,13 @@ const loadAlerts = async () => {
 };
 
 const latestUpdatesCount = computed(() => {
-  // Only count approved posts from the last 7 days
+  // Count posts from the last 7 days
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   
   return recentNews.value.filter(post => {
     const postDate = new Date(post.createdAt || post.created_at);
+    // Only check the date, don't filter by status since public posts are already approved
     return postDate > sevenDaysAgo;
   }).length;
 });
@@ -229,9 +230,7 @@ const fetchRecentNews = async () => {
 
 // Load alerts on mount and when authentication state changes
 onMounted(() => {
-  if (authStore.isLoggedIn) {
-    fetchRecentNews();
-  }
+  fetchRecentNews(); // Always fetch news regardless of login status
   if (isLoggedIn.value) {
     loadAlerts();
   }
