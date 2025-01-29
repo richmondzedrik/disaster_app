@@ -10,7 +10,7 @@ router.get('/progress', auth.authMiddleware, async (req, res) => {
     
     console.log('Loading checklist for user:', userId);
     
-    // Get custom items only
+    // Get both default and custom items
     const [items] = await db.execute(`
       SELECT 
         ci.item_id,
@@ -18,13 +18,16 @@ router.get('/progress', auth.authMiddleware, async (req, res) => {
         ci.text,
         ci.category,  
         ci.info,
-        true as is_custom
+        CASE 
+          WHEN ci.user_id = ? THEN true
+          ELSE false
+        END as is_custom
       FROM checklist_items ci
       LEFT JOIN checklist_progress cp 
         ON ci.item_id = cp.item_id 
-        AND cp.user_id = ci.user_id
-      WHERE ci.user_id = ?
-    `, [userId]);
+        AND cp.user_id = ?
+      WHERE ci.user_id = 1 OR ci.user_id = ?
+    `, [userId, userId, userId]);
 
     const formattedItems = items.map(row => ({
       id: row.item_id,
@@ -32,7 +35,7 @@ router.get('/progress', auth.authMiddleware, async (req, res) => {
       text: row.text,
       category: row.category,
       info: row.info,
-      isCustom: true
+      isCustom: Boolean(row.is_custom)
     }));
 
     console.log('Loaded items:', formattedItems);
