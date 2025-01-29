@@ -1,7 +1,25 @@
 <template>
   <div class="alerts-container">
     <h2>Alerts</h2>
-    <div v-if="loading" class="loading">Loading alerts...</div>
+    <div v-if="loading" class="alerts-list">
+      <!-- Skeleton loading for 3 alerts -->
+      <div v-for="i in 3" :key="i" class="alert skeleton-alert">
+        <div class="alert-content">
+          <div class="alert-header">
+            <div class="skeleton-type"></div>
+            <div class="skeleton-date"></div>
+          </div>
+          <div class="skeleton-message"></div>
+          <div class="alert-footer">
+            <div class="skeleton-priority"></div>
+            <div class="alert-actions">
+              <div class="skeleton-button"></div>
+              <div class="skeleton-author"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <div v-else>
       <div v-if="alerts.length === 0" class="no-alerts">
@@ -287,5 +305,102 @@ onMounted(() => {
 
 .is-read {
   opacity: 0.75;
+}
+
+.skeleton-alert {
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #f0f0f0;
+}
+
+.skeleton-type, .skeleton-date, .skeleton-message, .skeleton-priority, .skeleton-button, .skeleton-author {
+  height: 16px;
+  border-radius: 4px;
+  background-color: #e0e0e0;
+  margin-bottom: 8px;
+}
+
+.skeleton-type, .skeleton-date {
+  width: 40%;
+}
+
+.skeleton-message {
+  width: 60%;
+}
+
+.skeleton-priority {
+  width: 20%;
+}
+
+.skeleton-button {
+  width: 30%;
+}
+
+.skeleton-author {
+  width: 40%;
+}
+
+.skeleton-alert {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-left: 5px solid #dee2e6;
+}
+
+.skeleton-type,
+.skeleton-date,
+.skeleton-priority,
+.skeleton-button,
+.skeleton-author {
+  background: #e9ecef;
+  border-radius: 4px;
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-type {
+  width: 80px;
+  height: 20px;
+}
+
+.skeleton-date {
+  width: 150px;
+  height: 20px;
+}
+
+.skeleton-message {
+  width: 100%;
+  height: 40px;
+  background: #e9ecef;
+  border-radius: 4px;
+  margin: 10px 0;
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-priority {
+  width: 120px;
+  height: 20px;
+}
+
+.skeleton-button {
+  width: 120px;
+  height: 32px;
+  border-radius: 6px;
+}
+
+.skeleton-author {
+  width: 100px;
+  height: 20px;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0.6;
+  }
 }
 </style> 

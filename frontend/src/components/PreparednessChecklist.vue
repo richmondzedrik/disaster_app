@@ -1,147 +1,171 @@
 <template>
   <div class="checklist-container">
-    <div class="checklist-header">
-      <h2><i class="fas fa-clipboard-check"></i> Preparedness Checklist</h2>
-      <div class="progress-indicator">
-        <div class="progress-text">{{ completedCount }} of {{ checklist.length }} completed</div>
-        <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: `${progressPercentage}%` }"></div>
+    <!-- Skeleton Loading -->
+    <div v-if="initialLoading" class="checklist-skeleton">
+      <div class="skeleton-header">
+        <h2 class="skeleton-title"></h2>
+        <div class="skeleton-progress">
+          <div class="skeleton-text"></div>
+          <div class="skeleton-bar"></div>
         </div>
       </div>
-    </div>
 
-    <div class="checklist-categories">
-      <div v-for="(items, category) in groupedChecklist" :key="category" class="category-section">
-        <h3>{{ category }}</h3>
-        <div class="checklist-items"> 
-          <div v-for="item in items" :key="item.id" class="checklist-item" :class="{ completed: item.completed }">
-            <div class="item-content">
-              <label :for="item.id" class="item-label"> 
-                <input 
-                  type="checkbox" 
-                  :id="item.id" 
-                  v-model="item.completed"
-                  @change="updateProgress(item)"
-                > 
-                <span class="item-text">{{ item.text }}</span>
-              </label>
-              <div class="item-actions">
-                <button v-if="item.info" @click="showInfo(item)" class="info-btn">
-                  <i class="fas fa-info-circle"></i>
-                </button>
-                <button v-if="item.isCustom" @click="editItem(item)" class="edit-btn">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button v-if="item.isCustom" @click="deleteItem(item)" class="delete-btn">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </div>
-            <div v-if="item.showDetails" class="item-details">
-              {{ item.info }}
-            </div>
+      <div class="skeleton-categories">
+        <div v-for="i in 3" :key="i" class="skeleton-category">
+          <div class="skeleton-category-title"></div>
+          <div v-for="j in 3" :key="j" class="skeleton-item">
+            <div class="skeleton-checkbox"></div>
+            <div class="skeleton-text"></div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="add-item-section">
-      <button @click="showAddItemForm = true" class="add-item-btn">
-        <i class="fas fa-plus"></i> Add Custom Item
-      </button>
+    <!-- Actual Content -->
+    <div v-else>
+      <div class="checklist-header">
+        <h2><i class="fas fa-clipboard-check"></i> Preparedness Checklist</h2>
+        <div class="progress-indicator">
+          <div class="progress-text">{{ completedCount }} of {{ checklist.length }} completed</div>
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: `${progressPercentage}%` }"></div>
+          </div>
+        </div>
+      </div>
 
-      <!-- Add Item Modal -->
-      <div v-if="showAddItemForm" class="modal-overlay">
+      <div class="checklist-categories">
+        <div v-for="(items, category) in groupedChecklist" :key="category" class="category-section">
+          <h3>{{ category }}</h3>
+          <div class="checklist-items"> 
+            <div v-for="item in items" :key="item.id" class="checklist-item" :class="{ completed: item.completed }">
+              <div class="item-content">
+                <label :for="item.id" class="item-label"> 
+                  <input 
+                    type="checkbox" 
+                    :id="item.id" 
+                    v-model="item.completed"
+                    @change="updateProgress(item)"
+                  > 
+                  <span class="item-text">{{ item.text }}</span>
+                </label>
+                <div class="item-actions">
+                  <button v-if="item.info" @click="showInfo(item)" class="info-btn">
+                    <i class="fas fa-info-circle"></i>
+                  </button>
+                  <button v-if="item.isCustom" @click="editItem(item)" class="edit-btn">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button v-if="item.isCustom" @click="deleteItem(item)" class="delete-btn">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+              <div v-if="item.showDetails" class="item-details">
+                {{ item.info }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="add-item-section">
+        <button @click="showAddItemForm = true" class="add-item-btn">
+          <i class="fas fa-plus"></i> Add Custom Item
+        </button>
+
+        <!-- Add Item Modal -->
+        <div v-if="showAddItemForm" class="modal-overlay">
+          <div class="modal-content">
+            <h3>Add New Checklist Item</h3>
+            <form @submit.prevent="addNewItem" class="add-item-form">
+              <div class="form-group">
+                <label for="itemText">Item Description</label>
+                <input 
+                  type="text" 
+                  id="itemText" 
+                  v-model="newItem.text" 
+                  required
+                  placeholder="Enter item description"
+                >
+              </div>
+              <div class="form-group">
+                <label for="itemCategory">Category</label>
+                <select id="itemCategory" v-model="newItem.category" required>
+                  <option value="">Select a category</option>
+                  <option v-for="category in availableCategories" 
+                          :key="category" 
+                          :value="category">
+                    {{ category }}
+                  </option>
+                  <option value="custom">Add New Category</option>
+                </select>
+              </div>
+              <div v-if="newItem.category === 'custom'" class="form-group">
+                <label for="newCategory">New Category Name</label>
+                <input 
+                  type="text" 
+                  id="newCategory" 
+                  v-model="newItem.newCategory"
+                  required
+                  placeholder="Enter new category name"
+                >
+              </div>
+              <div class="form-group">
+                <label for="itemInfo">Additional Information (Optional)</label>
+                <textarea 
+                  id="itemInfo" 
+                  v-model="newItem.info"
+                  placeholder="Enter additional details or instructions"
+                ></textarea>
+              </div>
+              <div class="modal-actions">
+                <button type="submit" class="save-btn">Save Item</button>
+                <button type="button" @click="showAddItemForm = false" class="cancel-btn">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Item Modal -->
+      <div v-if="showEditForm && editingItem" class="modal-overlay">
         <div class="modal-content">
-          <h3>Add New Checklist Item</h3>
-          <form @submit.prevent="addNewItem" class="add-item-form">
+          <h3>Edit Checklist Item</h3>
+          <form @submit.prevent="saveEdit" class="edit-item-form">
             <div class="form-group">
-              <label for="itemText">Item Description</label>
+              <label for="editItemText">Item Description</label>
               <input 
                 type="text" 
-                id="itemText" 
-                v-model="newItem.text" 
+                id="editItemText" 
+                v-model="editingItem.text" 
                 required
                 placeholder="Enter item description"
               >
             </div>
             <div class="form-group">
-              <label for="itemCategory">Category</label>
-              <select id="itemCategory" v-model="newItem.category" required>
-                <option value="">Select a category</option>
-                <option v-for="category in availableCategories" 
-                        :key="category" 
-                        :value="category">
-                  {{ category }}
-                </option>
-                <option value="custom">Add New Category</option>
-              </select>
-            </div>
-            <div v-if="newItem.category === 'custom'" class="form-group">
-              <label for="newCategory">New Category Name</label>
+              <label for="editItemCategory">Category</label>
               <input 
                 type="text" 
-                id="newCategory" 
-                v-model="newItem.newCategory"
+                id="editItemCategory" 
+                v-model="editingItem.category"
                 required
-                placeholder="Enter new category name"
+                placeholder="Enter category"
               >
             </div>
             <div class="form-group">
-              <label for="itemInfo">Additional Information (Optional)</label>
+              <label for="editItemInfo">Additional Information (Optional)</label>
               <textarea 
-                id="itemInfo" 
-                v-model="newItem.info"
+                id="editItemInfo" 
+                v-model="editingItem.info"
                 placeholder="Enter additional details or instructions"
               ></textarea>
             </div>
             <div class="modal-actions">
-              <button type="submit" class="save-btn">Save Item</button>
-              <button type="button" @click="showAddItemForm = false" class="cancel-btn">Cancel</button>
+              <button type="submit" class="save-btn">Save Changes</button>
+              <button type="button" @click="showEditForm = false" class="cancel-btn">Cancel</button>
             </div>
           </form>
         </div>
-      </div>
-    </div>
-
-    <!-- Edit Item Modal -->
-    <div v-if="showEditForm && editingItem" class="modal-overlay">
-      <div class="modal-content">
-        <h3>Edit Checklist Item</h3>
-        <form @submit.prevent="saveEdit" class="edit-item-form">
-          <div class="form-group">
-            <label for="editItemText">Item Description</label>
-            <input 
-              type="text" 
-              id="editItemText" 
-              v-model="editingItem.text" 
-              required
-              placeholder="Enter item description"
-            >
-          </div>
-          <div class="form-group">
-            <label for="editItemCategory">Category</label>
-            <input 
-              type="text" 
-              id="editItemCategory" 
-              v-model="editingItem.category"
-              required
-              placeholder="Enter category"
-            >
-          </div>
-          <div class="form-group">
-            <label for="editItemInfo">Additional Information (Optional)</label>
-            <textarea 
-              id="editItemInfo" 
-              v-model="editingItem.info"
-              placeholder="Enter additional details or instructions"
-            ></textarea>
-          </div>
-          <div class="modal-actions">
-            <button type="submit" class="save-btn">Save Changes</button>
-            <button type="button" @click="showEditForm = false" class="cancel-btn">Cancel</button>
-          </div>
-        </form>
       </div>
     </div>
   </div>
@@ -369,6 +393,8 @@ onMounted(async () => {
         ? 'Please login to view your checklist' 
         : 'Failed to load checklist progress. Please try refreshing the page.'
     );
+  } finally {
+    initialLoading.value = false;
   }
 });
 
@@ -418,6 +444,8 @@ const saveEdit = async () => {
     notificationStore.error(error.message || 'Failed to update item');
   }
 };
+
+const initialLoading = ref(true);
 </script>
 
 <style scoped>
@@ -723,5 +751,101 @@ const saveEdit = async () => {
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
+}
+
+.checklist-skeleton {
+  padding: 1rem;
+}
+
+.skeleton-header {
+  margin-bottom: 2rem;
+}
+
+.skeleton-title {
+  height: 32px;
+  width: 300px;
+  background: #f0f0f0;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-progress {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.skeleton-text {
+  height: 20px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-bar {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.skeleton-category {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.skeleton-category-title {
+  height: 24px;
+  width: 200px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.skeleton-checkbox {
+  height: 20px;
+  width: 20px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-text {
+  height: 20px;
+  width: 80%;
+  background: #f0f0f0;
+  border-radius: 4px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0.6;
+  }
 }
 </style>   
