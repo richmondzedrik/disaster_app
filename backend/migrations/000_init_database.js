@@ -77,6 +77,7 @@ async function up() {
                 is_active BOOLEAN DEFAULT true,
                 is_public BOOLEAN DEFAULT false,
                 created_by INT,
+                is_read BOOLEAN DEFAULT false,
                 expiry_date DATETIME,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
