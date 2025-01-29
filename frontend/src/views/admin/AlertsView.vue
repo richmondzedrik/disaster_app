@@ -313,44 +313,40 @@
     }
   }, { deep: true });  
   
-  // In the script setup section, update the onMounted function:
-
-onMounted(async () => {
-  try {
-    loading.value = true;
-    const response = await alertStore.fetchAlerts();
+  const processedAlerts = computed(() => {
+    if (!alerts.value || !Array.isArray(alerts.value)) return [];
     
-    if (response?.success) {
-      alerts.value = response.alerts.map(alert => ({
+    return alerts.value.map(alert => {
+      const now = new Date();
+      const expiryDate = alert.expiry_date ? new Date(alert.expiry_date) : null;
+      const isExpired = expiryDate && expiryDate < now;
+      
+      return {
         ...alert,
-        is_active: Boolean(alert.is_active),
-        is_public: Boolean(alert.is_public)
-      }));
-    } else {
-      throw new Error(response?.message || 'Failed to load alerts');
-    }
-  } catch (error) {
-    console.error('Error loading alerts:', error);
-    notificationStore.error(error.message || 'Failed to load alerts');
-    alerts.value = [];
-  } finally {
-    loading.value = false;
-  }
-});
-
-const processedAlerts = computed(() => {
-  return alerts.value.map(alert => {
-    const now = new Date();
-    const expiryDate = alert.expiry_date ? new Date(alert.expiry_date) : null;
-    const isExpired = expiryDate && expiryDate < now;
-    
-    return {
-      ...alert,
-      is_active: isExpired ? false : alert.is_active,
-      status: isExpired ? 'Expired' : (alert.is_active ? 'Active' : 'Inactive')
-    };
+        is_active: isExpired ? false : Boolean(alert.is_active),
+        status: isExpired ? 'Expired' : (alert.is_active ? 'Active' : 'Inactive')
+      };
+    });
   });
-});
+  
+  onMounted(async () => {
+    try {
+      loading.value = true;
+      const response = await alertStore.fetchAlerts();
+      
+      if (response?.success) {
+        alerts.value = response.alerts || [];
+      } else {
+        throw new Error(response?.message || 'Failed to load alerts');
+      }
+    } catch (error) {
+      console.error('Error loading alerts:', error);
+      notificationStore.error(error.message || 'Failed to load alerts');
+      alerts.value = [];
+    } finally {
+      loading.value = false;
+    }
+  });
 
   </script>
   

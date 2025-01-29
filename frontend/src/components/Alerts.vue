@@ -85,14 +85,13 @@ const loadAlerts = async () => {
     const response = await alertService.getActiveAlerts();
     
     if (response?.success) {
-      alerts.value = response.alerts.map(alert => ({
+      alerts.value = (response.alerts || []).map(alert => ({
         ...alert,
         is_active: Boolean(alert.is_active),
         is_public: Boolean(alert.is_public),
         is_read: Boolean(alert.is_read)
       }));
 
-      // Update alert count using computed value
       window.dispatchEvent(new CustomEvent('alertCountUpdate', {
         detail: { count: unreadAlerts.value }
       }));
