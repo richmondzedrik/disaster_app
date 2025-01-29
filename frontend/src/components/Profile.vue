@@ -223,10 +223,6 @@
                                 {{ (profileData.emergencyContacts || []).length }}/3
                             </span>
                         </h3>
-                        <button @click="loadEmergencyContactsFromDB" class="refresh-contacts-btn" :disabled="loading">
-                            <i :class="['fas', loading ? 'fa-spinner fa-spin' : 'fa-sync-alt']"></i>
-                            Refresh Contacts
-                        </button>
                     </div>
                     <div class="emergency-contacts-list">
                         <div v-if="!profileData.emergencyContacts || profileData.emergencyContacts.length === 0"
@@ -380,6 +376,7 @@
                     </h3>
                     <button class="close-btn" @click="closeEmergencyContactModal">
                         <i class="fas fa-times"></i>
+                        <span class="tooltip">Close</span>
                     </button>
                 </div>
                 <div class="modal-body">
@@ -393,22 +390,41 @@
                     </div>
                     <div class="form-group">
                         <label for="contactPhone">Phone Number</label>
-                        <input type="tel" id="contactPhone" v-model="emergencyContactForm.phone"
-                            placeholder="+63XXXXXXXXXX" :class="{ 'error': emergencyContactErrors.phone }" />
+                        <div class="phone-input-container">
+                            <div class="country-prefix">
+                                <span class="flag">🇵🇭</span>
+                                <span class="prefix">+63</span>
+                            </div>
+                            <input 
+                                type="tel" 
+                                id="contactPhone"
+                                v-model="emergencyContactForm.localPhone"
+                                placeholder="9XXXXXXXXX"
+                                maxlength="10"
+                                @input="handleEmergencyContactPhoneInput"
+                                :class="{ 'error': emergencyContactErrors.phone }"
+                            />
+                        </div>
                         <span class="error-message" v-if="emergencyContactErrors.phone">
                             {{ emergencyContactErrors.phone }}
                         </span>
                     </div>
                     <div class="form-group">
                         <label for="contactRelation">Relationship</label>
-                        <select id="contactRelation" v-model="emergencyContactForm.relation"
-                            :class="{ 'error': emergencyContactErrors.relation }">
-                            <option value="">Select relationship</option>
-                            <option value="family">Family</option>
-                            <option value="friend">Friend</option>
-                            <option value="neighbor">Neighbor</option>
-                            <option value="other">Other</option>
-                        </select>
+                        <div class="select-wrapper">
+                            <select 
+                                id="contactRelation" 
+                                v-model="emergencyContactForm.relation"
+                                :class="{ 'error': emergencyContactErrors.relation }"
+                            >
+                                <option value="" disabled>Select relationship</option>
+                                <option value="family">Family Member</option>
+                                <option value="friend">Friend</option>
+                                <option value="neighbor">Neighbor</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <i class="fas fa-chevron-down select-icon"></i>
+                        </div>
                         <span class="error-message" v-if="emergencyContactErrors.relation">
                             {{ emergencyContactErrors.relation }}
                         </span>
@@ -1912,6 +1928,97 @@
     font-size: 2.5rem;
     font-weight: 600;
 }
+
+/* Add these styles */
+.close-btn {
+  position: relative;
+  background: transparent;
+  border: none;
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.close-btn i {
+  font-size: 1.2rem;
+  color: #64748b;
+}
+
+.close-btn .tooltip {
+  position: absolute;
+  background: #1e293b;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-right: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.select-wrapper select {
+  width: 100%;
+  padding: 10px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  appearance: none;
+  background: white;
+  font-size: 1rem;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.select-wrapper select:focus {
+  border-color: #00D1D1;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 209, 209, 0.1);
+}
+
+.select-wrapper select.error {
+  border-color: #ef4444;
+}
+
+.select-wrapper .select-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+  transition: transform 0.2s ease;
+}
+
+.select-wrapper select:focus + .select-icon {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+select option[value=""] {
+  color: #94a3b8;
+}
+
+select option:not([value=""]) {
+  color: #1e293b;
+}
 </style>
 
 <script setup>
@@ -2422,6 +2529,7 @@ const editingContactIndex = ref(-1);
 const emergencyContactForm = ref({
     name: '',
     phone: '',
+    localPhone: '', // Add this new field
     relation: ''
 });
 const emergencyContactErrors = ref({
@@ -2470,6 +2578,7 @@ const openEmergencyContactModal = () => {
     emergencyContactForm.value = {
         name: '',
         phone: '',
+        localPhone: '',
         relation: ''
     };
     showEmergencyContactModal.value = true;
@@ -2478,7 +2587,10 @@ const openEmergencyContactModal = () => {
 const editEmergencyContact = (index) => {
     editingContactIndex.value = index;
     const contact = profileData.value.emergencyContacts[index];
-    emergencyContactForm.value = { ...contact };
+    emergencyContactForm.value = { 
+        ...contact,
+        localPhone: contact.phone.startsWith('+63') ? contact.phone.substring(3) : contact.phone
+    };
     showEmergencyContactModal.value = true;
 };
 
@@ -2488,6 +2600,7 @@ const closeEmergencyContactModal = () => {
     emergencyContactForm.value = {
         name: '',
         phone: '',
+        localPhone: '',
         relation: ''
     };
     emergencyContactErrors.value = {
@@ -2498,35 +2611,50 @@ const closeEmergencyContactModal = () => {
 };
 
 const saveEmergencyContact = () => {
-    if (!validateEmergencyContactForm()) return;
+    // Reset any existing errors
+    emergencyContactErrors.value = {
+        name: '',
+        phone: '',
+        relation: ''
+    };
 
-    console.log('Saving emergency contact:', {
-        form: emergencyContactForm.value,
-        isEditing: editingContactIndex.value !== -1,
-        editIndex: editingContactIndex.value
+    // Trim the name to remove whitespace
+    const trimmedName = emergencyContactForm.value.name.trim();
+    const normalizedPhone = emergencyContactForm.value.phone.replace(/\s+/g, '');
+
+    // Check for duplicate name or phone number
+    const isDuplicate = profileData.value.emergencyContacts.some((contact, index) => {
+        // Skip checking against the contact being edited
+        if (index === editingContactIndex.value) return false;
+        
+        const existingPhone = contact.phone.replace(/\s+/g, '');
+        return contact.name.trim().toLowerCase() === trimmedName.toLowerCase() || 
+               existingPhone === normalizedPhone;
     });
 
+    if (isDuplicate) {
+        notificationStore.error('A contact with this name or phone number already exists');
+        return;
+    }
+
+    // If we're adding a new contact
     if (editingContactIndex.value === -1) {
-        // Adding new contact
         const newContact = {
-            name: emergencyContactForm.value.name.trim(),
-            phone: emergencyContactForm.value.phone,
+            name: trimmedName,
+            phone: normalizedPhone,
             relation: emergencyContactForm.value.relation
         };
-        console.log('Adding new contact:', newContact);
         profileData.value.emergencyContacts.push(newContact);
     } else {
         // Updating existing contact
         const updatedContact = {
-            name: emergencyContactForm.value.name.trim(),
-            phone: emergencyContactForm.value.phone,
+            name: trimmedName,
+            phone: normalizedPhone,
             relation: emergencyContactForm.value.relation
         };
-        console.log('Updating contact at index:', editingContactIndex.value, updatedContact);
         profileData.value.emergencyContacts[editingContactIndex.value] = updatedContact;
     }
 
-    console.log('Updated contacts array:', profileData.value.emergencyContacts);
     closeEmergencyContactModal();
 };
 
@@ -3009,5 +3137,30 @@ const handlePhoneInput = (event) => {
     
     // Validate the complete number
     validatePhoneNumber();
+};
+
+// Add this new method to handle emergency contact phone input
+const handleEmergencyContactPhoneInput = (event) => {
+  // Remove any non-numeric characters
+  let value = event.target.value.replace(/\D/g, '');
+  
+  // Ensure the first digit is 9
+  if (value.length > 0 && value[0] !== '9') {
+    value = '9' + value.substring(1);
+  }
+  
+  // Limit to 10 digits
+  value = value.substring(0, 10);
+  
+  // Update local phone number
+  emergencyContactForm.value.localPhone = value;
+  
+  // Update the main phone field with complete number
+  emergencyContactForm.value.phone = value ? `+63${value}` : '';
+  
+  // Clear phone error if exists
+  if (emergencyContactForm.value.phone) {
+    emergencyContactErrors.value.phone = '';
+  }
 };
 </script>
