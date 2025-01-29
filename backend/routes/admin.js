@@ -277,10 +277,7 @@ router.post('/posts', async (req, res) => {
     );
 
     // Track the activity
-    await db.execute(
-      'INSERT INTO activity_logs (user_id, action, target_type, target_id) VALUES (?, ?, ?, ?)',
-      [userId, 'created_post', 'post', result.insertId]
-    );
+    await trackActivity(userId, 'created_post', result.insertId);
 
     res.json({
       success: true,
@@ -309,10 +306,7 @@ router.put('/posts/:id', async (req, res) => {
 
     if (result.affectedRows > 0) {
       // Track the activity
-      await db.execute(
-        'INSERT INTO activity_logs (user_id, action, target_type, target_id) VALUES (?, ?, ?, ?)',
-        [userId, 'updated_post', 'post', postId]
-      );
+      await trackActivity(userId, 'updated_post', postId);
 
       res.json({
         success: true,
@@ -350,11 +344,8 @@ router.delete('/posts/:id', async (req, res) => {
       });
     }
 
-    // Log the activity
-    await connection.query(
-      'INSERT INTO activity_logs (user_id, action, target_type, target_id) VALUES (?, ?, ?, ?)',
-      [req.user.userId, 'deleted_post', 'post', req.params.id]
-    );
+    // Track the activity
+    await trackActivity(req.user.userId, 'deleted_post', req.params.id);
 
     await connection.commit();
 
@@ -510,8 +501,7 @@ router.post('/alerts', async (req, res) => {
     );
 
     // Track the activity
-    await trackActivity(req.user.userId, 'created_alert', {
-      alertId: result.insertId,
+    await trackActivity(req.user.userId, 'created_alert', result.insertId, {
       message: message,
       type: type
     });
@@ -673,11 +663,8 @@ router.put('/posts/:id/approve', async (req, res) => {
             }
         }
 
-        // Log the activity
-        await connection.execute(
-            'INSERT INTO activity_logs (user_id, action, target_type, target_id) VALUES (?, ?, ?, ?)',
-            [req.user.userId, 'approved_post', 'post', req.params.id]
-        );
+        // Track the activity
+        await trackActivity(req.user.userId, 'approved_post', req.params.id);
 
         await connection.commit();
 
@@ -715,11 +702,8 @@ router.put('/posts/:id/reject', async (req, res) => {
       });
     }
 
-    // Log the activity
-    await db.execute(
-      'INSERT INTO activity_logs (user_id, action, target_type, target_id) VALUES (?, ?, ?, ?)',
-      [req.user.userId, 'rejected_post', 'post', postId]
-    );
+    // Track the activity
+    await trackActivity(req.user.userId, 'rejected_post', postId, reason);
 
     res.json({
       success: true,
@@ -938,11 +922,11 @@ router.post('/alerts/:id/reactivate', async (req, res) => {
 });
 
 // Add this after the referenced lines:
-const trackActivity = async (userId, action, details = null) => {
+const trackActivity = async (userId, action, targetId = null, details = null) => {
   try {
     await db.execute(
-      'INSERT INTO admin_activity (user_id, action, details) VALUES (?, ?, ?)',
-      [userId, action, details]
+      'INSERT INTO activity_logs (user_id, action, target_type, target_id, details) VALUES (?, ?, ?, ?, ?)',
+      [userId, action, 'post', targetId, details]
     );
   } catch (error) {
     console.error('Error tracking activity:', error);
