@@ -558,18 +558,39 @@ router.put('/alerts/:id/status', async (req, res) => {
 
 // Delete alert
 router.delete('/alerts/:id', async (req, res) => {
+  const connection = await db.getConnection();
   try {
-    await db.execute('DELETE FROM alerts WHERE id = ?', [req.params.id]);
+    await connection.beginTransaction();
+    
+    // Delete alert reads first
+    await connection.query('DELETE FROM alert_reads WHERE alert_id = ?', [req.params.id]);
+    
+    // Then delete the alert
+    const [result] = await connection.query('DELETE FROM alerts WHERE id = ?', [req.params.id]);
+
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Alert not found'
+      });
+    }
+
+    await connection.commit();
+    
     res.json({
       success: true,
       message: 'Alert deleted successfully'
     });
   } catch (error) {
+    await connection.rollback();
     console.error('Delete alert error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to delete alert'
     });
+  } finally {
+    connection.release();
   }
 });
 

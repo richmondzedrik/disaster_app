@@ -214,36 +214,27 @@ class User {
     }
 
     static async delete(userId) {
+        const connection = await db.getConnection();
         try {
-            // Start a transaction
-            const connection = await db.getConnection();
             await connection.beginTransaction();
 
-            try {
-                // Delete user's related data first (if any)
-                // For example: refresh tokens, user preferences, etc.  
-                await connection.execute(
-                    'DELETE FROM refresh_tokens WHERE user_id = ?',
-                    [userId]
-                );
+            // Delete user's related data first
+            await connection.query('DELETE FROM refresh_tokens WHERE user_id = ?', [userId]);
+            await connection.query('DELETE FROM alert_reads WHERE user_id = ?', [userId]);
+            await connection.query('DELETE FROM comments WHERE user_id = ?', [userId]);
+            await connection.query('DELETE FROM likes WHERE user_id = ?', [userId]);
+            await connection.query('DELETE FROM posts WHERE author_id = ?', [userId]);
 
-                // Delete the user
-                const [result] = await connection.execute(
-                    'DELETE FROM users WHERE id = ?',
-                    [userId]
-                );
+            // Finally delete the user
+            const [result] = await connection.query('DELETE FROM users WHERE id = ?', [userId]);
 
-                await connection.commit();
-                return result.affectedRows > 0;
-            } catch (error) { 
-                await connection.rollback();
-                throw error;
-            } finally {
-                connection.release();
-            }
+            await connection.commit();
+            return result.affectedRows > 0;
         } catch (error) {
-            console.error('Error in delete:', error);
+            await connection.rollback();
             throw error;
+        } finally {
+            connection.release();
         }
     }
 

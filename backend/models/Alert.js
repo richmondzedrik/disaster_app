@@ -113,8 +113,19 @@ class Alert {
     static async delete(id) {
         const connection = await db.getConnection();
         try {
+            await connection.beginTransaction();
+            
+            // Delete alert reads first
+            await connection.query('DELETE FROM alert_reads WHERE alert_id = ?', [id]);
+            
+            // Then delete the alert
             const [result] = await connection.query('DELETE FROM alerts WHERE id = ?', [id]);
+            
+            await connection.commit();
             return result.affectedRows > 0;
+        } catch (error) {
+            await connection.rollback();
+            throw error;
         } finally {
             connection.release();
         }
