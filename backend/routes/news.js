@@ -77,20 +77,48 @@ router.get('/api/admin/news/posts', auth.authMiddleware, async (req, res) => {
 });
 
 // Update a post
-router.put('/posts/:id', auth.authMiddleware, async (req, res) => {
+router.put('/posts/:id', auth.authMiddleware, upload.single('media'), async (req, res) => {
     try {
         const { id } = req.params;
         const { title, content } = req.body;
         
+        // First check if post exists and user has permission
+        const [post] = await db.execute(
+            'SELECT * FROM posts WHERE id = ? AND (author_id = ? OR ? = true)',
+            [id, req.user.userId, req.user.role === 'admin']
+        );
+
+        if (!post.length) {
+            return res.status(404).json({
+                success: false,
+                message: 'Post not found or unauthorized'
+            });
+        }
+
+        let imageUrl = post[0].image_url;
+        
+        // Handle new image upload if exists
+        if (req.file) {
+            const b64 = Buffer.from(req.file.buffer).toString('base64');
+            const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+            
+            const cloudinaryResponse = await cloudinary.uploader.upload(dataURI, {
+                resource_type: 'auto',
+                folder: 'disaster-app/news'
+            });
+            
+            imageUrl = cloudinaryResponse.secure_url;
+        }
+
         const [result] = await db.execute(
-            'UPDATE posts SET title = ?, content = ? WHERE id = ? AND author_id = ?',
-            [title, content, id, req.user.userId]
+            'UPDATE posts SET title = ?, content = ?, image_url = ? WHERE id = ?',
+            [title, content, imageUrl, id]
         );
 
         if (result.affectedRows === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'Post not found or unauthorized'
+                message: 'Failed to update post'
             });
         }
 
