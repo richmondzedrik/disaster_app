@@ -19,6 +19,8 @@
               v-model="formData.username"
               required
               placeholder="Choose a username"
+              maxlength="20"
+              pattern="[a-zA-Z]+"
               :class="{ 
                 'error': errors.username,
                 'success': usernameAvailable === true 
@@ -49,6 +51,8 @@
               v-model="formData.email"
               required
               placeholder="Enter your email"
+              maxlength="254"
+              pattern="[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}"
               :class="{ 
                 'error': errors.email,
                 'success': emailAvailable === true 
@@ -344,8 +348,8 @@ const validateForm = () => {
   } else if (formData.username.length < 3 || formData.username.length > 20) {
     errors.username = 'Username must be between 3 and 20 characters';
     isValid = false;
-  } else if (!/^[a-zA-Z0-9_-]+$/.test(formData.username)) {
-    errors.username = 'Username can only contain letters, numbers, underscores, and hyphens';
+  } else if (!/^[a-zA-Z]+$/.test(formData.username)) {
+    errors.username = 'Username can only contain letters';
     isValid = false;
   } else if (usernameAvailable.value === false) {
     errors.username = 'This username is already taken';
@@ -359,7 +363,7 @@ const validateForm = () => {
   formData.email = sanitizedEmail;
 
   if (!formData.email) {
-    errors.email = 'Email address is required';
+    errors.email = 'Email is required';
     isValid = false;
   } else if (!isValidEmail(formData.email)) {
     errors.email = 'Please enter a valid email address';

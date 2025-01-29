@@ -122,6 +122,7 @@
                                 v-model.trim="profileData.username" 
                                 :disabled="loading"
                                 placeholder="Enter username" 
+                                maxlength="20"
                                 :class="{ 
                                     'error': usernameError, 
                                     'success': usernameAvailable === true 

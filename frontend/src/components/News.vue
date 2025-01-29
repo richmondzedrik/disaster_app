@@ -237,11 +237,27 @@
         <form @submit.prevent="createPost">
           <div class="form-group">
             <label for="title">Title</label>
-            <input type="text" id="title" v-model="postForm.title" required>
+            <input 
+              type="text" 
+              id="title" 
+              v-model="postForm.title" 
+              required
+              maxlength="100"
+              placeholder="Enter post title"
+            >
+            <span class="char-count">{{ postForm.title.length }}/100</span>
           </div>
           <div class="form-group">
             <label for="content">Content</label>
-            <textarea id="content" v-model="postForm.content" rows="4" required></textarea>
+            <textarea 
+              id="content" 
+              v-model="postForm.content" 
+              rows="4" 
+              required
+              maxlength="2000"
+              placeholder="Enter post content"
+            ></textarea>
+            <span class="char-count">{{ postForm.content.length }}/2000</span>
           </div>
           <div class="form-group">
             <label for="media">Media (Image or Video - Max 100MB)</label>
@@ -306,6 +322,36 @@ const mediaPreview = ref(null);
 const isImage = ref(true);
 const uploadProgress = ref(0);
 
+// Add after line 303 (after the state declarations)
+const restrictedWords = [
+  'fuck', 'shit', 'ass', 'bitch', 'dick', 'pussy', 'cock', 'bastard',
+  // Add more restricted words as needed
+];
+
+const containsRestrictedWords = (text) => {
+  const words = text.toLowerCase().split(/\s+/);
+  const foundWords = words.filter(word => restrictedWords.includes(word));
+  return foundWords.length > 0 ? foundWords : false;
+};
+
+// Add validation before post creation
+const validatePost = () => {
+  const titleVulgar = containsRestrictedWords(postForm.value.title);
+  const contentVulgar = containsRestrictedWords(postForm.value.content);
+
+  if (titleVulgar) {
+    notificationStore.error(`Title contains inappropriate language: ${titleVulgar.join(', ')}`);
+    return false;
+  }
+
+  if (contentVulgar) {
+    notificationStore.error(`Content contains inappropriate language: ${contentVulgar.join(', ')}`);
+    return false;
+  }
+
+  return true;
+};
+
 // Computed
 const user = computed(() => authStore.user);
 const isAuthenticated = computed(() => authStore.isAuthenticated);
@@ -353,6 +399,10 @@ const resetForm = () => {
 const createPost = async () => {
   if (!canCreatePost.value) {
     notificationStore.error('You do not have permission to create posts');
+    return;
+  }
+
+  if (!validatePost()) {
     return;
   }
 
@@ -2306,5 +2356,17 @@ const handleVideoLoad = (event, post) => {
   max-height: 500px;
   border-radius: 12px;
   margin: 1rem 0;
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+.form-group {
+  position: relative;
 }
 </style>
