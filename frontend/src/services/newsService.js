@@ -273,7 +273,7 @@ export const newsService = {
                 'Content-Type': 'multipart/form-data'
             };
             
-            const response = await axios.put(`${API_URL}/admin/news/posts/${postId}`, formData, {
+            const response = await axios.put(`${API_URL}/news/posts/${postId}`, formData, {
                 headers,
                 withCredentials: true,
                 timeout: 15000,

@@ -110,14 +110,15 @@ router.put('/posts/:id', auth.authMiddleware, upload.single('media'), async (req
             imageUrl = cloudinaryResponse.secure_url;
         }
 
-        // Update the post with the new values, keeping existing values if not provided
-        const updateTitle = title || post[0].title;
-        const updateContent = content || post[0].content;
-        const updateImageUrl = imageUrl || post[0].image_url;
-
+        // Update the post with non-null values
         const [result] = await db.execute(
             'UPDATE posts SET title = ?, content = ?, image_url = ?, updated_at = NOW() WHERE id = ?',
-            [updateTitle, updateContent, updateImageUrl, id]
+            [
+                title || post[0].title,
+                content || post[0].content,
+                imageUrl,
+                id
+            ]
         );
 
         if (result.affectedRows === 0) {
