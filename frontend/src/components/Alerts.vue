@@ -86,6 +86,15 @@ const loadAlerts = async () => {
         is_public: Boolean(alert.is_public),
         is_read: Boolean(alert.is_read)
       }));
+
+      // Update alert count considering only active and unread alerts
+      const unreadCount = alerts.value.filter(alert => 
+        alert.is_active && !alert.is_read && new Date(alert.expiry_date) > new Date()
+      ).length;
+
+      window.dispatchEvent(new CustomEvent('alertCountUpdate', {
+        detail: { count: unreadCount }
+      }));
     } else {
       throw new Error(response?.message || 'Failed to load alerts');
     }

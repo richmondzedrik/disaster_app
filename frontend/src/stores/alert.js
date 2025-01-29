@@ -103,7 +103,7 @@ export const useAlertStore = defineStore('alert', () => {
         );
         
         const activeUnreadAlerts = alerts.value.filter(alert => 
-          alert.is_active && !alert.is_read
+          alert.is_active && !alert.is_read && new Date(alert.expiry_date) > new Date()
         ).length;
         
         window.dispatchEvent(new CustomEvent('alertCountUpdate', {
