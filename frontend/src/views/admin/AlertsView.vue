@@ -20,7 +20,6 @@
               <th>Priority</th>
               <th>Status</th>
               <th>Expiry</th>
-              <th>Public</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -40,9 +39,6 @@
               </td>
               <td>
                 <div class="skeleton-text medium"></div>
-              </td>
-              <td>
-                <div class="skeleton-badge short"></div>
               </td>
               <td>
                 <div class="skeleton-actions">
@@ -65,7 +61,6 @@
                 <th>Priority</th>
                 <th>Status</th>
                 <th>Expiry</th>
-                <th>Public</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -94,11 +89,6 @@
                   </button>
                 </td>
                 <td>{{ formatDate(alert.expiry_date) }}</td>
-                <td>
-                  <span :class="['public-badge', alert.is_public ? 'public' : 'private']">
-                    {{ alert.is_public ? 'Public' : 'Private' }}
-                  </span>
-                </td>
                 <td class="action-buttons">
                   <button @click="deleteAlert(alert.id)" class="action-btn delete-btn">
                     <i class="fas fa-trash"></i>
@@ -158,13 +148,6 @@
                   required
                 >
               </div>
-              <div class="form-group">
-                <label>Public</label>
-                <select v-model="newAlert.isPublic" required class="form-input">
-                  <option value="true">Yes</option>
-                  <option value="false">No</option>
-                </select>
-              </div>
             </div>
             <div class="modal-actions">
               <button type="button" @click="showCreateModal = false" class="btn btn-secondary">
@@ -196,8 +179,7 @@
     message: '',
     type: 'info',
     priority: '0',
-    expiryDate: '',
-    isPublic: true
+    expiryDate: ''
   });
   
   const formatDate = (date) => {
@@ -247,8 +229,7 @@
         message: newAlert.value.message,
         type: newAlert.value.type,
         priority: parseInt(newAlert.value.priority),
-        expiryDate: formattedExpiryDate,
-        isPublic: newAlert.value.isPublic === 'true'
+        expiryDate: formattedExpiryDate
       };
 
       const response = await alertStore.createAlert(alertData);
@@ -302,8 +283,7 @@
       message: '',
       type: 'info',
       priority: '0',
-      expiryDate: now.toISOString().slice(0, 16),
-      isPublic: true
+      expiryDate: now.toISOString().slice(0, 16)
     };
   };
   
@@ -478,7 +458,7 @@
     box-shadow: 0 6px 16px rgba(0, 209, 209, 0.3);
   }
   
-  .type-badge, .priority-badge, .status-badge, .public-badge {
+  .type-badge, .priority-badge, .status-badge {
     padding: 0.5rem 1rem;
     border-radius: 8px;
     font-weight: 600;
