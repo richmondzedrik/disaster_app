@@ -85,8 +85,8 @@
                     <div class="stat-item">
                         <i class="fas fa-calendar-check"></i>
                         <div class="stat-info">
-                            <span class="stat-value">{{ formatDate(userStats.lastLogin) }}</span>
-                            <span class="stat-label">Last Login</span>
+                            <span class="stat-value">{{ getDaysActive() }} days</span>
+                            <span class="stat-label">Account Age</span>
                         </div>
                     </div>
                 </div>
@@ -3266,4 +3266,15 @@ watch(() => profileData.value.username, (newUsername) => {
 
     checkUsernameAvailability(newUsername);
 });
+
+const getDaysActive = () => {
+    if (!profileData.value?.created_at) return 0;
+    
+    const createdDate = new Date(profileData.value.created_at);
+    const today = new Date();
+    const diffTime = Math.abs(today - createdDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays;
+};
 </script>
