@@ -223,7 +223,7 @@
     <div v-if="showPostModal" class="modal-overlay">
       <div class="modal-content">
         <h2>{{ editingPost ? 'Edit Post' : 'Create Post' }}</h2>
-        <form @submit.prevent="createPost">
+        <form @submit.prevent="editingPost ? updatePost() : createPost()">
           <div class="form-group">
             <label for="title">Title</label>
             <input 
@@ -464,6 +464,44 @@ const createPost = async () => {
     loading.value = false;
     imageFile.value = null;
     imagePreview.value = null;
+  }
+};
+
+const updatePost = async () => {
+  if (!editingPost.value) return;
+
+  if (!validatePost()) {
+    return;
+  }
+
+  try {
+    loading.value = true;
+    const formData = new FormData();
+    formData.append('title', postForm.value.title.trim());
+    formData.append('content', postForm.value.content.trim());
+
+    if (mediaFile.value) {
+      formData.append('media', mediaFile.value);
+      formData.append('mediaType', isImage.value ? 'image' : 'video');
+    }
+
+    const response = await newsService.updatePost(editingPost.value.id, formData);
+
+    if (response.success) {
+      notificationStore.success('Post updated successfully');
+      showPostModal.value = false;
+      resetForm();
+      await loadPosts();
+    } else {
+      throw new Error(response.message || 'Failed to update post');
+    }
+  } catch (error) {
+    console.error('Error updating post:', error);
+    notificationStore.error(error.message || 'Failed to update post');
+  } finally {
+    loading.value = false;
+    mediaFile.value = null;
+    mediaPreview.value = null;
   }
 };
 
