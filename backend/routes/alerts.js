@@ -48,11 +48,14 @@ router.get('/active', auth.authMiddleware, async (req, res) => {
 // Get alert count
 router.get('/count', auth.authMiddleware, async (req, res) => {
     try {
+        const userId = req.user.userId;
         const [rows] = await db.execute(`
             SELECT COUNT(*) as count 
-            FROM alerts 
-            WHERE is_active = true
-        `);
+            FROM alerts a
+            LEFT JOIN alert_reads ar ON a.id = ar.alert_id AND ar.user_id = ?
+            WHERE a.is_active = true 
+            AND ar.read_at IS NULL
+        `, [userId]);
         
         res.json({
             success: true,
