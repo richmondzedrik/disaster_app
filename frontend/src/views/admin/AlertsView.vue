@@ -11,12 +11,8 @@
         </button>
       </div>
   
-      <div class="table-container" :class="{ 'loading': loading }">
-        <div v-if="loading" class="loading-overlay">
-          <i class="fas fa-spinner fa-spin"></i>
-          Loading alerts...
-        </div>
-        <table>
+      <div class="table-container">
+        <table v-if="loading">
           <thead>
             <tr>
               <th>Message</th>
@@ -29,43 +25,89 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="alert in processedAlerts" :key="alert.id">
-              <td class="message-cell">{{ alert.message }}</td>
+            <tr v-for="i in 5" :key="i" class="skeleton-row">
               <td>
-                <span :class="['type-badge', alert.type]">
-                  {{ alert.type.toUpperCase() }}
-                </span>
+                <div class="skeleton-text long"></div>
               </td>
               <td>
-                <span :class="['priority-badge', `priority-${alert.priority}`]">
-                  {{ formatPriority(alert.priority) }}
-                </span>
+                <div class="skeleton-badge"></div>
               </td>
               <td>
-                <button 
-                  @click="toggleAlertStatus(alert)"
-                  :class="['status-badge', 
-                          alert.status === 'Expired' ? 'expired' : 
-                          (alert.is_active ? 'active' : 'inactive')]"
-                  :disabled="alert.status === 'Expired'"
-                >
-                  {{ alert.status }}
-                </button>
+                <div class="skeleton-badge"></div>
               </td>
-              <td>{{ formatDate(alert.expiry_date) }}</td>
               <td>
-                <span :class="['public-badge', alert.is_public ? 'public' : 'private']">
-                  {{ alert.is_public ? 'Public' : 'Private' }}
-                </span>
+                <div class="skeleton-badge"></div>
               </td>
-              <td class="action-buttons">
-                <button @click="deleteAlert(alert.id)" class="action-btn delete-btn">
-                  <i class="fas fa-trash"></i>
-                </button>
+              <td>
+                <div class="skeleton-text medium"></div>
+              </td>
+              <td>
+                <div class="skeleton-badge short"></div>
+              </td>
+              <td>
+                <div class="skeleton-actions">
+                  <div class="skeleton-button"></div>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
+        <div v-else class="table-container" :class="{ 'loading': loading }">
+          <div v-if="loading" class="loading-overlay">
+            <i class="fas fa-spinner fa-spin"></i>
+            Loading alerts...
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Message</th>
+                <th>Type</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Expiry</th>
+                <th>Public</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="alert in processedAlerts" :key="alert.id">
+                <td class="message-cell">{{ alert.message }}</td>
+                <td>
+                  <span :class="['type-badge', alert.type]">
+                    {{ alert.type.toUpperCase() }}
+                  </span>
+                </td>
+                <td>
+                  <span :class="['priority-badge', `priority-${alert.priority}`]">
+                    {{ formatPriority(alert.priority) }}
+                  </span>
+                </td>
+                <td>
+                  <button 
+                    @click="toggleAlertStatus(alert)"
+                    :class="['status-badge', 
+                            alert.status === 'Expired' ? 'expired' : 
+                            (alert.is_active ? 'active' : 'inactive')]"
+                    :disabled="alert.status === 'Expired'"
+                  >
+                    {{ alert.status }}
+                  </button>
+                </td>
+                <td>{{ formatDate(alert.expiry_date) }}</td>
+                <td>
+                  <span :class="['public-badge', alert.is_public ? 'public' : 'private']">
+                    {{ alert.is_public ? 'Public' : 'Private' }}
+                  </span>
+                </td>
+                <td class="action-buttons">
+                  <button @click="deleteAlert(alert.id)" class="action-btn delete-btn">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
   
       <!-- Alert Modal -->
@@ -628,5 +670,66 @@ const processedAlerts = computed(() => {
     background: #f3f4f6; 
     color: #9ca3af;
     cursor: not-allowed;
+  }
+  
+  .skeleton-row td {
+    padding: 1.25rem 1.5rem;
+  }
+  
+  .skeleton-text {
+    height: 20px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    width: 100%;
+    animation: pulse 1.5s infinite;
+  }
+  
+  .skeleton-text.short {
+    width: 80px;
+  }
+  
+  .skeleton-text.medium {
+    width: 150px;
+  }
+  
+  .skeleton-text.long {
+    width: 300px;
+  }
+  
+  .skeleton-badge {
+    height: 32px;
+    width: 100px;
+    background: #f0f0f0;
+    border-radius: 999px;
+    animation: pulse 1.5s infinite;
+  }
+  
+  .skeleton-badge.short {
+    width: 80px;
+  }
+  
+  .skeleton-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .skeleton-button {
+    height: 36px;
+    width: 36px;
+    background: #f0f0f0;
+    border-radius: 8px;
+    animation: pulse 1.5s infinite;
+  }
+  
+  @keyframes pulse {
+    0% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 0.8;
+    }
+    100% {
+      opacity: 0.6;
+    }
   }
   </style>  

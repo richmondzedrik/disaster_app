@@ -25,7 +25,44 @@
       </div>
     </div>
 
-    <div class="table-container" :class="{ 'loading': isLoading }">
+    <div v-if="isLoading" class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Verified</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="i in 5" :key="i" class="skeleton-row">
+            <td>
+              <div class="skeleton-text"></div>
+            </td>
+            <td>
+              <div class="skeleton-text"></div>
+            </td>
+            <td>
+              <div class="skeleton-badge"></div>
+            </td>
+            <td>
+              <div class="skeleton-badge short"></div>
+            </td>
+            <td>
+              <div class="skeleton-text short"></div>
+            </td>
+            <td>
+              <div class="skeleton-button"></div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div v-else class="table-container">
       <table>
         <thead>
           <tr>
@@ -325,7 +362,7 @@ const formatDate = (dateString) => {
 }
 
 .table-container.loading {
-  opacity: 0.7;
+  opacity: 1;
   pointer-events: none;
 }
 
@@ -501,5 +538,53 @@ tr:hover {
 .retry-btn:hover {
   background: #c62828;
   color: white;
+}
+
+.skeleton-row td {
+  padding: 1.25rem 1.5rem;
+}
+
+.skeleton-text {
+  height: 20px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  width: 100%;
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-text.short {
+  width: 80px;
+}
+
+.skeleton-badge {
+  height: 32px;
+  width: 100px;
+  background: #f0f0f0;
+  border-radius: 999px;
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-badge.short {
+  width: 80px;
+}
+
+.skeleton-button {
+  height: 38px;
+  width: 90px;
+  background: #f0f0f0;
+  border-radius: 8px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0.6;
+  }
 }
 </style>

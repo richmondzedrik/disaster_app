@@ -277,11 +277,10 @@ router.post('/posts', async (req, res) => {
     );
 
     // Track the activity
-    await trackActivity(userId, 'created_post', {
-      postId: result.insertId,
-      title: title,
-      category: category
-    });
+    await db.execute(
+      'INSERT INTO activity_logs (user_id, action, target_type, target_id) VALUES (?, ?, ?, ?)',
+      [userId, 'created_post', 'post', result.insertId]
+    );
 
     res.json({
       success: true,
@@ -301,6 +300,7 @@ router.put('/posts/:id', async (req, res) => {
   try {
     const { title, content, category } = req.body;
     const postId = req.params.id;
+    const userId = req.user.userId;
 
     const [result] = await db.execute(
       'UPDATE posts SET title = ?, content = ?, category = ? WHERE id = ?',
@@ -308,6 +308,12 @@ router.put('/posts/:id', async (req, res) => {
     );
 
     if (result.affectedRows > 0) {
+      // Track the activity
+      await db.execute(
+        'INSERT INTO activity_logs (user_id, action, target_type, target_id) VALUES (?, ?, ?, ?)',
+        [userId, 'updated_post', 'post', postId]
+      );
+
       res.json({
         success: true,
         message: 'Post updated successfully'
