@@ -2923,12 +2923,10 @@ const avatarError = ref(false);
 
 // Modify the getAvatarUrl method (replace existing one)
 const getAvatarUrl = (avatarUrl) => {
-    const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
-    
     try {
         // If no avatar URL is provided, return default avatar
         if (!avatarUrl) {
-            return `${baseUrl}/uploads/avatars/default.png`;
+            return '/uploads/avatars/default.png';
         }
 
         // If it's already a full URL (including Cloudinary)
@@ -2938,37 +2936,28 @@ const getAvatarUrl = (avatarUrl) => {
 
         // For database-stored avatar URLs
         const cleanAvatarUrl = avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/');
-        return `${baseUrl}/uploads/avatars/${cleanAvatarUrl}`;
+        return `/uploads/avatars/${cleanAvatarUrl}`;
     } catch (error) {
         console.error('Error constructing avatar URL:', error);
-        return `${baseUrl}/uploads/avatars/default.png`;
+        return '/uploads/avatars/default.png';
     }
 };
 
 // Modify the handleAvatarError method (replace existing one)
 const handleAvatarError = async () => {
-    // Try to get cached avatar from localStorage
-    const cachedAvatar = localStorage.getItem(`userAvatar_${profileData.value?.id}`);
-    
-    // If we have a cached avatar and haven't tried it yet
-    if (cachedAvatar && !profileData.value.retryCount) {
-        profileData.value.retryCount = 1;
-        profileData.value.avatar_url = cachedAvatar;
-        return;
-    }
-    
-    // If no cached avatar or cache failed, try with cache-busting
-    if (!profileData.value.retryCount || profileData.value.retryCount === 1) {
-        profileData.value.retryCount = 2;
-        const currentUrl = getAvatarUrl(profileData.value.avatar_url);
-        profileData.value.avatar_url = `${currentUrl}?t=${Date.now()}`;
-        return;
-    }
-    
-    // If all attempts fail, show fallback
-    avatarError.value = true;
-    profileData.value.avatar_url = '';
-    delete profileData.value.retryCount;
+  // Try to get cached avatar from localStorage
+  const cachedAvatar = localStorage.getItem(`userAvatar_${profileData.value?.id}`);
+  
+  if (cachedAvatar && !profileData.value.retryCount) {
+    profileData.value.retryCount = 1;
+    profileData.value.avatar_url = cachedAvatar;
+    return;
+  }
+  
+  // If no cached avatar or cache failed, show fallback
+  avatarError.value = true;
+  profileData.value.avatar_url = '';
+  delete profileData.value.retryCount;
 };
 
 // Modify the handleAvatarLoad method (replace existing one)
