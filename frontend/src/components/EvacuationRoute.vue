@@ -629,10 +629,9 @@ const getCurrentPosition = () => {
                     timestamp: new Date(position.timestamp).toISOString()
                 });
 
-                // Only accept positions with good accuracy
-                if (position.coords.accuracy > 100) { // 100 meters threshold
-                    reject(new Error('Location accuracy too low'));
-                    return;
+                // Accept any position, but warn if accuracy is low
+                if (position.coords.accuracy > 100) {
+                    console.warn('Location accuracy is low:', position.coords.accuracy, 'meters');
                 }
 
                 resolve(position);
