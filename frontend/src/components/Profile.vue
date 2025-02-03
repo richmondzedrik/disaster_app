@@ -2923,29 +2923,26 @@ const avatarError = ref(false);
 
 // Modify the getAvatarUrl method (replace existing one)
 const getAvatarUrl = (avatarUrl) => {
-    try {
-        // If no avatar URL is provided, return default avatar
-        if (!avatarUrl) {
-            return '/uploads/avatars/default.png';
-        }
-
-        // If it's already a full URL (including http/https)
-        if (avatarUrl.startsWith('http')) {
-            return avatarUrl;
-        }
-
-        // For Netlify deployment
-        if (import.meta.env.PROD) {
-            return `${import.meta.env.VITE_API_URL}/uploads/avatars/${avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/')}`;
-        }
-
-        // For local development
-        const cleanAvatarUrl = avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/');
-        return `/uploads/avatars/${cleanAvatarUrl}`;
-    } catch (error) {
-        console.error('Error constructing avatar URL:', error);
-        return '/uploads/avatars/default.png';
+  const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
+  
+  try {
+    // If no avatar URL is provided, return default avatar
+    if (!avatarUrl) {
+      return `${baseUrl}/uploads/avatars/default.png`;
     }
+
+    // If it's already a full URL (including Cloudinary)
+    if (avatarUrl.startsWith('http')) {
+      return avatarUrl;
+    }
+
+    // For database-stored avatar URLs
+    const cleanAvatarUrl = avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/');
+    return `${baseUrl}/uploads/avatars/${cleanAvatarUrl}`;
+  } catch (error) {
+    console.error('Error constructing avatar URL:', error);
+    return `${baseUrl}/uploads/avatars/default.png`;
+  }
 };
 
 // Modify the handleAvatarError method (replace existing one)
@@ -2961,7 +2958,8 @@ const handleAvatarError = async () => {
   
   // If no cached avatar or cache failed, show fallback
   avatarError.value = true;
-  profileData.value.avatar_url = '';
+  const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
+  profileData.value.avatar_url = `${baseUrl}/uploads/avatars/default.png`;
   delete profileData.value.retryCount;
 };
 
