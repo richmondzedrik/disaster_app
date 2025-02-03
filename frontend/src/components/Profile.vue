@@ -2923,26 +2923,25 @@ const avatarError = ref(false);
 
 // Modify the getAvatarUrl method (replace existing one)
 const getAvatarUrl = (avatarUrl) => {
-  const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
-  
-  try {
-    // If no avatar URL is provided, return default avatar
-    if (!avatarUrl) {
-      return `${baseUrl}/uploads/avatars/default.png`;
-    }
+    const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
+    
+    try {
+        // If no avatar URL is provided, return default avatar
+        if (!avatarUrl) {
+            return `${baseUrl}/uploads/avatars/default.png`;
+        }
 
-    // If it's already a full URL (including Cloudinary)
-    if (avatarUrl.startsWith('http')) {
-      return avatarUrl;
-    }
+        // If it's a full URL (e.g., Cloudinary or other external source)
+        if (avatarUrl.startsWith('http')) {
+            return avatarUrl;
+        }
 
-    // For database-stored avatar URLs
-    const cleanAvatarUrl = avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/');
-    return `${baseUrl}/uploads/avatars/${cleanAvatarUrl}`;
-  } catch (error) {
-    console.error('Error constructing avatar URL:', error);
-    return `${baseUrl}/uploads/avatars/default.png`;
-  }
+        // For database-stored avatar URLs, ensure proper path construction
+        return `${baseUrl}/uploads/avatars/${avatarUrl.replace(/^\/+/, '')}`;
+    } catch (error) {
+        console.error('Error constructing avatar URL:', error);
+        return `${baseUrl}/uploads/avatars/default.png`;
+    }
 };
 
 // Modify the handleAvatarError method (replace existing one)
@@ -2958,8 +2957,7 @@ const handleAvatarError = async () => {
   
   // If no cached avatar or cache failed, show fallback
   avatarError.value = true;
-  const baseUrl = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'https://disaster-app-backend.onrender.com';
-  profileData.value.avatar_url = `${baseUrl}/uploads/avatars/default.png`;
+  profileData.value.avatar_url = '';
   delete profileData.value.retryCount;
 };
 

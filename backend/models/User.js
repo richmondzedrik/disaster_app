@@ -21,7 +21,7 @@ class User {
             const [rows] = await db.execute(
                 `SELECT id, username, email, phone, location, notifications, 
                 emergency_contacts, role, email_verified, created_at, updated_at,
-                COALESCE(last_login, created_at) as last_login
+                COALESCE(last_login, created_at) as last_login, avatar_url
                 FROM users WHERE id = ?`,
                 [userId]
             );

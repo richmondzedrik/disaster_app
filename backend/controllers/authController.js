@@ -479,6 +479,7 @@ exports.getProfile = async (req, res) => {
                 is_admin: user.role === 'admin',
                 phone: user.phone || '',
                 location: user.location || '',
+                avatar_url: user.avatar_url || '',
                 notifications: user.notifications ? 
                     (typeof user.notifications === 'string' ? 
                         JSON.parse(user.notifications) : 
