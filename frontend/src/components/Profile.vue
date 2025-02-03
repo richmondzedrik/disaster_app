@@ -2929,12 +2929,17 @@ const getAvatarUrl = (avatarUrl) => {
             return '/uploads/avatars/default.png';
         }
 
-        // If it's already a full URL (including Cloudinary)
+        // If it's already a full URL (including http/https)
         if (avatarUrl.startsWith('http')) {
             return avatarUrl;
         }
 
-        // For database-stored avatar URLs
+        // For Netlify deployment
+        if (import.meta.env.PROD) {
+            return `${import.meta.env.VITE_API_URL}/uploads/avatars/${avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/')}`;
+        }
+
+        // For local development
         const cleanAvatarUrl = avatarUrl.replace(/^\/+/, '').replace(/\\/g, '/');
         return `/uploads/avatars/${cleanAvatarUrl}`;
     } catch (error) {
