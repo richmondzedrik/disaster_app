@@ -106,6 +106,14 @@
         </div>
         <div class="post-content">
           <p>{{ selectedPost.content }}</p>
+          <div v-if="selectedPost.image_url" class="post-image-container">
+            <img 
+              :src="selectedPost.image_url" 
+              :alt="selectedPost.title"
+              class="post-image"
+              @error="handleImageError"
+            />
+          </div>
         </div>
         <div class="post-meta">
           <div class="meta-item">
@@ -165,6 +173,19 @@ const formatDate = (date) => {
   return new Date(date).toLocaleString();
 };
 
+const handleImageError = (event) => {
+  event.target.style.display = 'none';
+  const container = event.target.parentElement;
+  if (container) {
+    container.innerHTML = `
+      <div class="image-error">
+        <i class="fas fa-image"></i>
+        <span>Failed to load image</span>
+      </div>
+    `;
+  }
+};
+
 const loadPosts = async () => {
     try {
         isLoading.value = true;
@@ -181,6 +202,7 @@ const loadPosts = async () => {
                 created_at: post.created_at || post.createdAt || new Date().toISOString(),
                 author_username: post.author || post.author_username || post.author_name || 'Unknown Author',
                 comment_count: parseInt(post.comment_count) || 0,
+                image_url: post.image_url || null,
                 comments: []
             }));
         } else {
@@ -420,12 +442,13 @@ td {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 92, 92, 0.4);
+  background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 2rem;
 }
 
 .modal-content {
@@ -433,7 +456,9 @@ td {
   padding: 2rem;
   border-radius: 16px;
   width: 90%;
-  max-width: 600px;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 8px 32px rgba(0, 92, 92, 0.15);
 }
 
@@ -469,8 +494,6 @@ td {
   padding: 1.5rem;
   background: #f8fafc;
   border-radius: 12px;
-  max-height: 400px;
-  overflow-y: auto;
   line-height: 1.6;
   color: #334155;
 }
@@ -686,5 +709,37 @@ td {
   100% {
     opacity: 0.6;
   }
+}
+
+.post-image-container {
+  margin-top: 1rem;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  background: #f1f5f9;
+  padding: 1rem;
+}
+
+.post-image {
+  max-width: 100%;
+  max-height: 500px;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.image-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: #64748b;
+}
+
+.image-error i {
+  font-size: 2rem;
+  color: #94a3b8;
 }
 </style>
