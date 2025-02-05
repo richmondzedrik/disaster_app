@@ -5,7 +5,7 @@
             <span>Loading map...</span>
         </div>
         <div class="map-controls">
-            <button @click="addMarker" class="control-btn">
+            <button v-if="authStore.user?.role === 'admin'" @click="addMarker" class="control-btn">
                 <i class="fas fa-map-marker-alt"></i> Add Evacuation Point
             </button>
             <button @click="centerOnUser" class="control-btn">
@@ -175,12 +175,22 @@ const initializeUserMarker = (position) => {
 };
 
 const addMarker = () => {
+    if (!authStore.user?.role === 'admin') {
+        notificationStore.error('Only administrators can add evacuation points');
+        return;
+    }
     isAddingMarker.value = true;
     map.value.getContainer().style.cursor = 'crosshair';
 };
 
 const handleMapClick = (e) => {
     if (isAddingMarker.value) {
+        if (!authStore.user?.role === 'admin') {
+            notificationStore.error('Only administrators can add evacuation points');
+            isAddingMarker.value = false;
+            map.value.getContainer().style.cursor = '';
+            return;
+        }
         createMarker(e.latlng);
         isAddingMarker.value = false;
         map.value.getContainer().style.cursor = '';
