@@ -19,14 +19,36 @@
               </li>
             </ul>
             <div v-if="guide.videoUrl" class="video-container">
-              <a :href="guide.videoUrl" target="_blank" class="video-link">
-                <i class="fas fa-play-circle"></i>
-                Watch Tutorial Video
-              </a>
-              <button v-if="isAdmin" @click="editVideoUrl(index)" class="edit-video-btn">
-                <i class="fas fa-edit"></i>
-                Edit URL
-              </button>
+              <template v-if="editingVideoIndex === index">
+                <div class="edit-video-form">
+                  <input 
+                    type="url" 
+                    v-model="newVideoUrl"
+                    placeholder="Enter new video URL"
+                    class="video-url-input"
+                  >
+                  <div class="edit-actions">
+                    <button @click="saveVideoUrl(index)" class="save-btn">
+                      <i class="fas fa-save"></i>
+                      Save
+                    </button>
+                    <button @click="cancelEdit" class="cancel-btn">
+                      <i class="fas fa-times"></i>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <a :href="guide.videoUrl" target="_blank" class="video-link">
+                  <i class="fas fa-play-circle"></i>
+                  Watch Tutorial Video
+                </a>
+                <button v-if="isAdmin" @click="editVideoUrl(index)" class="edit-video-btn">
+                  <i class="fas fa-edit"></i>
+                  Edit URL
+                </button>
+              </template>
             </div>
           </div>
         </div>
@@ -35,6 +57,15 @@
   </template>
   
   <script setup>
+  import { ref, computed } from 'vue';
+  import { useAuthStore } from '../stores/auth';
+
+  const authStore = useAuthStore();
+  const isAdmin = computed(() => authStore.user?.role === 'admin');
+
+  const editingVideoIndex = ref(null);
+  const newVideoUrl = ref('');
+
   const firstAidGuides = [
     {
       title: 'CPR Basics',
@@ -142,6 +173,30 @@
       videoUrl: 'https://www.youtube.com/watch?v=qE8DcgVW44g'
     }
   ]
+
+  const editVideoUrl = (index) => {
+    editingVideoIndex.value = index;
+    newVideoUrl.value = firstAidGuides[index].videoUrl;
+  };
+
+  const saveVideoUrl = (index) => {
+    if (!newVideoUrl.value) return;
+    
+    // Validate URL format
+    try {
+      new URL(newVideoUrl.value);
+      firstAidGuides[index].videoUrl = newVideoUrl.value;
+      editingVideoIndex.value = null;
+      newVideoUrl.value = '';
+    } catch (e) {
+      alert('Please enter a valid URL');
+    }
+  };
+
+  const cancelEdit = () => {
+    editingVideoIndex.value = null;
+    newVideoUrl.value = '';
+  };
   </script>
   
   <style scoped>
@@ -243,5 +298,55 @@
   
   .video-link i {
     font-size: 1.2rem;
+  }
+  
+  .edit-video-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  
+  .video-url-input {
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    width: 100%;
+  }
+  
+  .edit-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .save-btn,
+  .cancel-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+  
+  .save-btn {
+    background-color: #00D1D1;
+    color: white;
+  }
+  
+  .save-btn:hover {
+    background-color: #008B87;
+  }
+  
+  .cancel-btn {
+    background-color: #f1f5f9;
+    color: #64748b;
+  }
+  
+  .cancel-btn:hover {
+    background-color: #e2e8f0;
   }
   </style>
