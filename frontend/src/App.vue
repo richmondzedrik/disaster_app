@@ -58,6 +58,9 @@
               <router-link to="/evacuation-route" class="dropdown-item">
                 <i class="fas fa-route"></i> Evacuation Route
               </router-link>
+              <router-link to="/first-aid" class="dropdown-item">
+                <i class="fas fa-first-aid"></i> First Aid Guide
+              </router-link>
             </div>
           </div>
 

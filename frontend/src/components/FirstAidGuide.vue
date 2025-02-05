@@ -23,6 +23,10 @@
                 <i class="fas fa-play-circle"></i>
                 Watch Tutorial Video
               </a>
+              <button v-if="isAdmin" @click="editVideoUrl(index)" class="edit-video-btn">
+                <i class="fas fa-edit"></i>
+                Edit URL
+              </button>
             </div>
           </div>
         </div>
