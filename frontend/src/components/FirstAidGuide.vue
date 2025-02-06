@@ -18,7 +18,7 @@
                 {{ step }}
               </li>
             </ul>
-            <div v-if="guide.videoUrl && guide.videoUrl.trim()" class="video-container">
+            <div v-if="guide.videoUrl" class="video-container">
               <template v-if="editingVideoIndex === index">
                 <div class="edit-video-form">
                   <input 
@@ -43,12 +43,10 @@
                 <a :href="guide.videoUrl" 
                    target="_blank" 
                    rel="noopener noreferrer" 
-                   class="video-link" 
-                   v-if="guide.videoUrl && isValidUrl(guide.videoUrl)">
+                   class="video-link">
                   <i class="fas fa-play-circle"></i>
                   Watch Tutorial Video
                 </a>
-                <span v-else-if="guide.videoUrl" class="error-text">Invalid video URL</span>
                 <button v-if="isAdmin" 
                         @click="editVideoUrl(index)" 
                         class="edit-video-btn" 
