@@ -18,7 +18,7 @@
                 {{ step }}
               </li>
             </ul>
-            <div v-if="guide.videoUrl" class="video-container">
+            <div v-if="guide.videoUrl && guide.videoUrl.trim()" class="video-container">
               <template v-if="editingVideoIndex === index">
                 <div class="edit-video-form">
                   <input 
@@ -40,7 +40,7 @@
                 </div>
               </template>
               <template v-else>
-                <a :href="guide.videoUrl" target="_blank" class="video-link">
+                <a :href="guide.videoUrl" target="_blank" class="video-link" v-if="guide.videoUrl && guide.videoUrl.trim()">
                   <i class="fas fa-play-circle"></i>
                   Watch Tutorial Video
                 </a>
@@ -71,11 +71,12 @@
   const notificationStore = useNotificationStore();
   const router = useRouter();
 
-  const firstAidGuides = [
+  const firstAidGuides = ref([
     {
       title: 'CPR Basics',
       icon: 'fas fa-heartbeat',
       description: 'Basic steps for performing CPR:',
+      videoUrl: '',
       steps: [
         'Check the scene for safety',
         'Check responsiveness',
@@ -83,105 +84,104 @@
         'Check breathing',
         'Begin chest compressions',
         'Give rescue breaths if trained'
-      ],
-      videoUrl: 'https://www.youtube.com/watch?v=hizBdM1Ob68'
+      ]
     },
     {
       title: 'Bleeding Control',
       icon: 'fas fa-band-aid',
       description: 'Steps to control bleeding:',
+      videoUrl: '',
       steps: [
         'Apply direct pressure',
         'Use clean cloth or gauze',
         'Elevate the injury if possible',
         'Apply pressure bandage',
         'Seek medical attention'
-      ],
-      videoUrl: 'https://www.youtube.com/watch?v=gOWEFgsrNhI'
+      ]
     },
     {
       title: 'Burns Treatment',
       icon: 'fas fa-fire',
       description: 'Initial treatment for burns:',
+      videoUrl: '',
       steps: [
         'Cool the burn with cool water',
         'Remove jewelry/tight items',
         'Cover with sterile gauze',
         'Don\'t break blisters',
         'Seek medical attention for severe burns'
-      ],
-      videoUrl: 'https://www.youtube.com/watch?v=EaJmzB8YgS0'
+      ]
     },
     {
       title: 'Choking Response',
       icon: 'fas fa-exclamation-triangle',
       description: 'How to help someone who is choking:',
+      videoUrl: '',
       steps: [
         'Encourage coughing',
         'Give 5 back blows',
         'Perform abdominal thrusts',
         'Alternate between back blows and thrusts',
         'Call emergency if person becomes unconscious'
-      ],
-      videoUrl: 'https://www.youtube.com/watch?v=2dn13zneEjo'
+      ]
     },
     {
       title: 'Fracture Care',
       icon: 'fas fa-bone',
       description: 'Immediate care for suspected fractures:',
+      videoUrl: '',
       steps: [
         'Keep the injured area still',
         'Apply ice to reduce swelling',
         'Check circulation beyond the injury',
         'Immobilize the injured area',
         'Seek immediate medical attention'
-      ],
-      videoUrl: 'https://www.youtube.com/watch?v=AsZvN7b02S0'
+      ]
     },
     {
       title: 'Heat Exhaustion',
       icon: 'fas fa-temperature-high',
       description: 'Treating heat exhaustion symptoms:',
+      videoUrl: '',
       steps: [
         'Move to a cool place',
         'Loosen tight clothing',
         'Apply cool, wet cloths',
         'Sip water slowly',
         'Monitor symptoms'
-      ],
-      videoUrl: 'https://www.youtube.com/watch?v=vIXR-RJ3o0w'
+      ]
     },
     {
       title: 'Seizure Response',
       icon: 'fas fa-brain',
       description: 'How to help during a seizure:',
+      videoUrl: '',
       steps: [
         'Clear the area of hazards',
         'Protect head from injury',
         'Time the seizure duration',
         'Never restrain the person',
         'Place in recovery position after'
-      ],
-      videoUrl: 'https://www.youtube.com/watch?v=FbtLZ4ww6Y4'
+      ]
     },
     {
       title: 'Allergic Reaction',
       icon: 'fas fa-allergies',
       description: 'Managing severe allergic reactions:',
+      videoUrl: '',
       steps: [
         'Identify allergic symptoms',
         'Use EpiPen if available',
         'Call emergency services',
         'Keep person calm',
         'Monitor breathing and consciousness'
-      ],
-      videoUrl: 'https://www.youtube.com/watch?v=qE8DcgVW44g'
+      ]
     }
-  ]
+  ]);
 
   const editVideoUrl = (index) => {
     editingVideoIndex.value = index;
-    newVideoUrl.value = firstAidGuides[index].videoUrl;
+    newVideoUrl.value = firstAidGuides.value[index].videoUrl;
   };
 
   const saveVideoUrl = async (index) => {
@@ -196,10 +196,10 @@
             return;
         }
 
-        // Validate URL format
-        const urlPattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
+        // Validate URL format to accept more video platforms
+        const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w-./?%&=]*)?$/;
         if (!urlPattern.test(newVideoUrl.value)) {
-            throw new Error('Please enter a valid YouTube URL');
+            throw new Error('Please enter a valid URL');
         }
         
         // Save to backend
@@ -210,7 +210,7 @@
         }
         
         // Update local state
-        firstAidGuides[index].videoUrl = newVideoUrl.value;
+        firstAidGuides.value[index].videoUrl = newVideoUrl.value;
         editingVideoIndex.value = null;
         newVideoUrl.value = '';
         
@@ -232,26 +232,21 @@
 
   const loadGuides = async () => {
     try {
-      if (!authStore.isAuthenticated) {
-        console.warn('User not authenticated');
-        return;
-      }
-      
-      const response = await firstAidService.getGuides();
-      if (response.success && response.guides?.length) {
-        // Update video URLs from database response
-        response.guides.forEach((guide, index) => {
-          if (firstAidGuides[index]) {
-            firstAidGuides[index].videoUrl = guide.video_url || firstAidGuides[index].videoUrl;
-          }
-        });
-      }
+        const response = await firstAidService.getGuides();
+        if (response.success && response.guides?.length) {
+            response.guides.forEach((guide) => {
+                if (guide.guide_index >= 0 && guide.guide_index < firstAidGuides.value.length) {
+                    firstAidGuides.value[guide.guide_index].videoUrl = guide.video_url || '';
+                }
+            });
+        }
     } catch (error) {
-      console.error('Error loading guides:', error);
-      if (error.response?.status === 401) {
-        notificationStore.error('Please login to access all features');
-        return;
-      }
+        console.error('Error loading guides:', error);
+        if (error.response?.status === 401) {
+            notificationStore.error('Please login to access all features');
+            return;
+        }
+        notificationStore.error('Failed to load guide updates');
     }
   };
 

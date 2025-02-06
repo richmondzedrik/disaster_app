@@ -53,4 +53,23 @@ router.put('/update-video', auth.authMiddleware, checkAdmin, async (req, res) =>
     }
 });
 
+router.get('/guides', auth.authMiddleware, async (req, res) => {
+  try {
+    const [guides] = await db.execute(
+      'SELECT guide_index, video_url FROM first_aid_guides ORDER BY guide_index'
+    );
+
+    res.json({
+      success: true,
+      guides: guides
+    });
+  } catch (error) {
+    console.error('Get guides error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch guides'
+    });
+  }
+});
+
 module.exports = router;

@@ -36,7 +36,7 @@ export const firstAidService = {
 
   async getGuides() {
     try {
-      const response = await axios.get(`${baseUrl}/first-aid`, {
+      const response = await axios.get(`${baseUrl}/first-aid/guides`, {
         headers: getHeaders()
       });
       return {
@@ -44,14 +44,16 @@ export const firstAidService = {
         guides: response.data.guides || []
       };
     } catch (error) {
+      if (error.response?.status === 404) {
+        return {
+          success: true,
+          guides: []
+        };
+      }
       if (error.response?.status === 401) {
         throw new Error('Authentication required');
       }
-      console.error('Error fetching guides:', error);
-      return {
-        success: false,
-        guides: []
-      };
+      throw error;
     }
   }
 };
