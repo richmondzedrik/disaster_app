@@ -186,6 +186,10 @@
     if (!newVideoUrl.value) return;
     
     try {
+      if (!authStore.isAuthenticated) {
+        throw new Error('Please login to edit video URLs');
+      }
+
       // Validate URL format with more permissive check for YouTube URLs
       const urlPattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
       if (!urlPattern.test(newVideoUrl.value)) {
@@ -202,7 +206,10 @@
       
       notificationStore.success('Video URL updated successfully');
     } catch (e) {
-      notificationStore.error(e.message || 'Failed to update video URL');
+      const errorMessage = e.response?.status === 401 
+        ? 'Please login to edit video URLs'
+        : e.message || 'Failed to update video URL';
+      notificationStore.error(errorMessage);
     }
   };
 
@@ -213,6 +220,11 @@
 
   const loadGuides = async () => {
     try {
+      if (!authStore.isAuthenticated) {
+        console.warn('User not authenticated');
+        return;
+      }
+      
       const response = await firstAidService.getGuides();
       if (response.success && response.guides?.length) {
         // Only update video URLs if they exist in the response
@@ -224,6 +236,10 @@
       }
     } catch (error) {
       console.error('Error loading guides:', error);
+      if (error.response?.status === 401) {
+        notificationStore.error('Please login to access all features');
+        return;
+      }
       // Don't show error notification since we're using static data
     }
   };
