@@ -41,7 +41,7 @@
                 <div class="card-content">
                     <div class="progress-item">
                         <div class="progress-label">
-                            <span>Supply Checklist</span>
+                            <span>Preparedness Checklist</span>
                             <span>{{ supplyProgress }}%</span>
                         </div>
                         <div class="progress-bar">
@@ -372,6 +372,7 @@ import { useAuthStore } from '../stores/auth';
 import { useRouter } from 'vue-router';
 import { alertService } from '../services/alertService';
 import { useNotificationStore } from '../stores/notification';
+import { checklistService } from '../services/checklistService';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -392,6 +393,33 @@ const hasActiveAlerts = ref(false);
 const alertMessage = ref('No active alerts');
 const alerts = ref([]);
 const loading = ref(false);
+
+const supplyProgress = ref(0);
+
+const loadChecklistProgress = async () => {
+    try {
+        const response = await checklistService.loadProgress();
+        if (response.success) {
+            const completed = response.items.filter(item => item.completed).length;
+            const total = response.items.length;
+            const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+            supplyProgress.value = progress;
+            
+            // Also update localStorage for consistency
+            localStorage.setItem('checklistProgress', progress.toString());
+        }
+    } catch (error) {
+        console.error('Error loading checklist progress:', error);
+        // Fallback to localStorage if API fails
+        try {
+            const progress = localStorage.getItem('checklistProgress');
+            supplyProgress.value = progress ? parseInt(progress) : 0;
+        } catch (error) {
+            console.error('Error reading localStorage:', error);
+            supplyProgress.value = 0;
+        }
+    }
+};
 
 // Add function to load alerts
 const loadAlerts = async () => {
@@ -446,20 +474,10 @@ onMounted(async () => {
         }
 
         // Continue with existing dashboard initialization
-        await Promise.all([loadAlerts()]);
+        await Promise.all([loadAlerts(), loadChecklistProgress()]);
     } catch (error) {
         console.error('Dashboard initialization error:', error);
         notificationStore.error('Failed to initialize dashboard');
-    }
-});
-
-const supplyProgress = computed(() => {
-    try {
-        const progress = localStorage.getItem('checklistProgress');
-        return progress ? parseInt(progress) : 0;
-    } catch (error) {
-        console.error('Error reading checklist progress:', error);
-        return 0;
     }
 });
 
