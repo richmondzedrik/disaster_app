@@ -16,7 +16,7 @@ const getHeaders = () => {
 export const firstAidService = {
   async updateVideoUrl(guideIndex, newUrl) {
     try {
-      const response = await api.put('/first-aid/update-video', {
+      const response = await api.put('/api/first-aid/update-video', {
         guideIndex,
         videoUrl: newUrl
       }, {
@@ -33,7 +33,7 @@ export const firstAidService = {
 
   async getGuides() {
     try {
-      const response = await api.get('/first-aid/guides', {
+      const response = await api.get('/api/first-aid/guides', {
         headers: getHeaders()
       });
       return {
