@@ -4,12 +4,15 @@ import { useAuthStore } from '../stores/auth';
 const baseUrl = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com/api';
 
 const getHeaders = () => {
-  const authStore = useAuthStore();
-  const token = authStore.token;
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
   
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+    'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
   };
 };
 
@@ -24,7 +27,10 @@ export const firstAidService = {
       });
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      if (error.response?.status === 401) {
+        throw new Error('Please login to edit video URLs');
+      }
+      throw error.response?.data || error;
     }
   },
 
@@ -33,11 +39,18 @@ export const firstAidService = {
       const response = await axios.get(`${baseUrl}/first-aid`, {
         headers: getHeaders()
       });
-      return response.data;
-    } catch (error) {
       return {
         success: true,
-        guides: [] // Return empty array as fallback
+        guides: response.data.guides || []
+      };
+    } catch (error) {
+      if (error.response?.status === 401) {
+        throw new Error('Authentication required');
+      }
+      console.error('Error fetching guides:', error);
+      return {
+        success: false,
+        guides: []
       };
     }
   }

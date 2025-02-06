@@ -60,6 +60,7 @@
   import { useAuthStore } from '../stores/auth';
   import { firstAidService } from '../services/firstAidService';
   import { useNotificationStore } from '../stores/notification';
+  import { useRouter } from 'vue-router';
 
   const authStore = useAuthStore();
   const isAdmin = computed(() => authStore.user?.role === 'admin');
@@ -68,6 +69,7 @@
   const newVideoUrl = ref('');
 
   const notificationStore = useNotificationStore();
+  const router = useRouter();
 
   const firstAidGuides = [
     {
@@ -186,30 +188,40 @@
     if (!newVideoUrl.value) return;
     
     try {
-      if (!authStore.isAuthenticated) {
-        throw new Error('Please login to edit video URLs');
-      }
+        // Check for authentication token first
+        const token = localStorage.getItem('token');
+        if (!token) {
+            notificationStore.error('Please login to edit video URLs');
+            router.push('/login');
+            return;
+        }
 
-      // Validate URL format with more permissive check for YouTube URLs
-      const urlPattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
-      if (!urlPattern.test(newVideoUrl.value)) {
-        throw new Error('Please enter a valid YouTube URL');
-      }
-      
-      // Save to backend
-      await firstAidService.updateVideoUrl(index, newVideoUrl.value);
-      
-      // Update local state
-      firstAidGuides[index].videoUrl = newVideoUrl.value;
-      editingVideoIndex.value = null;
-      newVideoUrl.value = '';
-      
-      notificationStore.success('Video URL updated successfully');
-    } catch (e) {
-      const errorMessage = e.response?.status === 401 
-        ? 'Please login to edit video URLs'
-        : e.message || 'Failed to update video URL';
-      notificationStore.error(errorMessage);
+        // Validate URL format
+        const urlPattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
+        if (!urlPattern.test(newVideoUrl.value)) {
+            throw new Error('Please enter a valid YouTube URL');
+        }
+        
+        // Save to backend
+        const response = await firstAidService.updateVideoUrl(index, newVideoUrl.value);
+        
+        if (!response.success) {
+            throw new Error(response.message || 'Failed to update video URL');
+        }
+        
+        // Update local state
+        firstAidGuides[index].videoUrl = newVideoUrl.value;
+        editingVideoIndex.value = null;
+        newVideoUrl.value = '';
+        
+        notificationStore.success('Video URL updated successfully');
+    } catch (error) {
+        if (error.message.includes('No authentication token found') || error.response?.status === 401) {
+            notificationStore.error('Please login to edit video URLs');
+            router.push('/login');
+            return;
+        }
+        notificationStore.error(error.message || 'Failed to update video URL');
     }
   };
 
@@ -227,10 +239,10 @@
       
       const response = await firstAidService.getGuides();
       if (response.success && response.guides?.length) {
-        // Only update video URLs if they exist in the response
+        // Update video URLs from database response
         response.guides.forEach((guide, index) => {
-          if (firstAidGuides[index] && guide.videoUrl) {
-            firstAidGuides[index].videoUrl = guide.videoUrl;
+          if (firstAidGuides[index]) {
+            firstAidGuides[index].videoUrl = guide.video_url || firstAidGuides[index].videoUrl;
           }
         });
       }
@@ -240,7 +252,6 @@
         notificationStore.error('Please login to access all features');
         return;
       }
-      // Don't show error notification since we're using static data
     }
   };
 
