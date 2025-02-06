@@ -44,9 +44,8 @@
                   <i class="fas fa-play-circle"></i>
                   Watch Tutorial Video
                 </a>
-                <button v-if="isAdmin" @click="editVideoUrl(index)" class="edit-video-btn">
+                <button v-if="isAdmin" @click="editVideoUrl(index)" class="edit-video-btn" title="Edit Video URL">
                   <i class="fas fa-edit"></i>
-                  Edit URL
                 </button>
               </template>
             </div>
@@ -263,27 +262,40 @@
   
   .guide-card {
     background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    padding: 1.5rem;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    padding: 1.75rem;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0, 209, 209, 0.1);
   }
   
   .guide-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 25px rgba(0, 209, 209, 0.15);
+    border-color: rgba(0, 209, 209, 0.3);
   }
   
   .guide-header {
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid rgba(0, 209, 209, 0.1);
   }
   
   .guide-header i {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     color: #00D1D1;
+    background: rgba(0, 209, 209, 0.1);
+    padding: 0.75rem;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+  }
+  
+  .guide-card:hover .guide-header i {
+    transform: scale(1.1);
+    background: rgba(0, 209, 209, 0.2);
   }
   
   .guide-header h3 {
@@ -315,20 +327,28 @@
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
   
   .video-link {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     color: #00D1D1;
     text-decoration: none;
     font-weight: 600;
-    transition: color 0.3s ease;
+    transition: all 0.3s ease;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    background-color: rgba(0, 209, 209, 0.1);
   }
   
   .video-link:hover {
     color: #008B87;
+    background-color: rgba(0, 209, 209, 0.2);
+    transform: translateY(-1px);
   }
   
   .video-link i {
@@ -340,13 +360,24 @@
     flex-direction: column;
     gap: 1rem;
     margin-top: 1rem;
+    background: rgba(0, 209, 209, 0.05);
+    padding: 1rem;
+    border-radius: 8px;
   }
   
   .video-url-input {
-    padding: 0.5rem;
+    padding: 0.75rem;
     border: 1px solid #e2e8f0;
-    border-radius: 4px;
+    border-radius: 6px;
     width: 100%;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+  }
+  
+  .video-url-input:focus {
+    outline: none;
+    border-color: #00D1D1;
+    box-shadow: 0 0 0 3px rgba(0, 209, 209, 0.1);
   }
   
   .edit-actions {
@@ -383,5 +414,25 @@
   
   .cancel-btn:hover {
     background-color: #e2e8f0;
+  }
+  
+  .edit-video-btn {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .edit-video-btn:hover {
+    color: #00D1D1;
+    background-color: rgba(0, 209, 209, 0.1);
+    transform: rotate(15deg);
   }
   </style>
