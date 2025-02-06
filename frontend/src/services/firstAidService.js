@@ -1,7 +1,4 @@
-import axios from 'axios';
-import { useAuthStore } from '../stores/auth';
-
-const baseUrl = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com/api';
+import { api } from './api';
 
 const getHeaders = () => {
   const token = localStorage.getItem('token');
@@ -19,7 +16,7 @@ const getHeaders = () => {
 export const firstAidService = {
   async updateVideoUrl(guideIndex, newUrl) {
     try {
-      const response = await axios.put(`${baseUrl}/first-aid/update-video`, {
+      const response = await api.put('/first-aid/update-video', {
         guideIndex,
         videoUrl: newUrl
       }, {
@@ -36,7 +33,7 @@ export const firstAidService = {
 
   async getGuides() {
     try {
-      const response = await axios.get(`${baseUrl}/first-aid/guides`, {
+      const response = await api.get('/first-aid/guides', {
         headers: getHeaders()
       });
       return {
