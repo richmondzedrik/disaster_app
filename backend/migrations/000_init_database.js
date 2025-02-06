@@ -183,6 +183,28 @@ async function up() {
             )
         `);
 
+        // Add first_aid_guides table
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS first_aid_guides (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                guide_index INT NOT NULL UNIQUE,
+                video_url TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Insert default first aid guides
+        await connection.execute(`
+            INSERT IGNORE INTO first_aid_guides (guide_index, video_url) VALUES
+            (0, 'https://www.youtube.com/watch?v=hizBdM1Ob68'),
+            (1, 'https://www.youtube.com/watch?v=gOWEFgsrNhI'),
+            (2, 'https://www.youtube.com/watch?v=EaJmzB8YgS0'),
+            (3, 'https://www.youtube.com/watch?v=2dn13zneEjo'),
+            (4, 'https://www.youtube.com/watch?v=AsZvN7b02S0'),
+            (5, 'https://www.youtube.com/watch?v=qE8DcgVW44g')
+        `);
+
         await connection.commit();
         return true;
     } catch (error) {
@@ -209,6 +231,7 @@ async function down() {
         await connection.execute('DROP TABLE IF EXISTS users');
         await connection.execute('DROP TABLE IF EXISTS checklist_items');
         await connection.execute('DROP TABLE IF EXISTS notifications');
+        await connection.execute('DROP TABLE IF EXISTS first_aid_guides');
 
         await connection.commit();
         console.log('All tables dropped successfully'); 

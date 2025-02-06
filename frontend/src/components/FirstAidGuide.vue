@@ -57,14 +57,18 @@
   </template>
   
   <script setup>
-  import { ref, computed } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
   import { useAuthStore } from '../stores/auth';
+  import { firstAidService } from '../services/firstAidService';
+  import { useNotificationStore } from '../stores/notification';
 
   const authStore = useAuthStore();
   const isAdmin = computed(() => authStore.user?.role === 'admin');
 
   const editingVideoIndex = ref(null);
   const newVideoUrl = ref('');
+
+  const notificationStore = useNotificationStore();
 
   const firstAidGuides = [
     {
@@ -179,17 +183,27 @@
     newVideoUrl.value = firstAidGuides[index].videoUrl;
   };
 
-  const saveVideoUrl = (index) => {
+  const saveVideoUrl = async (index) => {
     if (!newVideoUrl.value) return;
     
-    // Validate URL format
     try {
-      new URL(newVideoUrl.value);
+      // Validate URL format with more permissive check for YouTube URLs
+      const urlPattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
+      if (!urlPattern.test(newVideoUrl.value)) {
+        throw new Error('Please enter a valid YouTube URL');
+      }
+      
+      // Save to backend
+      await firstAidService.updateVideoUrl(index, newVideoUrl.value);
+      
+      // Update local state
       firstAidGuides[index].videoUrl = newVideoUrl.value;
       editingVideoIndex.value = null;
       newVideoUrl.value = '';
+      
+      notificationStore.success('Video URL updated successfully');
     } catch (e) {
-      alert('Please enter a valid URL');
+      notificationStore.error(e.message || 'Failed to update video URL');
     }
   };
 
@@ -197,6 +211,27 @@
     editingVideoIndex.value = null;
     newVideoUrl.value = '';
   };
+
+  const loadGuides = async () => {
+    try {
+      const response = await firstAidService.getGuides();
+      if (response.success && response.guides?.length) {
+        // Only update video URLs if they exist in the response
+        response.guides.forEach((guide, index) => {
+          if (firstAidGuides[index] && guide.videoUrl) {
+            firstAidGuides[index].videoUrl = guide.videoUrl;
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error loading guides:', error);
+      // Don't show error notification since we're using static data
+    }
+  };
+
+  onMounted(async () => {
+    await loadGuides();
+  });
   </script>
   
   <style scoped>
