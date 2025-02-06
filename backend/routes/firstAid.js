@@ -19,11 +19,11 @@ router.put('/update-video', auth.authMiddleware, checkAdmin, async (req, res) =>
         const { guideIndex, videoUrl } = req.body;
 
         // Validate URL format
-        const urlPattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
+        const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w-./?%&=]*)?$/;
         if (!urlPattern.test(videoUrl)) {
             return res.status(400).json({
                 success: false,
-                message: 'Please enter a valid YouTube URL'
+                message: 'Please enter a valid video URL'
             });
         }
 
