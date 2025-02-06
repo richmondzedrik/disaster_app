@@ -40,11 +40,19 @@
                 </div>
               </template>
               <template v-else>
-                <a :href="guide.videoUrl" target="_blank" class="video-link" v-if="guide.videoUrl && guide.videoUrl.trim()">
+                <a :href="guide.videoUrl" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="video-link" 
+                   v-if="guide.videoUrl && isValidUrl(guide.videoUrl)">
                   <i class="fas fa-play-circle"></i>
                   Watch Tutorial Video
                 </a>
-                <button v-if="isAdmin" @click="editVideoUrl(index)" class="edit-video-btn" title="Edit Video URL">
+                <span v-else-if="guide.videoUrl" class="error-text">Invalid video URL</span>
+                <button v-if="isAdmin" 
+                        @click="editVideoUrl(index)" 
+                        class="edit-video-btn" 
+                        title="Edit Video URL">
                   <i class="fas fa-edit"></i>
                 </button>
               </template>
@@ -196,10 +204,13 @@
             return;
         }
 
-        // Validate URL format to accept more video platforms
+        // Log the URL being saved
+        console.log('Attempting to save video URL:', newVideoUrl.value);
+        
+        // Validate URL format
         const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w-./?%&=]*)?$/;
         if (!urlPattern.test(newVideoUrl.value)) {
-            throw new Error('Please enter a valid URL');
+            throw new Error('Please enter a valid video URL');
         }
         
         // Save to backend
@@ -216,6 +227,7 @@
         
         notificationStore.success('Video URL updated successfully');
     } catch (error) {
+        console.error('Save video URL error:', error);
         if (error.message.includes('No authentication token found') || error.response?.status === 401) {
             notificationStore.error('Please login to edit video URLs');
             router.push('/login');
@@ -247,6 +259,15 @@
             return;
         }
         notificationStore.error('Failed to load guide updates');
+    }
+  };
+
+  const isValidUrl = (url) => {
+    try {
+        new URL(url);
+        return true;
+    } catch {
+        return false;
     }
   };
 
