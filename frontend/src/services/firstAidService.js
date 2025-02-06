@@ -16,7 +16,7 @@ const getHeaders = () => {
 export const firstAidService = {
   async updateVideoUrl(guideIndex, newUrl) {
     try {
-      const response = await axios.put(`${baseUrl}/admin/first-aid/update-video`, {
+      const response = await axios.put(`${baseUrl}/first-aid/update-video`, {
         guideIndex,
         videoUrl: newUrl
       }, {
