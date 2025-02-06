@@ -36,7 +36,7 @@ export const firstAidService = {
 
   async getGuides() {
     try {
-      const response = await axios.get(`${baseUrl}/guides`, {
+      const response = await axios.get(`${baseUrl}/first-aid/guides`, {
         headers: getHeaders()
       });
       return {
