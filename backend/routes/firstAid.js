@@ -3,7 +3,18 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const db = require('../db/connection');
 
-router.put('/update-video', auth.authMiddleware, async (req, res) => {
+// Add admin check middleware
+const checkAdmin = async (req, res, next) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({
+            success: false,
+            message: 'Admin access required'
+        });
+    }
+    next();
+};
+
+router.put('/update-video', auth.authMiddleware, checkAdmin, async (req, res) => {
     try {
         const { guideIndex, videoUrl } = req.body;
 
