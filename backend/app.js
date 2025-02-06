@@ -94,6 +94,7 @@ app.use('/auth', authRoutes);
 app.use('/api', notificationTestRoutes);
 app.use('/api/markers', markersRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/first-aid', require('./routes/firstAid'));
 
 // Route debugging endpoint in development         
 if (process.env.NODE_ENV !== 'production') {
