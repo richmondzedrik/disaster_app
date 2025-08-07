@@ -24,7 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 // CORS configuration
 const corsOptions = {
     origin: [
-        'https://disasterapp.netlify.app',
+        'https://alertoabra.netlify.app',
         'http://localhost:5173',
         'http://localhost:3000'
     ],

@@ -21,13 +21,13 @@ router.use(cors(corsOptions));
 // Pre-flight OPTIONS handling
 router.options('*', cors(corsOptions));
 
-// Add this middleware at the top of your admin routes 
+// Add this middleware at the top of your admin routes
 router.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'https://disasterapp.netlify.app');
+  res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'https://alertoabra.netlify.app');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
+
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -481,7 +481,7 @@ router.get('/alerts', async (req, res) => {
 
 // Create new alert
 router.post('/alerts', async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'https://disasterapp.netlify.app');
+  res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'https://alertoabra.netlify.app');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
