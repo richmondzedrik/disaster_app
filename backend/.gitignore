@@ -1,1 +1,80 @@
+# ===================================
+# BACKEND-SPECIFIC GITIGNORE
+# ===================================
+
+# Deployment platforms
 .vercel
+.railway
+.render
+
+# Backend-specific environment files
+.env.development
+.env.production
+.env.staging
+.env.test
+
+# Database-specific files
+*.sqlite
+*.sqlite3
+*.db
+database/
+db_backups/
+migrations/backup/
+
+# Upload directories (keep structure, ignore content)
+uploads/*
+!uploads/.gitkeep
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Session storage
+sessions/
+.sessions
+
+# Email templates compiled
+email-templates/compiled/
+
+# Logs specific to backend
+server.log
+access.log
+error.log
+api.log
+
+# PM2 process files
+ecosystem.config.js
+.pm2/
+
+# Backend build artifacts
+lib/
+dist/
+build/
+
+# Test files
+test-results/
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Cache
+.cache/
+redis-cache/
+
+# SSL certificates for local development
+ssl/
+certificates/
+*.pem
+*.key
+*.crt
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# IDE specific to backend development
+.vscode/launch.json
+.idea/runConfigurations/

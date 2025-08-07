@@ -2259,12 +2259,23 @@ const loadProfileData = async () => {
 
 // Phone validation
 const validatePhoneNumber = () => {
-    const phoneRegex = /^\+639\d{9}$/;
-    if (profileData.value.phone && !phoneRegex.test(profileData.value.phone)) {
-        phoneError.value = 'Invalid Philippine mobile number format';
-    } else {
-        phoneError.value = '';
+    // Clear any existing error
+    phoneError.value = '';
+    
+    if (!profileData.value.phone) {
+        return true; // Phone is optional
     }
+    
+    // International phone validation - basic check
+    // For a more robust solution, consider using a library like libphonenumber-js
+    const phoneRegex = /^\+[1-9]\d{1,14}$/;
+    
+    if (!phoneRegex.test(profileData.value.phone)) {
+        phoneError.value = 'Please enter a valid international phone number (e.g., +631234567890)';
+        return false;
+    }
+    
+    return true;
 };
 
 // Add these constants at the top of the script section
@@ -3160,24 +3171,18 @@ watch(() => profileData.value.phone, (newPhone) => {
 }, { immediate: true });
 
 const handlePhoneInput = (event) => {
-    // Remove any non-numeric characters
-    let value = event.target.value.replace(/\D/g, '');
+    // Get raw input
+    let value = event.target.value;
     
-    // Ensure the first digit is 9
-    if (value.length > 0 && value[0] !== '9') {
-        value = '9' + value.substring(1);
+    // If it doesn't start with +, add it
+    if (value && !value.startsWith('+')) {
+        value = '+' + value;
     }
     
-    // Limit to 10 digits
-    value = value.substring(0, 10);
+    // Update the profile data
+    profileData.value.phone = value;
     
-    // Update local phone number
-    localPhoneNumber.value = value;
-    
-    // Update the main profile data with complete number
-    profileData.value.phone = value ? `+63${value}` : '';
-    
-    // Validate the complete number
+    // Validate the phone number
     validatePhoneNumber();
 };
 

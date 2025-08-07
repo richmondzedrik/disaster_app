@@ -346,60 +346,62 @@ class User {
         }
     }
 
-    static async resetPassword(token, newPassword) {
+    static async generateResetToken(email) {
         try {
-            if (!token || !newPassword) {
-                return {
-                    success: false,
-                    message: 'Token and new password are required'
-                };
-            }
-
-            // Hash the token to compare with stored hash
-            const hashedToken = crypto
-                .createHash('sha256')
-                .update(token)
-                .digest('hex');
-
-            // Find user with valid reset token
-            const [rows] = await db.query(
-                `SELECT id 
-                 FROM users 
-                 WHERE reset_token = ? 
-                 AND reset_token_expires > NOW()`,
-                [hashedToken]
-            );
-
-            if (!rows || rows.length === 0) {
-                return {
-                    success: false,
-                    message: 'Invalid or expired reset token'
-                };
-            }
-
-            // Hash new password
-            const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-            // Update password and clear reset token
-            await db.query(
+            // Generate a random token
+            const resetToken = crypto.randomBytes(32).toString('hex');
+            // Token expires in 1 hour
+            const resetTokenExpires = new Date(Date.now() + 3600000);
+            
+            // Update the user with the reset token
+            const [result] = await db.execute(
                 `UPDATE users 
-                 SET password = ?, 
-                     reset_token = NULL, 
-                     reset_token_expires = NULL 
-                 WHERE id = ?`,
-                [hashedPassword, rows[0].id]
+                 SET reset_token = ?,
+                     reset_token_expires = ?
+                 WHERE email = ?`,
+                [resetToken, resetTokenExpires, email]
             );
-
-            return {
-                success: true,
-                message: 'Password reset successful'
+            
+            if (result.affectedRows === 0) {
+                return { success: false, message: 'Email not found' };
+            }
+            
+            return { 
+                success: true, 
+                resetToken,
+                message: 'Password reset token generated successfully' 
             };
         } catch (error) {
-            console.error('Reset password error:', error);
+            console.error('Error in generateResetToken:', error);
+            throw error;
+        }
+    }
+
+    static async resetPassword(token, newPassword) {
+        try {
+            // Hash the new password
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            
+            // Update user's password if token is valid and not expired
+            const [result] = await db.execute(
+                `UPDATE users 
+                 SET password = ?,
+                     reset_token = NULL,
+                     reset_token_expires = NULL
+                 WHERE reset_token = ? 
+                    AND reset_token_expires > NOW()`,
+                [hashedPassword, token]
+            );
+            
             return {
-                success: false,
-                message: 'Failed to reset password'
+                success: result.affectedRows > 0,
+                message: result.affectedRows > 0 
+                    ? 'Password updated successfully'
+                    : 'Invalid or expired reset token'
             };
+        } catch (error) {
+            console.error('Error in resetPassword:', error);
+            throw error;
         }
     }
 
