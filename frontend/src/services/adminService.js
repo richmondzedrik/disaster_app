@@ -2,8 +2,8 @@ import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 
 const API_URL = import.meta.env.PROD
-  ? 'https://disaster-app-backend.onrender.com/api'
-  : 'http://localhost:3000/api';
+  ? 'https://disaster-app-backend.onrender.com'
+  : 'http://localhost:3000';
   
 const getHeaders = () => {
   const authStore = useAuthStore();
