@@ -10,6 +10,7 @@
     "start": "serve -s dist"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
     "@vitejs/plugin-vue": "^4.0.0",
     "axios": "^1.7.9",
     "leaflet": "^1.9.4",
