@@ -17,25 +17,36 @@ const authMiddleware = async (req, res, next) => {
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             
-            const [users] = await db.execute(
-                'SELECT id, username, role, email_verified FROM users WHERE id = ?',
-                [decoded.userId]
-            );
+            const result = await db.select('users', {
+                select: 'id, username, role, email_verified',
+                where: { id: decoded.userId },
+                limit: 1
+            });
 
-            if (!users.length) {
+            if (result.error) {
+                console.error('Database error in auth middleware:', result.error);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Database error'
+                });
+            }
+
+            if (!result.data || result.data.length === 0) {
                 return res.status(401).json({
                     success: false,
                     message: 'User not found'
                 });
             }
 
+            const user = result.data[0];
+
             // Set both userId and id for compatibility
             req.user = {
                 id: decoded.userId,
                 userId: decoded.userId,
-                username: users[0].username,
-                role: users[0].role,
-                isVerified: users[0].email_verified === 1
+                username: user.username,
+                role: user.role,
+                isVerified: user.email_verified === true || user.email_verified === 1
             };
 
             next();

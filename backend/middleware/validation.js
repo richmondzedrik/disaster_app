@@ -79,26 +79,42 @@ const validateRegistration = async (req, res, next) => {
     }
 
     try {
-        // Check for existing email or username
-        const [existingUsers] = await db.query(
-            'SELECT email, username FROM users WHERE email = ? OR username = ?',
-            [email, username]
-        );
+        // Check for existing email
+        const emailResult = await db.select('users', {
+            select: 'email',
+            where: { email: email },
+            limit: 1
+        });
 
-        if (existingUsers.length > 0) {
-            const existingUser = existingUsers[0];
-            if (existingUser.email === email) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'This email address is already registered. Please use a different email or try logging in'
-                });
-            }
-            if (existingUser.username === username) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'This username is already taken. Please choose a different username'
-                });
-            }
+        if (emailResult.error) {
+            console.error('Database error checking email:', emailResult.error);
+            throw new Error('Database query failed');
+        }
+
+        if (emailResult.data && emailResult.data.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'This email address is already registered. Please use a different email or try logging in'
+            });
+        }
+
+        // Check for existing username
+        const usernameResult = await db.select('users', {
+            select: 'username',
+            where: { username: username },
+            limit: 1
+        });
+
+        if (usernameResult.error) {
+            console.error('Database error checking username:', usernameResult.error);
+            throw new Error('Database query failed');
+        }
+
+        if (usernameResult.data && usernameResult.data.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'This username is already taken. Please choose a different username'
+            });
         }
 
         next();
@@ -152,15 +168,31 @@ const validateUsername = async (req, res, next) => {
             });
         }
 
-        // Check for existing username
-        const query = userId 
-            ? 'SELECT COUNT(*) as count FROM users WHERE username = ? AND id != ?'
-            : 'SELECT COUNT(*) as count FROM users WHERE username = ?';
-        const params = userId ? [username, userId] : [username];
+        // Check for existing username using Supabase
+        let result;
+        if (userId) {
+            // For updates - check if username exists for other users
+            result = await db.supabase
+                .from('users')
+                .select('id')
+                .eq('username', username)
+                .neq('id', userId)
+                .limit(1);
+        } else {
+            // For new registrations - check if username exists at all
+            result = await db.select('users', {
+                select: 'id',
+                where: { username: username },
+                limit: 1
+            });
+        }
 
-        const [result] = await db.query(query, params);
-        
-        if (result[0].count > 0) {
+        if (result.error) {
+            console.error('Database error:', result.error);
+            throw new Error('Database query failed');
+        }
+
+        if (result.data && result.data.length > 0) {
             return res.status(400).json({
                 success: false,
                 message: 'This username is already taken. Please choose a different username'
@@ -217,13 +249,19 @@ const validateUsernamePublic = async (req, res) => {
             });
         }
 
-        // Check availability
-        const [result] = await db.query(
-            'SELECT COUNT(*) as count FROM users WHERE username = ?',
-            [username]
-        );
-        
-        if (result[0].count > 0) {
+        // Check availability using Supabase
+        const result = await db.select('users', {
+            select: 'id',
+            where: { username: username },
+            limit: 1
+        });
+
+        if (result.error) {
+            console.error('Database error:', result.error);
+            throw new Error('Database query failed');
+        }
+
+        if (result.data && result.data.length > 0) {
             return res.status(400).json({
                 success: false,
                 message: 'This username is already taken'
@@ -264,13 +302,19 @@ const validateEmailPublic = async (req, res) => {
             });
         }
 
-        // Check availability
-        const [result] = await db.query(
-            'SELECT COUNT(*) as count FROM users WHERE email = ?',
-            [email]
-        );
-        
-        if (result[0].count > 0) {
+        // Check availability using Supabase
+        const result = await db.select('users', {
+            select: 'id',
+            where: { email: email },
+            limit: 1
+        });
+
+        if (result.error) {
+            console.error('Database error:', result.error);
+            throw new Error('Database query failed');
+        }
+
+        if (result.data && result.data.length > 0) {
             return res.status(400).json({
                 success: false,
                 message: 'This email is already registered'

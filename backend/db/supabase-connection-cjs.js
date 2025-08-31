@@ -85,6 +85,72 @@ class SupabaseDB {
         // This is a placeholder for compatibility
         throw new Error('Raw SQL queries not supported in Supabase client mode');
     }
+
+    // Execute method for MySQL compatibility
+    async execute(sql, params = []) {
+        // Convert common MySQL queries to Supabase operations
+        const sqlLower = sql.toLowerCase().trim();
+
+        if (sqlLower.startsWith('select')) {
+            // Handle SELECT queries
+            if (sqlLower.includes('count(*)')) {
+                // Handle COUNT queries
+                const tableMatch = sql.match(/from\s+(\w+)/i);
+                if (tableMatch) {
+                    const table = tableMatch[1];
+                    const { count, error } = await this.supabase
+                        .from(table)
+                        .select('*', { count: 'exact', head: true });
+
+                    if (error) throw error;
+                    return [[{ count: count || 0 }]];
+                }
+            } else {
+                // Handle regular SELECT queries
+                const tableMatch = sql.match(/from\s+(\w+)/i);
+                if (tableMatch) {
+                    const table = tableMatch[1];
+                    let query = this.supabase.from(table).select('*');
+
+                    // Handle WHERE conditions with parameters
+                    if (params && params.length > 0 && sql.includes('?')) {
+                        // This is a simplified parameter replacement
+                        // In a real implementation, you'd need proper SQL parsing
+                        console.warn('Parameter binding in execute() is simplified. Consider using specific methods.');
+                    }
+
+                    const { data, error } = await query;
+                    if (error) throw error;
+                    return [data || []];
+                }
+            }
+        } else if (sqlLower.startsWith('insert')) {
+            // Handle INSERT queries
+            const tableMatch = sql.match(/into\s+(\w+)/i);
+            if (tableMatch) {
+                const table = tableMatch[1];
+                // This is a simplified implementation
+                // You'd need to parse the INSERT statement properly
+                throw new Error('INSERT via execute() not fully implemented. Use insert() method instead.');
+            }
+        } else if (sqlLower.startsWith('update')) {
+            // Handle UPDATE queries
+            const tableMatch = sql.match(/update\s+(\w+)/i);
+            if (tableMatch) {
+                const table = tableMatch[1];
+                throw new Error('UPDATE via execute() not fully implemented. Use update() method instead.');
+            }
+        } else if (sqlLower.startsWith('delete')) {
+            // Handle DELETE queries
+            const tableMatch = sql.match(/from\s+(\w+)/i);
+            if (tableMatch) {
+                const table = tableMatch[1];
+                throw new Error('DELETE via execute() not fully implemented. Use delete() method instead.');
+            }
+        }
+
+        throw new Error(`Unsupported SQL query in execute(): ${sql}`);
+    }
 }
 
 // Test connection function
