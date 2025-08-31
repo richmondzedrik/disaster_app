@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config');
-const db = require('../db/connection');
+const { db } = require('../db/supabase-connection-cjs');
 
 const authMiddleware = async (req, res, next) => {
     try {

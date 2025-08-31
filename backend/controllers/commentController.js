@@ -1,4 +1,4 @@
-const db = require('../db/connection');
+const { db } = require('../db/supabase-connection-cjs');
 
 const commentController = {
     async getComments(req, res) {

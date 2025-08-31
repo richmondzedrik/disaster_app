@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const db = require('../db/connection');
+const { db } = require('../db/supabase-connection-cjs');
 
 // Load checklist progress
 router.get('/progress', auth.authMiddleware, async (req, res) => {

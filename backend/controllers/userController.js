@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const db = require('../db/connection');
+const { db } = require('../db/supabase-connection-cjs');
 const bcrypt = require('bcryptjs');
 const { sendVerificationEmail } = require('../utils/email');
 

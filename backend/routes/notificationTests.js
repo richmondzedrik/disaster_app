@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db/connection');
+const { db } = require('../db/supabase-connection-cjs');
 const auth = require('../middleware/auth');
 const { sendEmail } = require('../utils/email');
 

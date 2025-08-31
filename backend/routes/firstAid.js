@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const db = require('../db/connection');
+const { db } = require('../db/supabase-connection-cjs');
 
 // Add admin check middleware
 const checkAdmin = async (req, res, next) => {

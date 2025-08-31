@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const emailService = require('../services/emailService');
-const db = require('../db/connection');
+const { db } = require('../db/supabase-connection-cjs');
 
 const notifyNewPost = async (req, res) => {
   try {

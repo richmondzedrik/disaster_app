@@ -1,5 +1,5 @@
 const Alert = require('../models/Alert');
-const db = require('../db/connection');
+const { db } = require('../db/supabase-connection-cjs');
 
 exports.createAlert = async (req, res) => {
     try {

@@ -1,4 +1,4 @@
-const db = require('../db/connection');
+const { db } = require('../db/supabase-connection-cjs');
 
 const validateRegistration = async (req, res, next) => {
     const { username, email, password } = req.body;

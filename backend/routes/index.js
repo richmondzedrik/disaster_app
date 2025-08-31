@@ -2,22 +2,28 @@ const express = require('express');
 const router = express.Router();
 const authRoutes = require('./auth');
 const newsRoutes = require('./news');
-const db = require('../db/connection');
+const { db } = require('../db/supabase-connection-cjs');
 
 // Database connection test
 router.get('/db-test', async (req, res) => {
     try {
-        await db.execute('SELECT 1');
-        res.json({ 
-            success: true, 
-            message: 'Database connected successfully' 
-        });
+        const { testConnection } = require('../db/supabase-connection-cjs');
+        const connected = await testConnection();
+        if (connected) {
+            res.json({
+                success: true,
+                message: 'Supabase connected successfully',
+                database: 'Supabase PostgreSQL'
+            });
+        } else {
+            throw new Error('Supabase connection failed');
+        }
     } catch (error) {
         console.error('Database connection test failed:', error);
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             message: 'Database connection failed',
-            error: error.message 
+            error: error.message
         });
     }
 });
