@@ -1,7 +1,10 @@
-require('dotenv').config();
-const mysql = require('mysql2/promise');
-const { Pool } = require('pg');
-const bcrypt = require('bcryptjs');
+import dotenv from 'dotenv';
+import mysql from 'mysql2/promise';
+import { Pool } from 'pg';
+import bcrypt from 'bcryptjs';
+
+// Configure dotenv
+dotenv.config();
 
 // MySQL configuration (source)
 const mysqlConfig = {
@@ -241,7 +244,7 @@ class DataMigrator {
 }
 
 // Run if called directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
     const migrator = new DataMigrator();
     migrator.run()
         .then(() => {
@@ -254,4 +257,4 @@ if (require.main === module) {
         });
 }
 
-module.exports = DataMigrator;
+export default DataMigrator;

@@ -7,7 +7,10 @@
     "build": "cd frontend && npm install && npm run build",
     "start": "node server.js",
     "migrate": "node migrations/runMigrations.js",
-    "migrate:down": "node -e \"require('./migrations/000_init_database').down()\""
+    "migrate:down": "node -e \"require('./migrations/000_init_database').down()\"",
+    "start:supabase": "node server.js",
+    "dev:supabase": "nodemon server.js",
+    "start:mysql": "node server.js.mysql-backup"
   },
   "keywords": [],
   "author": "",

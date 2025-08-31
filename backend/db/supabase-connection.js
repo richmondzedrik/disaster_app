@@ -1,6 +1,8 @@
-require('dotenv').config();
-const { Pool } = require('pg');
-const { supabaseAdmin, pgConfig } = require('../config/supabase');
+import dotenv from 'dotenv';
+import { Pool } from 'pg';
+import { supabaseAdmin, pgConfig } from '../config/supabase.js';
+
+dotenv.config();
 
 // Create PostgreSQL connection pool
 const pool = new Pool({
@@ -221,7 +223,7 @@ async function testConnection() {
 // Create singleton instance
 const db = new SupabaseDB();
 
-module.exports = {
+export {
     db,
     SupabaseDB,
     testConnection,

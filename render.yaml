@@ -1,15 +1,48 @@
 services:
   - type: web
-    name: disaster-app
+    name: disaster-app-backend
     env: node
+    rootDir: backend
     buildCommand: npm install
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
+        value: 10000
       - key: JWT_SECRET
         sync: false
       - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        value: https://taqoegurvxaqzoejpmrp.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcW9lZ3VydnhhcXpvZWpwbXJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MTc2NTcsImV4cCI6MjA3MDE5MzY1N30.AOtaN86DsqQq1vy9Uw4sqtwXRfByr5NSsDfWryrmMSk
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: DB_HOST
+        value: db.taqoegurvxaqzoejpmrp.supabase.co
+      - key: DB_USER
+        value: postgres
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        value: postgres
+      - key: DB_PORT
+        value: 5432
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: FRONTEND_URL
+        value: https://disasterapp.netlify.app
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: ADMIN_CREATION_KEY
         sync: false

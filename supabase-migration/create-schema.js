@@ -1,7 +1,15 @@
-require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
-const { Pool } = require('pg');
+import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { Pool } from 'pg';
+import { fileURLToPath } from 'url';
+
+// Configure dotenv
+dotenv.config();
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // PostgreSQL connection configuration
 const pgConfig = {
@@ -62,7 +70,7 @@ async function createSchema() {
 }
 
 // Run if called directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
     createSchema()
         .then(() => {
             console.log('🎉 Schema creation completed successfully!');
@@ -74,4 +82,4 @@ if (require.main === module) {
         });
 }
 
-module.exports = createSchema;
+export default createSchema;

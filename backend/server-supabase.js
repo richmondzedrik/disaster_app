@@ -7,7 +7,7 @@ const fs = require('fs');
 const express = require('express');
 
 // Import Supabase connection instead of MySQL
-const { testConnection } = require('./db/supabase-connection-cjs');
+const { testConnection } = require('./db/supabase-connection');
 
 const PORT = process.env.PORT || 3000; 
 

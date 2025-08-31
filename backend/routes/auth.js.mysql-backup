@@ -3,7 +3,7 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const auth = require('../middleware/auth');
 const validation = require('../middleware/validation');
-const { db } = require('../db/supabase-connection-cjs');
+const db = require('../db/connection');
 const User = require('../models/User');
 const multer = require('multer');
 const upload = multer({
@@ -47,24 +47,17 @@ router.post('/verify-code', authController.verifyCode);
 // Add this new route to check raw emergency contacts  
 router.get('/debug/emergency-contacts', auth.authMiddleware, async (req, res) => {
     try {
-        const userResult = await db.select('users', {
-            where: { id: req.user.id },
-            select: 'emergency_contacts'
-        });
+        const [rows] = await db.execute(
+            'SELECT emergency_contacts FROM users WHERE id = ?',
+            [req.user.id]
+        );
         
-        if (userResult.error || !userResult.data || userResult.data.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        const user = userResult.data[0];
-
         return res.json({
             success: true,
-            raw: user.emergency_contacts,
-            parsed: Array.isArray(user.emergency_contacts) ? user.emergency_contacts : []
+            raw: rows[0]?.emergency_contacts,
+            parsed: rows[0]?.emergency_contacts ? 
+                JSON.parse(rows[0].emergency_contacts) : 
+                []
         });
     } catch (error) {
         console.error('Debug emergency contacts error:', error);
@@ -79,26 +72,21 @@ router.get('/debug/emergency-contacts', auth.authMiddleware, async (req, res) =>
 // Add this new route to verify emergency contacts storage
 router.get('/verify-emergency-contacts', auth.authMiddleware, async (req, res) => {
     try {
-        // Get data from database using Supabase
-        const userResult = await db.select('users', {
-            where: { id: req.user.id || req.user.userId },
-            select: 'emergency_contacts'
-        });
+        // Get raw data from database
+        const [rawResult] = await db.execute(
+            'SELECT emergency_contacts FROM users WHERE id = ?',
+            [req.user.id || req.user.userId]
+        );
 
-        if (userResult.error || !userResult.data || userResult.data.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        const user = userResult.data[0];
+        // Get parsed data through User model
+        const user = await User.findById(req.user.id || req.user.userId);
 
         return res.json({
             success: true,
-            raw_data: user.emergency_contacts,
-            parsed_data: Array.isArray(user.emergency_contacts) ? user.emergency_contacts : [],
-            is_valid_json: true // Supabase handles JSON automatically
+            raw_data: rawResult[0]?.emergency_contacts,
+            parsed_data: user?.emergencyContacts,
+            is_valid_json: rawResult[0]?.emergency_contacts ? 
+                JSON.parse(rawResult[0].emergency_contacts) : null
         });
     } catch (error) {
         console.error('Emergency contacts verification error:', error);
@@ -182,34 +170,43 @@ router.post('/avatar', auth.authMiddleware, upload.single('avatar'), authControl
 router.delete('/delete-account', auth.authMiddleware, async (req, res) => {
     try {
         const userId = req.user.userId;
-
-        // Delete user's data from related tables (Supabase will handle cascading deletes)
-        // Note: With proper foreign key constraints, deleting the user should cascade
-
+        
+        // Get database connection
+        const connection = await db.getConnection();
+        
         try {
-            // Delete related data first (optional, as CASCADE should handle this)
-            await db.delete('comments', { user_id: userId });
-            await db.delete('likes', { user_id: userId });
-            await db.delete('posts', { author_id: userId });
-
-            // Finally delete the user
-            const deleteResult = await db.delete('users', userId);
+            // Start transaction
+            await connection.beginTransaction();
             
-            if (deleteResult.error) {
-                return res.status(500).json({
+            // Delete user's data from related tables
+            await connection.query('DELETE FROM comments WHERE user_id = ?', [userId]);
+            await connection.query('DELETE FROM likes WHERE user_id = ?', [userId]);
+            await connection.query('DELETE FROM posts WHERE author_id = ?', [userId]);
+            
+            // Finally delete the user
+            const [result] = await connection.query('DELETE FROM users WHERE id = ?', [userId]);
+            
+            if (result.affectedRows === 0) {
+                await connection.rollback();
+                return res.status(404).json({
                     success: false,
-                    message: 'Failed to delete account'
+                    message: 'User not found'
                 });
             }
-
+            
+            // Commit the transaction
+            await connection.commit();
+            
             res.json({
                 success: true,
                 message: 'Account deleted successfully'
             });
-
+            
         } catch (error) {
-            console.error('Delete account error:', error);
+            await connection.rollback();
             throw error;
+        } finally {
+            connection.release();
         }
         
     } catch (error) {
