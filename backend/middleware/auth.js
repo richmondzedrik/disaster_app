@@ -15,7 +15,7 @@ const authMiddleware = async (req, res, next) => {
         }
 
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || config.jwt.secret);
             
             const result = await db.select('users', {
                 select: 'id, username, role, email_verified',
@@ -89,7 +89,9 @@ const adminMiddleware = async (req, res, next) => {
 
         // Verify token is still valid
         try {
-            jwt.verify(req.headers.authorization.slice(7), process.env.JWT_SECRET);
+            const authHeader = req.headers.authorization;
+            const token = authHeader && authHeader.split(' ')[1];
+            jwt.verify(token, process.env.JWT_SECRET || config.jwt.secret);
         } catch (tokenError) {
             return res.status(401).json({
                 success: false,
@@ -116,7 +118,7 @@ const optionalAuthMiddleware = async (req, res, next) => {
             return next();
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || config.jwt.secret);
         req.user = decoded;
         next();
     } catch (error) {

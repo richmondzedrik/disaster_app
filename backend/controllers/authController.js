@@ -155,26 +155,27 @@ exports.login = async (req, res) => {
 
         // Generate JWT token
         const token = jwt.sign(
-            { 
-                userId: user.id, 
-                email: user.email, 
-                role: user.role 
+            {
+                userId: user.id,
+                email: user.email,
+                role: user.role,
+                username: user.username
             },
-            config.jwt.secret,
-            { expiresIn: config.jwt.expiresIn }
+            process.env.JWT_SECRET || config.jwt.secret,
+            { expiresIn: process.env.JWT_EXPIRES_IN || config.jwt.expiresIn }
         );
 
         // Generate refresh token
         const refreshToken = jwt.sign(
             { userId: user.id },
-            config.jwt.refreshSecret,
-            { expiresIn: config.jwt.refreshExpiresIn }
+            process.env.JWT_REFRESH_SECRET || config.jwt.refreshSecret,
+            { expiresIn: '7d' }
         );
 
         res.json({
             success: true,
             message: 'Login successful',
-            token,
+            accessToken: `Bearer ${token}`,
             refreshToken,
             user: {
                 id: user.id,

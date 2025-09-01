@@ -49,19 +49,23 @@ export const useAuthStore = defineStore('auth', () => {
             
             if (response.data?.success) {
                 const { accessToken, user: userData } = response.data;
-                
+
+                // Ensure token is properly formatted
+                const formattedToken = accessToken.startsWith('Bearer ') ? accessToken : `Bearer ${accessToken}`;
+
                 // Store auth data
-                localStorage.setItem('token', accessToken);
+                localStorage.setItem('token', formattedToken);
                 localStorage.setItem('user', JSON.stringify(userData));
-                
+
                 // Update store state
                 isAuthenticated.value = true;
                 user.value = userData;
-                
+                accessToken.value = formattedToken;
+
                 // Set axios default header
-                api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-                
-                return response.data;  
+                api.defaults.headers.common['Authorization'] = formattedToken;
+
+                return response.data;
             }
 
             // If the response indicates email doesn't exist
