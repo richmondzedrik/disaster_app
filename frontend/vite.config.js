@@ -10,13 +10,13 @@ export default defineConfig({
     },
   },
   server: {
-    
+
     port: 5173,
     strictPort: true,
     host: true,
     proxy: {
       '/api': {
-        target: 'https://disaster-app-backend.onrender.com',
+        target: 'https://disaster-app.onrender.com',
         changeOrigin: true,
         secure: true,
         configure: (proxy, options) => {
@@ -68,6 +68,6 @@ export default defineConfig({
     }
   },
   define: {
-    'process.env.VITE_API_URL': JSON.stringify('https://disaster-app-backend.onrender.com')
+    'process.env.VITE_API_URL': JSON.stringify('https://disaster-app.onrender.com')
   }
 })

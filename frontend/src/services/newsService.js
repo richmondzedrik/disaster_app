@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/auth';
 import api from './api';
 import { onMounted, watch } from 'vue';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL || 'https://disaster-app.onrender.com';
 
 const getHeaders = () => {
   const authStore = useAuthStore();
@@ -24,7 +24,7 @@ export const newsService = {
         try {
             const response = await axios.get(`${API_URL}/news/public`, {
                 withCredentials: true,
-                timeout: 15000
+                timeout: 30000
             });
             
             // Ensure liked status is properly set for each post

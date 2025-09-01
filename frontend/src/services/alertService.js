@@ -42,19 +42,40 @@ export const alertService = {
 
   async getActiveAlerts() {
     try {
-      const headers = getHeaders();
-      const response = await api.get('/api/alerts/active', { 
-        headers,
+      // Try to get user-specific alerts first (if authenticated)
+      const authStore = useAuthStore();
+
+      if (authStore.isAuthenticated) {
+        try {
+          const headers = getHeaders();
+          const response = await api.get('/api/alerts/active/user', {
+            headers,
+            withCredentials: true
+          });
+
+          if (response.data) {
+            return {
+              success: true,
+              alerts: response.data.alerts || []
+            };
+          }
+        } catch (authError) {
+          console.log('Authenticated request failed, falling back to public alerts');
+        }
+      }
+
+      // Fall back to public alerts (no authentication required)
+      const response = await api.get('/api/alerts/active', {
         withCredentials: true
       });
-      
+
       if (!response.data) {
         throw new Error('Invalid response format');
       }
-      
+
       return {
         success: true,
-        alerts: response.data.alerts || [] 
+        alerts: response.data.alerts || []
       };
     } catch (error) {
       console.error('Error fetching active alerts:', error);

@@ -1,6 +1,23 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://disaster-app-backend.onrender.com';
+// Dynamic API URL detection
+const getApiUrl = () => {
+    // If explicitly set in environment, use that
+    if (import.meta.env.VITE_API_URL) {
+        return import.meta.env.VITE_API_URL;
+    }
+
+    // Auto-detect based on current location
+    const hostname = window.location.hostname;
+
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:3000';
+    } else {
+        return 'https://disaster-app.onrender.com';
+    }
+};
+
+const API_URL = getApiUrl();
 
 const api = axios.create({
     baseURL: API_URL,
