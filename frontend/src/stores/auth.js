@@ -48,10 +48,10 @@ export const useAuthStore = defineStore('auth', () => {
             const response = await api.post('/api/auth/login', credentials);
 
             if (response.data?.success) {
-                const { accessToken, user: userData } = response.data;
+                const { accessToken: responseToken, user: userData } = response.data;
 
                 // Ensure token is properly formatted
-                const formattedToken = accessToken.startsWith('Bearer ') ? accessToken : `Bearer ${accessToken}`;
+                const formattedToken = responseToken.startsWith('Bearer ') ? responseToken : `Bearer ${responseToken}`;
 
                 // Store auth data
                 localStorage.setItem('token', formattedToken);

@@ -1,34 +1,43 @@
-const db = require('../db/connection');
+const { db } = require('../db/supabase-connection-cjs');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
 class User {
     static async findByEmail(email) {
         try {
-            const [rows] = await db.execute(
-                'SELECT * FROM users WHERE email = ?',
-                [email]
-            );
-            return rows[0] || null;
+            const result = await db.select('users', {
+                where: { email: email },
+                limit: 1
+            });
+
+            if (result.error) {
+                console.error('Supabase error in findByEmail:', result.error);
+                return null;
+            }
+
+            return result.data && result.data.length > 0 ? result.data[0] : null;
         } catch (error) {
             console.error('Error in findByEmail:', error);
-            throw error;  
+            return null;
         }
     }
 
     static async findById(userId) {
         try {
-            const [rows] = await db.execute(
-                `SELECT id, username, email, phone, location, notifications, 
-                emergency_contacts, role, email_verified, created_at, updated_at,
-                COALESCE(last_login, created_at) as last_login, avatar_url
-                FROM users WHERE id = ?`,
-                [userId]
-            );
+            const result = await db.select('users', {
+                select: 'id, username, email, phone, location, notifications, emergency_contacts, role, email_verified, created_at, updated_at, last_login, avatar_url',
+                where: { id: userId },
+                limit: 1
+            });
 
-            if (rows.length === 0) return null;
+            if (result.error) {
+                console.error('Supabase error in findById:', result.error);
+                return null;
+            }
 
-            const user = rows[0];
+            if (!result.data || result.data.length === 0) return null;
+
+            const user = result.data[0];
             
             try {
                 // Handle notifications
@@ -77,26 +86,28 @@ class User {
         }
     }
 
-    static async create(userData) {   
+    static async create(userData) {
         try {
-            const hashedPassword = await bcrypt.hash(userData.password, 10);  
-            
-            const [result] = await db.execute(
-                'INSERT INTO users (username, email, password, role, notifications) VALUES (?, ?, ?, ?, ?)',
-                [
-                    userData.username, 
-                    userData.email, 
-                    hashedPassword, 
-                    userData.role || 'user',
-                    true  // Enable notifications by default
-                ]
-            );
+            const hashedPassword = await bcrypt.hash(userData.password, 10);
+
+            const result = await db.insert('users', {
+                username: userData.username,
+                email: userData.email,
+                password: hashedPassword,
+                role: userData.role || 'user',
+                notifications: true
+            });
+
+            if (result.error) {
+                console.error('Supabase error in create:', result.error);
+                throw new Error('Failed to create user');
+            }
 
             return {
-                userId: result.insertId
+                userId: result.data[0].id
             };
         } catch (error) {
-            console.error('Error in create:', error); 
+            console.error('Error in create:', error);
             throw error;
         }
     }
@@ -139,78 +150,54 @@ class User {
             console.log('Formatted emergency contacts:', formattedData.emergency_contacts);
 
             // Update user in database
-            const [result] = await db.execute(
-                `UPDATE users 
-                 SET username = ?, 
-                     phone = ?, 
-                     location = ?, 
-                     notifications = ?,
-                     emergency_contacts = ?
-                 WHERE id = ?`,
-                [
-                    formattedData.username,
-                    formattedData.phone,
-                    formattedData.location,
-                    formattedData.notifications,
-                    formattedData.emergency_contacts,
-                    userId
-                ]
-            );
+            const result = await db.update('users', userId, {
+                username: formattedData.username,
+                phone: formattedData.phone,
+                location: formattedData.location,
+                notifications: formattedData.notifications,
+                emergency_contacts: formattedData.emergency_contacts
+            });
 
-            if (result.affectedRows === 0) {
+            if (result.error) {
+                console.error('Supabase error in updateProfile:', result.error);
+                throw new Error('Failed to update profile');
+            }
+
+            if (!result.data || result.data.length === 0) {
                 throw new Error('User not found');
             }
 
-            // Fetch updated user and verify the data
-            const [rows] = await db.execute(
-                `SELECT id, username, email, phone, location, notifications, 
-                 emergency_contacts, role, email_verified, created_at, updated_at 
-                 FROM users WHERE id = ?`,
-                [userId]
-            );
-
-            if (!rows.length) {
-                throw new Error('User not found');
-            }
-
-            const user = rows[0];
-            
             // Parse JSON fields for response
             try {
                 // Handle notifications
-                user.notifications = typeof user.notifications === 'string'
-                    ? JSON.parse(user.notifications)
-                    : user.notifications || {};
+                updatedUser.notifications = typeof updatedUser.notifications === 'string'
+                    ? JSON.parse(updatedUser.notifications)
+                    : updatedUser.notifications || {};
 
                 // Handle emergency contacts
-                if (typeof user.emergency_contacts === 'string') {
-                    user.emergencyContacts = JSON.parse(user.emergency_contacts);
-                } else if (user.emergency_contacts) {
-                    user.emergencyContacts = user.emergency_contacts;
+                if (typeof updatedUser.emergency_contacts === 'string') {
+                    updatedUser.emergencyContacts = JSON.parse(updatedUser.emergency_contacts);
+                } else if (updatedUser.emergency_contacts) {
+                    updatedUser.emergencyContacts = updatedUser.emergency_contacts;
                 } else {
-                    user.emergencyContacts = [];
+                    updatedUser.emergencyContacts = [];
                 }
-                
+
                 // Ensure it's an array
-                if (!Array.isArray(user.emergencyContacts)) {
-                    user.emergencyContacts = [];
+                if (!Array.isArray(updatedUser.emergencyContacts)) {
+                    updatedUser.emergencyContacts = [];
                 }
-                
-                // Log the parsed data for debugging
-                console.log('Updated user emergency contacts:', user.emergencyContacts);
-                
+
                 // Remove the snake_case version to avoid confusion
-                delete user.emergency_contacts;
-                
+                delete updatedUser.emergency_contacts;
+
             } catch (e) {
                 console.error('Error parsing JSON fields:', e);
-                console.error('Raw notifications:', user.notifications);
-                console.error('Raw emergency_contacts:', user.emergency_contacts);
-                user.notifications = {};
-                user.emergencyContacts = [];
+                updatedUser.notifications = {};
+                updatedUser.emergencyContacts = [];
             }
 
-            return user;
+            return updatedUser;
         } catch (error) {
             console.error('User.updateProfile error:', error);
             throw error;
