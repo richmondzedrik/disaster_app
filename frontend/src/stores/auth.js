@@ -45,8 +45,8 @@ export const useAuthStore = defineStore('auth', () => {
 
     const login = async (credentials) => {
         try {
-            const response = await api.post('/auth/login', credentials);
-            
+            const response = await api.post('/api/auth/login', credentials);
+
             if (response.data?.success) {
                 const { accessToken, user: userData } = response.data;
 
@@ -77,7 +77,7 @@ export const useAuthStore = defineStore('auth', () => {
         } catch (error) {
             console.error('Login error:', error);
             // Clear any existing auth data on error
-            localStorage.removeItem('token');  
+            localStorage.removeItem('token');
             localStorage.removeItem('user');
             isAuthenticated.value = false;
             user.value = null;
@@ -98,7 +98,7 @@ export const useAuthStore = defineStore('auth', () => {
             
             console.log('📤 Sending registration data:', registrationData);
             
-            const response = await api.post('/auth/register', registrationData);
+            const response = await api.post('/api/auth/register', registrationData);
             
             if (response.data?.success) {
                 console.log('✅ Registration successful:', response.data);
@@ -121,7 +121,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     const resendVerificationCode = async (email) => {
         try {
-            const response = await api.post('/auth/resend-verification', { email })
+            const response = await api.post('/api/auth/resend-verification', { email })
             if (response.data?.success) {
                 localStorage.setItem('pendingVerificationEmail', email)
             }
@@ -134,7 +134,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     const verifyEmail = async (email, code) => {
         try {
-            const response = await api.post('/auth/verify-email', { email, code });
+            const response = await api.post('/api/auth/verify-email', { email, code });
             
             if (response.data?.success) {
                 console.log('✅ Email verification successful');
@@ -189,10 +189,10 @@ export const useAuthStore = defineStore('auth', () => {
 
     const handleAuthError = (error) => {
         // Only logout for specific auth errors
-        if (error?.response?.data?.code === 'TOKEN_EXPIRED' || 
+        if (error?.response?.data?.code === 'TOKEN_EXPIRED' ||
             error?.response?.data?.code === 'INVALID_AUTH') {
             user.value = null;
-            accessToken.value = null;
+            accessToken.value = '';
             isAuthenticated.value = false;
             localStorage.removeItem('token');
             localStorage.removeItem('user');
@@ -206,7 +206,7 @@ export const useAuthStore = defineStore('auth', () => {
     const checkUsername = async (username) => {
         try {
             // Use a different endpoint that doesn't require authentication
-            const response = await api.post('/auth/validate-username', { username }, {
+            const response = await api.post('/api/auth/validate-username', { username }, {
                 // Skip auth header for this request
                 headers: {
                     'Content-Type': 'application/json',
@@ -233,7 +233,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     const checkEmail = async (email) => {
         try {
-            const response = await api.post('/auth/validate-email', { email }, {
+            const response = await api.post('/api/auth/validate-email', { email }, {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': undefined
