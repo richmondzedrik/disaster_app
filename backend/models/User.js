@@ -339,8 +339,6 @@ class User {
         }
     }
 
-    }
-
     static async setResetToken(email) {
         try {
             // Generate reset token
