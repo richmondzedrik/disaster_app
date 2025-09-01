@@ -18,7 +18,7 @@ const authMiddleware = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET || config.jwt.secret);
             
             const result = await db.select('users', {
-                select: 'id, username, role, email_verified',
+                select: 'id, username, role, email_verified, email',
                 where: { id: decoded.userId },
                 limit: 1
             });
@@ -45,8 +45,10 @@ const authMiddleware = async (req, res, next) => {
                 id: decoded.userId,
                 userId: decoded.userId,
                 username: user.username,
+                email: user.email,
                 role: user.role,
-                isVerified: user.email_verified === true || user.email_verified === 1
+                email_verified: Boolean(user.email_verified),
+                isVerified: Boolean(user.email_verified)
             };
 
             next();

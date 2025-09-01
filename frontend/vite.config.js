@@ -56,7 +56,11 @@ export default defineConfig({
           'vendor-leaflet': ['leaflet', 'leaflet-routing-machine'],
           'vendor-core': ['vue', 'vue-router', 'pinia'],
           'vendor-utils': ['axios']
-        }
+        },
+        // Ensure proper file extensions
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       }
     },
     minify: 'terser',

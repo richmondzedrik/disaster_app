@@ -186,7 +186,9 @@ exports.login = async (req, res) => {
                 notifications: user.notifications,
                 location: user.location,
                 phone: user.phone,
-                emergency_contacts: user.emergency_contacts
+                emergency_contacts: user.emergency_contacts,
+                email_verified: Boolean(user.email_verified),
+                isVerified: Boolean(user.email_verified)
             }
         });
 
@@ -263,7 +265,7 @@ exports.getProfile = async (req, res) => {
 
         const userResult = await db.select('users', {
             where: { id: userId },
-            select: 'id, username, email, role, avatar_url, notifications, location, phone, emergency_contacts, created_at'
+            select: 'id, username, email, role, avatar_url, notifications, location, phone, emergency_contacts, created_at, email_verified'
         });
 
         if (userResult.error || !userResult.data || userResult.data.length === 0) {
@@ -277,7 +279,11 @@ exports.getProfile = async (req, res) => {
 
         res.json({
             success: true,
-            user: user
+            user: {
+                ...user,
+                email_verified: Boolean(user.email_verified),
+                isVerified: Boolean(user.email_verified)
+            }
         });
 
     } catch (error) {
