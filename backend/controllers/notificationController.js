@@ -28,16 +28,35 @@ const notifyNewPost = async (req, res) => {
     }
 
     // Get all users with notifications enabled
-    const [users] = await db.execute(
-      `SELECT email, id FROM users 
-       WHERE email_verified = true 
-       AND (
-           notifications = 'true' 
-           OR notifications = '1' 
-           OR notifications = true 
-           OR (notifications IS NOT NULL AND JSON_EXTRACT(notifications, '$.email') = true)
-       )`
-    );
+    const usersResult = await db.select('users', {
+      select: 'email, id, notifications',
+      where: { email_verified: true }
+    });
+
+    if (usersResult.error) {
+      console.error('Error fetching users for notifications:', usersResult.error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch users for notifications'
+      });
+    }
+
+    // Filter users with notifications enabled
+    const users = usersResult.data?.filter(user => {
+      if (!user.notifications) return false;
+
+      // Handle different notification formats
+      if (typeof user.notifications === 'string') {
+        try {
+          const notifSettings = JSON.parse(user.notifications);
+          return notifSettings.posts === true || notifSettings.email === true;
+        } catch {
+          return user.notifications === 'true' || user.notifications === '1';
+        }
+      }
+
+      return user.notifications === true || user.notifications?.posts === true || user.notifications?.email === true;
+    }) || [];
 
     console.log(`Found ${users.length} subscribers to notify`);
 
@@ -90,11 +109,17 @@ const notifyNewPost = async (req, res) => {
           `
         });
         
-        // Create notification record
-        await db.execute(
-          'INSERT INTO notifications (user_id, type, message, created_at) VALUES (?, ?, ?, NOW())',
-          [user.id, 'post', `New post created: ${title}`]
-        );
+        // Create notification record (optional - skip if table doesn't exist)
+        try {
+          await db.insert('notifications', {
+            user_id: user.id,
+            type: 'post',
+            message: `New post created: ${title}`,
+            created_at: new Date().toISOString()
+          });
+        } catch (notifError) {
+          console.log('Notification record creation skipped (table may not exist):', notifError.message);
+        }
 
         return { success: true, email: user.email };
       } catch (error) {

@@ -353,7 +353,7 @@ router.get('/admin/posts', auth.authMiddleware, async (req, res) => {
 router.post('/posts', auth.authMiddleware, upload.single('media'), async (req, res) => {
     try {
         const { title, content } = req.body;
-        
+
         if (!title || !content) {
             return res.status(400).json({
                 success: false,
@@ -362,64 +362,89 @@ router.post('/posts', auth.authMiddleware, upload.single('media'), async (req, r
         }
 
         let imageUrl = null;
-        
+
         if (req.file) {
-            const b64 = Buffer.from(req.file.buffer).toString('base64');
-            const dataURI = `data:${req.file.mimetype};base64,${b64}`;
-            
-            const cloudinaryResponse = await cloudinary.uploader.upload(dataURI, {
-                resource_type: 'auto',
-                folder: 'disaster-app/news'
-            });
-            
-            imageUrl = cloudinaryResponse.secure_url;
+            try {
+                const b64 = Buffer.from(req.file.buffer).toString('base64');
+                const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+                const cloudinaryResponse = await cloudinary.uploader.upload(dataURI, {
+                    resource_type: 'auto',
+                    folder: 'disaster-app/news'
+                });
+
+                imageUrl = cloudinaryResponse.secure_url;
+            } catch (uploadError) {
+                console.error('Image upload error:', uploadError);
+                // Continue without image if upload fails
+            }
         }
-        
+
         // Set status based on user role
         const status = req.user.role === 'admin' ? 'approved' : 'pending';
-        
-        const [userResult] = await db.execute(
-            'SELECT avatar_url FROM users WHERE id = ?',
-            [req.user.userId]
-        );
 
-        const [result] = await db.execute(
-            'INSERT INTO posts (title, content, author_id, status, image_url, author_avatar) VALUES (?, ?, ?, ?, ?, ?)',
-            [
-                title, 
-                content, 
-                req.user.userId, 
-                status, 
-                imageUrl, 
-                userResult[0]?.avatar_url || null
-            ]
-        );
+        // Get user avatar (fallback if query fails)
+        let userAvatar = null;
+        try {
+            const userResult = await db.select('users', {
+                select: 'avatar_url',
+                where: { id: req.user.userId },
+                limit: 1
+            });
+            userAvatar = userResult.data?.[0]?.avatar_url || null;
+        } catch (userError) {
+            console.error('User avatar fetch error:', userError);
+        }
 
-        if (!result.insertId) {
+        // Create the post using Supabase
+        const result = await db.insert('posts', {
+            title: title,
+            content: content,
+            author_id: req.user.userId,
+            status: status,
+            image_url: imageUrl,
+            author_avatar: userAvatar
+        });
+
+        if (result.error) {
+            console.error('Supabase insert error:', result.error);
             return res.status(500).json({
                 success: false,
                 message: 'Failed to create post'
             });
         }
 
-        const [posts] = await db.execute(`
-            SELECT 
-                p.*,
-                u.username as author
-            FROM posts p
-            JOIN users u ON p.author_id = u.id
-            WHERE p.id = ?
-        `, [result.insertId]);
+        if (!result.data || result.data.length === 0) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to create post'
+            });
+        }
+
+        const newPost = result.data[0];
+
+        // Get user info for the response
+        let authorUsername = req.user.username || 'Unknown';
+        try {
+            const userResult = await db.select('users', {
+                select: 'username',
+                where: { id: req.user.userId },
+                limit: 1
+            });
+            authorUsername = userResult.data?.[0]?.username || authorUsername;
+        } catch (userError) {
+            console.error('Author username fetch error:', userError);
+        }
 
         // Send notifications immediately for admin posts
         if (req.user.role === 'admin') {
             try {
                 await notificationController.notifyNewPost({
                     body: {
-                        postId: result.insertId,
+                        postId: newPost.id,
                         title,
                         content,
-                        author: req.user.username,
+                        author: authorUsername,
                         status: 'approved',
                         isAdmin: true
                     }
@@ -435,13 +460,17 @@ router.post('/posts', auth.authMiddleware, upload.single('media'), async (req, r
         return res.json({
             success: true,
             message: status === 'approved' ? 'Post created successfully' : 'Post created successfully and pending approval',
-            post: posts[0]
+            post: {
+                ...newPost,
+                author: authorUsername
+            }
         });
     } catch (error) {
         console.error('Error creating post:', error);
         return res.status(500).json({
             success: false,
-            message: 'Failed to create post'
+            message: 'Failed to create post',
+            error: error.message
         });
     }
 });

@@ -205,39 +205,68 @@ class User {
     }
 
     static async delete(userId) {
-        const connection = await db.getConnection();
         try {
-            await connection.beginTransaction();
-
             // Delete user's related data first
-            await connection.query('DELETE FROM refresh_tokens WHERE user_id = ?', [userId]);
-            await connection.query('DELETE FROM alert_reads WHERE user_id = ?', [userId]);
-            await connection.query('DELETE FROM comments WHERE user_id = ?', [userId]);
-            await connection.query('DELETE FROM likes WHERE user_id = ?', [userId]);
-            await connection.query('DELETE FROM posts WHERE author_id = ?', [userId]);
+            await db.delete('refresh_tokens', { user_id: userId });
+            await db.delete('alert_reads', { user_id: userId });
+            await db.delete('comments', { user_id: userId });
+            await db.delete('likes', { user_id: userId });
+            await db.delete('posts', { author_id: userId });
 
             // Finally delete the user
-            const [result] = await connection.query('DELETE FROM users WHERE id = ?', [userId]);
+            const result = await db.delete('users', userId);
 
-            await connection.commit();
-            return result.affectedRows > 0;
+            if (result.error) {
+                console.error('Supabase error in delete:', result.error);
+                throw new Error('Failed to delete user');
+            }
+
+            return true;
         } catch (error) {
-            await connection.rollback();
+            console.error('Error in delete:', error);
             throw error;
-        } finally {
-            connection.release();
         }
     }
 
     static async verifyEmail(token) {
         try {
-            const [result] = await db.execute(
-                'UPDATE users SET email_verified = true WHERE verification_token = ? AND verification_token_expires > NOW()',
-                [token]
-            );
+            // First find the user with the token
+            const userResult = await db.select('users', {
+                where: { verification_token: token },
+                limit: 1
+            });
+
+            if (userResult.error || !userResult.data || userResult.data.length === 0) {
+                return {
+                    success: false,
+                    message: 'Invalid or expired token'
+                };
+            }
+
+            const user = userResult.data[0];
+
+            // Check if token is expired
+            if (new Date(user.verification_token_expires) < new Date()) {
+                return {
+                    success: false,
+                    message: 'Invalid or expired token'
+                };
+            }
+
+            // Update user to verified
+            const result = await db.update('users', user.id, {
+                email_verified: true,
+                verification_token: null,
+                verification_token_expires: null
+            });
+
+            if (result.error) {
+                throw new Error('Failed to verify email');
+            }
+
             return {
-                success: result.affectedRows > 0,
-                message: result.affectedRows > 0 ? 'Email verified successfully' : 'Invalid or expired token'
+                success: true,
+                message: 'Email verified successfully'
             };
         } catch (error) {
             console.error('Error in verifyEmail:', error);
@@ -248,26 +277,26 @@ class User {
     static async updateVerificationCode(userId, code) {
         try {
             const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-            const [result] = await db.execute(
-                'UPDATE users SET verification_code = ?, verification_code_expires = ? WHERE id = ?',
-                [code, expiresAt, userId]
-            );
-            
-            // Verify the update was successful
-            if (result.affectedRows === 0) {
+
+            const result = await db.update('users', userId, {
+                verification_code: code,
+                verification_code_expires: expiresAt.toISOString()
+            });
+
+            if (result.error) {
+                console.error('Supabase error in updateVerificationCode:', result.error);
                 throw new Error('Failed to update verification code');
             }
-            
-            // Double-check the code was stored
-            const [verifyResult] = await db.execute(
-                'SELECT verification_code FROM users WHERE id = ?',
-                [userId]
-            );
-            
-            if (!verifyResult[0] || verifyResult[0].verification_code !== code) {
+
+            if (!result.data || result.data.length === 0) {
+                throw new Error('Failed to update verification code');
+            }
+
+            // Verify the code was stored correctly
+            if (result.data[0].verification_code !== code) {
                 throw new Error('Verification code mismatch after update');
             }
-            
+
             return true;
         } catch (error) {
             console.error('Error in updateVerificationCode:', error);
@@ -277,36 +306,46 @@ class User {
 
     static async findByUsername(username) {
         try {
-            const [rows] = await db.execute(
-                'SELECT * FROM users WHERE username = ?',
-                [username]
-            );
-            return rows[0] || null;
+            const result = await db.select('users', {
+                where: { username: username },
+                limit: 1
+            });
+
+            if (result.error) {
+                console.error('Supabase error in findByUsername:', result.error);
+                return null;
+            }
+
+            return result.data && result.data.length > 0 ? result.data[0] : null;
         } catch (error) {
             console.error('Error in findByUsername:', error);
-            throw error;
+            return null;
         }
     }
 
     static async update(userId, updates) {
-        const fields = Object.keys(updates);
-        const values = Object.values(updates);
+        try {
+            const result = await db.update('users', userId, updates);
 
-        const setClause = fields.map((field, index) => `${field} = ?`).join(', ');
+            if (result.error) {
+                console.error('Supabase error in update:', result.error);
+                throw new Error('Failed to update user');
+            }
 
-        const [result] = await db.execute(
-            `UPDATE users SET ${setClause} WHERE id = ?`,
-            [...values, userId]
-        );
+            return result.data && result.data.length > 0 ? result.data[0] : null;
+        } catch (error) {
+            console.error('Error in update:', error);
+            throw error;
+        }
+    }
 
-        return result;
     }
 
     static async setResetToken(email) {
         try {
             // Generate reset token
             const resetToken = crypto.randomBytes(32).toString('hex');
-            const hashedToken = crypto  
+            const hashedToken = crypto
                 .createHash('sha256')
                 .update(resetToken)
                 .digest('hex');
@@ -314,16 +353,24 @@ class User {
             // Set expiration to 1 hour from now
             const expires = new Date(Date.now() + 3600000); // 1 hour
 
-            // Update user with reset token
-            const [result] = await db.query(`
-                UPDATE users 
-                SET reset_token = ?, 
-                    reset_token_expires = ? 
-                WHERE email = ?
-            `, [hashedToken, expires, email]);
+            // First find the user
+            const userResult = await db.select('users', {
+                where: { email: email },
+                limit: 1
+            });
 
-            if (result.affectedRows === 0) {
+            if (userResult.error || !userResult.data || userResult.data.length === 0) {
                 throw new Error('No user found with that email');
+            }
+
+            // Update user with reset token
+            const result = await db.update('users', userResult.data[0].id, {
+                reset_token: hashedToken,
+                reset_token_expires: expires.toISOString()
+            });
+
+            if (result.error) {
+                throw new Error('Failed to set reset token');
             }
 
             return resetToken; // Return unhashed token for email
@@ -339,24 +386,31 @@ class User {
             const resetToken = crypto.randomBytes(32).toString('hex');
             // Token expires in 1 hour
             const resetTokenExpires = new Date(Date.now() + 3600000);
-            
-            // Update the user with the reset token
-            const [result] = await db.execute(
-                `UPDATE users 
-                 SET reset_token = ?,
-                     reset_token_expires = ?
-                 WHERE email = ?`,
-                [resetToken, resetTokenExpires, email]
-            );
-            
-            if (result.affectedRows === 0) {
+
+            // First find the user
+            const userResult = await db.select('users', {
+                where: { email: email },
+                limit: 1
+            });
+
+            if (userResult.error || !userResult.data || userResult.data.length === 0) {
                 return { success: false, message: 'Email not found' };
             }
-            
-            return { 
-                success: true, 
+
+            // Update the user with the reset token
+            const result = await db.update('users', userResult.data[0].id, {
+                reset_token: resetToken,
+                reset_token_expires: resetTokenExpires.toISOString()
+            });
+
+            if (result.error) {
+                return { success: false, message: 'Failed to generate reset token' };
+            }
+
+            return {
+                success: true,
                 resetToken,
-                message: 'Password reset token generated successfully' 
+                message: 'Password reset token generated successfully'
             };
         } catch (error) {
             console.error('Error in generateResetToken:', error);
@@ -368,23 +422,44 @@ class User {
         try {
             // Hash the new password
             const hashedPassword = await bcrypt.hash(newPassword, 10);
-            
-            // Update user's password if token is valid and not expired
-            const [result] = await db.execute(
-                `UPDATE users 
-                 SET password = ?,
-                     reset_token = NULL,
-                     reset_token_expires = NULL
-                 WHERE reset_token = ? 
-                    AND reset_token_expires > NOW()`,
-                [hashedPassword, token]
-            );
-            
+
+            // First find user with valid token
+            const userResult = await db.select('users', {
+                where: { reset_token: token },
+                limit: 1
+            });
+
+            if (userResult.error || !userResult.data || userResult.data.length === 0) {
+                return {
+                    success: false,
+                    message: 'Invalid or expired reset token'
+                };
+            }
+
+            const user = userResult.data[0];
+
+            // Check if token is expired
+            if (new Date(user.reset_token_expires) < new Date()) {
+                return {
+                    success: false,
+                    message: 'Invalid or expired reset token'
+                };
+            }
+
+            // Update user's password and clear reset token
+            const result = await db.update('users', user.id, {
+                password: hashedPassword,
+                reset_token: null,
+                reset_token_expires: null
+            });
+
+            if (result.error) {
+                throw new Error('Failed to reset password');
+            }
+
             return {
-                success: result.affectedRows > 0,
-                message: result.affectedRows > 0 
-                    ? 'Password updated successfully'
-                    : 'Invalid or expired reset token'
+                success: true,
+                message: 'Password updated successfully'
             };
         } catch (error) {
             console.error('Error in resetPassword:', error);
@@ -395,37 +470,45 @@ class User {
     static async verifyCode(email, code) {
         try {
             // First check if the code exists and is valid
-            const [user] = await db.execute(
-                `SELECT * FROM users 
-                 WHERE email = ? 
-                 AND verification_code = ?
-                 AND verification_code_expires > NOW()`,
-                [email, code]
-            );
-    
-            if (!user[0]) {
+            const userResult = await db.select('users', {
+                where: {
+                    email: email,
+                    verification_code: code
+                },
+                limit: 1
+            });
+
+            if (userResult.error || !userResult.data || userResult.data.length === 0) {
                 return {
                     success: false,
                     message: 'Invalid or expired verification code'
                 };
             }
-    
+
+            const user = userResult.data[0];
+
+            // Check if code is expired
+            if (new Date(user.verification_code_expires) < new Date()) {
+                return {
+                    success: false,
+                    message: 'Invalid or expired verification code'
+                };
+            }
+
             // If code is valid, update the user
-            const [result] = await db.execute(
-                `UPDATE users 
-                 SET email_verified = true,
-                     verification_code = NULL,
-                     verification_code_expires = NULL
-                 WHERE email = ? 
-                 AND verification_code = ?`,
-                [email, code]
-            );
-    
+            const result = await db.update('users', user.id, {
+                email_verified: true,
+                verification_code: null,
+                verification_code_expires: null
+            });
+
+            if (result.error) {
+                throw new Error('Failed to verify code');
+            }
+
             return {
-                success: result.affectedRows > 0,
-                message: result.affectedRows > 0 
-                    ? 'Email verified successfully! Please login to continue'
-                    : 'Verification failed. Please try again.'
+                success: true,
+                message: 'Email verified successfully! Please login to continue'
             };
         } catch (error) {
             console.error('Error in verifyCode:', error);

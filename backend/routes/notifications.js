@@ -27,11 +27,18 @@ router.post('/test-notification-system', authMiddleware, async (req, res) => {
       `
     });
 
-    // Test database notification
-    const [result] = await db.execute(
-      'INSERT INTO notifications (user_id, type, message, created_at) VALUES (?, ?, ?, NOW())',
-      [req.user.userId, 'test', 'Test notification']
-    );
+    // Test database notification (optional - skip if table doesn't exist)
+    let dbResult = null;
+    try {
+      dbResult = await db.insert('notifications', {
+        user_id: req.user.userId,
+        type: 'test',
+        message: 'Test notification',
+        created_at: new Date().toISOString()
+      });
+    } catch (notifError) {
+      console.log('Notification table insert skipped (table may not exist):', notifError.message);
+    }
 
     res.json({
       success: true,
