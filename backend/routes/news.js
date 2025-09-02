@@ -352,38 +352,75 @@ router.get('/admin/posts', auth.authMiddleware, async (req, res) => {
 // Create a new post with image
 router.post('/posts', auth.authMiddleware, upload.single('media'), async (req, res) => {
     try {
+        // Validate user authentication
+        if (!req.user || !req.user.userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
+
         const { title, content } = req.body;
 
-        if (!title || !content) {
+        console.log('Post creation request:', {
+            userId: req.user.userId,
+            title: title?.substring(0, 50),
+            contentLength: content?.length,
+            hasFile: !!req.file
+        });
+
+        // Validate required fields
+        if (!title || !title.trim()) {
             return res.status(400).json({
                 success: false,
-                message: 'Title and content are required'
+                message: 'Title is required'
+            });
+        }
+
+        if (!content || !content.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Content is required'
             });
         }
 
         let imageUrl = null;
 
+        // Handle image upload with better error handling
         if (req.file) {
             try {
+                console.log('Processing image upload:', req.file.originalname, req.file.size);
+
                 const b64 = Buffer.from(req.file.buffer).toString('base64');
                 const dataURI = `data:${req.file.mimetype};base64,${b64}`;
 
                 const cloudinaryResponse = await cloudinary.uploader.upload(dataURI, {
                     resource_type: 'auto',
-                    folder: 'disaster-app/news'
+                    folder: 'disaster-app/news',
+                    transformation: [
+                        { width: 800, height: 600, crop: 'limit' },
+                        { quality: 'auto' }
+                    ]
                 });
 
                 imageUrl = cloudinaryResponse.secure_url;
+                console.log('Image uploaded successfully:', imageUrl);
+
             } catch (uploadError) {
                 console.error('Image upload error:', uploadError);
-                // Continue without image if upload fails
+                // Return error for image upload failures
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to upload image. Please try again.',
+                    error: process.env.NODE_ENV === 'development' ? uploadError.message : undefined
+                });
             }
         }
 
         // Set status based on user role
         const status = req.user.role === 'admin' ? 'approved' : 'pending';
 
-        // Get user avatar (fallback if query fails)
+        // Get user avatar with better error handling
         let userAvatar = null;
         try {
             const userResult = await db.select('users', {
@@ -391,37 +428,63 @@ router.post('/posts', auth.authMiddleware, upload.single('media'), async (req, r
                 where: { id: req.user.userId },
                 limit: 1
             });
-            userAvatar = userResult.data?.[0]?.avatar_url || null;
+
+            if (userResult.error) {
+                console.error('User avatar fetch error:', userResult.error);
+            } else {
+                userAvatar = userResult.data?.[0]?.avatar_url || null;
+            }
         } catch (userError) {
             console.error('User avatar fetch error:', userError);
+            // Continue without avatar
         }
 
-        // Create the post using Supabase
-        const result = await db.insert('posts', {
-            title: title,
-            content: content,
+        // Prepare post data
+        const postData = {
+            title: title.trim(),
+            content: content.trim(),
             author_id: req.user.userId,
             status: status,
             image_url: imageUrl,
-            author_avatar: userAvatar
-        });
+            author_avatar: userAvatar,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        console.log('Creating post with data:', { ...postData, content: postData.content.substring(0, 100) + '...' });
+
+        // Create the post using Supabase
+        let result;
+        try {
+            result = await db.insert('posts', postData);
+        } catch (insertError) {
+            console.error('Database insert error:', insertError);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to create post in database',
+                error: process.env.NODE_ENV === 'development' ? insertError.message : undefined
+            });
+        }
 
         if (result.error) {
             console.error('Supabase insert error:', result.error);
             return res.status(500).json({
                 success: false,
-                message: 'Failed to create post'
+                message: 'Failed to create post',
+                error: process.env.NODE_ENV === 'development' ? result.error.message : undefined
             });
         }
 
         if (!result.data || result.data.length === 0) {
+            console.error('No data returned from post creation');
             return res.status(500).json({
                 success: false,
-                message: 'Failed to create post'
+                message: 'Post creation failed - no data returned'
             });
         }
 
         const newPost = result.data[0];
+        console.log('Post created successfully:', newPost.id);
 
         // Get user info for the response
         let authorUsername = req.user.username || 'Unknown';
@@ -431,46 +494,73 @@ router.post('/posts', auth.authMiddleware, upload.single('media'), async (req, r
                 where: { id: req.user.userId },
                 limit: 1
             });
-            authorUsername = userResult.data?.[0]?.username || authorUsername;
+
+            if (userResult.error) {
+                console.error('Author username fetch error:', userResult.error);
+            } else {
+                authorUsername = userResult.data?.[0]?.username || authorUsername;
+            }
         } catch (userError) {
             console.error('Author username fetch error:', userError);
+            // Continue with default username
         }
 
-        // Send notifications immediately for admin posts
+        // Send notifications immediately for admin posts (with better error handling)
         if (req.user.role === 'admin') {
             try {
+                console.log('Sending notifications for admin post:', newPost.id);
+
+                // Create a proper mock response object for the notification controller
+                const mockRes = {
+                    json: (data) => {
+                        console.log('Notification response:', data);
+                        return data;
+                    },
+                    status: (code) => ({
+                        json: (data) => {
+                            console.log('Notification error response:', code, data);
+                            return data;
+                        }
+                    })
+                };
+
                 await notificationController.notifyNewPost({
                     body: {
                         postId: newPost.id,
-                        title,
-                        content,
+                        title: title.trim(),
+                        content: content.trim(),
                         author: authorUsername,
                         status: 'approved',
                         isAdmin: true
                     }
-                }, {
-                    json: () => {} // Mock response object to prevent double response
-                });
+                }, mockRes);
+
+                console.log('Notifications sent successfully for post:', newPost.id);
+
             } catch (notifyError) {
-                console.error('Notification error:', notifyError);
+                console.error('Notification error (non-critical):', notifyError);
                 // Don't fail the post creation if notification fails
             }
         }
 
+        console.log('Post creation completed successfully:', newPost.id);
+
         return res.json({
             success: true,
-            message: status === 'approved' ? 'Post created successfully' : 'Post created successfully and pending approval',
+            message: status === 'approved' ? 'Post created and published successfully' : 'Post created successfully and pending approval',
             post: {
                 ...newPost,
-                author: authorUsername
+                author: authorUsername,
+                status: status
             }
         });
+
     } catch (error) {
-        console.error('Error creating post:', error);
+        console.error('Critical error creating post:', error);
         return res.status(500).json({
             success: false,
             message: 'Failed to create post',
-            error: error.message
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
         });
     }
 });

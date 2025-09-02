@@ -297,48 +297,120 @@ exports.getProfile = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
     try {
+        // Validate user authentication
+        if (!req.user || !req.user.userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
+
         const userId = req.user.userId;
         const { username, phone, location, notifications, emergency_contacts } = req.body;
 
-        // Check if username is taken by another user
-        if (username) {
-            const existingUser = await db.select('users', {
-                where: { username: username }
-            });
+        console.log('Profile update request:', { userId, username, phone, location });
 
-            if (existingUser.data && existingUser.data.length > 0 && existingUser.data[0].id !== userId) {
-                return res.status(400).json({
+        // Check if username is taken by another user
+        if (username && username.trim()) {
+            try {
+                const existingUser = await db.select('users', {
+                    where: { username: username.trim() }
+                });
+
+                if (existingUser.error) {
+                    console.error('Error checking username:', existingUser.error);
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Error validating username'
+                    });
+                }
+
+                if (existingUser.data && existingUser.data.length > 0 && existingUser.data[0].id !== userId) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Username already taken'
+                    });
+                }
+            } catch (usernameError) {
+                console.error('Username validation error:', usernameError);
+                return res.status(500).json({
                     success: false,
-                    message: 'Username already taken'
+                    message: 'Error validating username'
                 });
             }
         }
 
-        // Update user profile
+        // Prepare update data with validation
         const updateData = {};
-        if (username) updateData.username = username;
-        if (phone !== undefined) updateData.phone = phone;
-        if (location !== undefined) updateData.location = location;
-        if (notifications !== undefined) updateData.notifications = notifications;
-        if (emergency_contacts !== undefined) updateData.emergency_contacts = emergency_contacts;
-        updateData.updated_at = new Date().toISOString();
 
-        const updateResult = await db.update('users', userId, updateData);
-
-        if (updateResult.error) {
-            throw new Error(updateResult.error.message);
+        if (username !== undefined) {
+            updateData.username = username ? username.trim() : null;
         }
 
-        res.json({
-            success: true,
-            message: 'Profile updated successfully'
-        });
+        if (phone !== undefined) {
+            updateData.phone = phone ? phone.trim() : null;
+        }
+
+        if (location !== undefined) {
+            updateData.location = location ? location.trim() : null;
+        }
+
+        if (notifications !== undefined) {
+            // Ensure notifications is properly formatted
+            updateData.notifications = typeof notifications === 'object' ? notifications : {};
+        }
+
+        if (emergency_contacts !== undefined) {
+            // Ensure emergency_contacts is properly formatted as array
+            updateData.emergency_contacts = Array.isArray(emergency_contacts) ? emergency_contacts : [];
+        }
+
+        updateData.updated_at = new Date().toISOString();
+
+        console.log('Update data prepared:', updateData);
+
+        // Perform the update
+        try {
+            const updateResult = await db.update('users', userId, updateData);
+
+            if (updateResult.error) {
+                console.error('Database update error:', updateResult.error);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to update profile in database'
+                });
+            }
+
+            if (!updateResult.data || updateResult.data.length === 0) {
+                console.error('No data returned from update');
+                return res.status(500).json({
+                    success: false,
+                    message: 'Profile update failed - no data returned'
+                });
+            }
+
+            console.log('Profile updated successfully for user:', userId);
+
+            res.json({
+                success: true,
+                message: 'Profile updated successfully',
+                data: updateResult.data[0]
+            });
+
+        } catch (updateError) {
+            console.error('Profile update database error:', updateError);
+            return res.status(500).json({
+                success: false,
+                message: 'Database error during profile update'
+            });
+        }
 
     } catch (error) {
         console.error('Update profile error:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to update profile'
+            message: 'Failed to update profile',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };

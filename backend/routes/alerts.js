@@ -33,19 +33,73 @@ router.get('/active', async (req, res) => {
 // Get active alerts for authenticated users (with read status)
 router.get('/active/user', auth.authMiddleware, async (req, res) => {
     try {
-        // For now, return empty alerts array since tables may not exist yet
-        // This prevents the 500 error and allows the app to function
-        res.json({
-            success: true,
-            alerts: [],
-            message: 'User alerts service operational - no active alerts'
-        });
+        // Validate user authentication
+        if (!req.user || !req.user.userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
+
+        const userId = req.user.userId;
+        console.log('Fetching active alerts for user:', userId);
+
+        try {
+            // Try to fetch alerts from database (with only existing columns)
+            const alertsResult = await db.select('alerts', {
+                select: 'id, message, priority, created_at, expiry_date',
+                order: { column: 'created_at', ascending: false }
+            });
+
+            if (alertsResult.error) {
+                console.error('Database error fetching alerts:', alertsResult.error);
+                // Return empty array instead of error to prevent frontend crashes
+                return res.json({
+                    success: true,
+                    alerts: [],
+                    message: 'No active alerts available'
+                });
+            }
+
+            const alerts = alertsResult.data || [];
+
+            // Filter out expired alerts (all alerts are considered active if not expired)
+            const activeAlerts = alerts.filter(alert => {
+                if (!alert.expiry_date) return true;
+                return new Date(alert.expiry_date) > new Date();
+            });
+
+            console.log(`Found ${activeAlerts.length} active alerts for user ${userId}`);
+
+            res.json({
+                success: true,
+                alerts: activeAlerts.map(alert => ({
+                    ...alert,
+                    type: alert.type || 'info', // Default type if not present
+                    is_active: true, // All non-expired alerts are considered active
+                    is_public: true, // Default to public for now
+                    is_read: false // Default to unread for now
+                })),
+                message: activeAlerts.length > 0 ? `Found ${activeAlerts.length} active alerts` : 'No active alerts'
+            });
+
+        } catch (dbError) {
+            console.error('Database connection error:', dbError);
+            // Return empty array instead of error to prevent frontend crashes
+            res.json({
+                success: true,
+                alerts: [],
+                message: 'Alert service temporarily unavailable'
+            });
+        }
+
     } catch (error) {
-        console.error('Error fetching active alerts:', error);
+        console.error('Error in active alerts endpoint:', error);
+        // Always return success with empty array to prevent frontend crashes
         res.json({
             success: true,
             alerts: [],
-            message: 'User alerts service operational - no active alerts'
+            message: 'Alert service operational - no active alerts'
         });
     }
 });
