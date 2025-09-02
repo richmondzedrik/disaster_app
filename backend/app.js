@@ -117,12 +117,12 @@ app.get('/db-test', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/alerts', alertRoutes);
-app.use('/api/checklist', checklistRoutes); 
+app.use('/api/checklist', checklistRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/admin/news', adminNewsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/admin', adminRoutes); // Add direct admin route for frontend compatibility
 app.use('/news', newsRoutes);
-app.use('/api/alerts', require('./routes/alerts'));
 app.use('/auth', authRoutes);
 app.use('/api', notificationTestRoutes);
 app.use('/api/markers', markersRoutes);

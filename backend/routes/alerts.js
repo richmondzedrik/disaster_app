@@ -45,9 +45,9 @@ router.get('/active/user', auth.authMiddleware, async (req, res) => {
         console.log('Fetching active alerts for user:', userId);
 
         try {
-            // Try to fetch alerts from database (with only existing columns)
+            // Try to fetch alerts from database (with correct column names based on actual schema)
             const alertsResult = await db.select('alerts', {
-                select: 'id, message, priority, created_at, expiry_date',
+                select: 'id, title, message, alert_type, severity, active, created_at, expiry_date, is_public, created_by',
                 order: { column: 'created_at', ascending: false }
             });
 
@@ -63,10 +63,13 @@ router.get('/active/user', auth.authMiddleware, async (req, res) => {
 
             const alerts = alertsResult.data || [];
 
-            // Filter out expired alerts (all alerts are considered active if not expired)
+            // Filter out expired and inactive alerts
             const activeAlerts = alerts.filter(alert => {
-                if (!alert.expiry_date) return true;
-                return new Date(alert.expiry_date) > new Date();
+                // Check if alert is active
+                if (!alert.active) return false;
+                // Check if alert is not expired
+                if (alert.expiry_date && new Date(alert.expiry_date) <= new Date()) return false;
+                return true;
             });
 
             console.log(`Found ${activeAlerts.length} active alerts for user ${userId}`);
@@ -75,9 +78,10 @@ router.get('/active/user', auth.authMiddleware, async (req, res) => {
                 success: true,
                 alerts: activeAlerts.map(alert => ({
                     ...alert,
-                    type: alert.type || 'info', // Default type if not present
-                    is_active: true, // All non-expired alerts are considered active
-                    is_public: true, // Default to public for now
+                    type: alert.alert_type || 'info', // Map alert_type to type for frontend compatibility
+                    priority: alert.severity === 'high' ? 2 : alert.severity === 'medium' ? 1 : 0, // Map severity to priority
+                    is_active: Boolean(alert.active),
+                    is_public: Boolean(alert.is_public),
                     is_read: false // Default to unread for now
                 })),
                 message: activeAlerts.length > 0 ? `Found ${activeAlerts.length} active alerts` : 'No active alerts'

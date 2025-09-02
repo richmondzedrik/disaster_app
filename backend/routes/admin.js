@@ -51,7 +51,14 @@ router.use(async (req, res, next) => {
     }
 
     // Call authMiddleware directly with next
-    auth.authMiddleware(req, res, async () => {
+    auth.authMiddleware(req, res, async (authError) => {
+      if (authError) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication failed'
+        });
+      }
+
       if (!req.user || req.user.role !== 'admin') {
         return res.status(403).json({
           success: false,
@@ -92,7 +99,7 @@ router.get('/users', async (req, res) => {
 
       res.json({
           success: true,
-          users: result.data.map(user => ({
+          data: result.data.map(user => ({
               ...user,
               email_verified: Boolean(user.email_verified)
           }))
@@ -439,7 +446,7 @@ router.get('/analytics', async (req, res) => {
   }
 });
 
-// Add this route after your existing admin routes
+// Get all alerts (admin only)
 router.get('/alerts', async (req, res) => {
   try {
     if (!req.user || !req.user.userId) {
@@ -449,31 +456,34 @@ router.get('/alerts', async (req, res) => {
       });
     }
 
-    const [rows] = await db.execute(`
-      SELECT 
-        a.*,
-        u.username as created_by_username
-      FROM alerts a
-      LEFT JOIN users u ON a.created_by = u.id
-      ORDER BY a.created_at DESC
-    `);
-    
-    return res.json({ 
-      success: true, 
-      alerts: rows.map(alert => ({
+    // Use Supabase query with correct column names
+    const result = await db.select('alerts', {
+      select: 'id, title, message, alert_type, severity, active, created_at, expiry_date, is_public, created_by',
+      order: { column: 'created_at', ascending: false }
+    });
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    return res.json({
+      success: true,
+      alerts: result.data.map(alert => ({
         ...alert,
-        is_active: Boolean(alert.is_active),
+        type: alert.alert_type, // Map for frontend compatibility
+        priority: alert.severity === 'high' ? 2 : alert.severity === 'medium' ? 1 : 0,
+        is_active: Boolean(alert.active),
         is_public: Boolean(alert.is_public)
       }))
     });
   } catch (error) {
     console.error('Get alerts error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch alerts' 
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch alerts'
     });
   }
-}); 
+});
 
 // Create new alert
 router.post('/alerts', async (req, res) => {

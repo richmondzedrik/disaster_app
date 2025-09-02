@@ -332,7 +332,7 @@ router.get('/admin/posts', auth.authMiddleware, async (req, res) => {
       success: true,
       posts: posts.map(post => ({
         ...post,
-        created_at: new Date(post.created_at).toISOString(),
+        created_at: post.created_at ? new Date(post.created_at).toISOString() : new Date().toISOString(),
         likes: parseInt(post.likes) || 0,
         comment_count: parseInt(post.comment_count) || 0,
         liked_by: post.liked_by ? post.liked_by.split(',').map(id => parseInt(id)) : [],
