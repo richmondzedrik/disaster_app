@@ -84,7 +84,7 @@ export const newsService = {
         try {
             const headers = getHeaders();
             // First approve the post
-            const response = await axios.put(`${API_URL}/admin/news/posts/${postId}/approve`, {}, {
+            const response = await axios.put(`${API_URL}/admin/posts/${postId}/approve`, {}, {
                 headers,
                 withCredentials: true,
                 timeout: 15000,
@@ -138,7 +138,7 @@ export const newsService = {
     async deletePost(postId) {
         try {
             const headers = getHeaders();
-            const response = await axios.delete(`${API_URL}/api/admin/posts/${postId}`, {
+            const response = await axios.delete(`${API_URL}/admin/posts/${postId}`, {
                 headers,
                 withCredentials: true,
                 timeout: 15000,

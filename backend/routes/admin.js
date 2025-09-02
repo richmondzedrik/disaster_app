@@ -243,92 +243,164 @@ router.get('/dashboard/stats', auth.authMiddleware, async (req, res) => {
 // Get all posts (Admin view)
 router.get('/posts', async (req, res) => {
   try {
-    const [posts] = await db.execute(`
-      SELECT 
-        p.*,
-        u.username as author_username,
-        u.id as author_id,
-        p.created_at
-      FROM posts p
-      LEFT JOIN users u ON p.author_id = u.id
-      ORDER BY p.created_at DESC
-    `);
-    
-    res.json({ 
-      success: true, 
-      posts: posts.map(post => ({
+    console.log('Fetching admin posts via /admin/posts...');
+
+    // Use Supabase query instead of MySQL
+    const result = await db.supabase
+      .from('posts')
+      .select(`
+        *,
+        users:author_id (
+          id,
+          username,
+          avatar_url
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (result.error) {
+      console.error('Database error:', result.error);
+      throw new Error(result.error.message);
+    }
+
+    console.log(`Found ${result.data.length} posts via /admin/posts`);
+
+    res.json({
+      success: true,
+      posts: result.data.map(post => ({
         ...post,
-        created_at: new Date(post.created_at).toISOString()
+        created_at: post.created_at ? new Date(post.created_at).toISOString() : new Date().toISOString(),
+        author_username: post.users?.username || 'Unknown Author',
+        author_id: post.users?.id || null,
+        author_avatar: post.users?.avatar_url || null
       }))
     });
   } catch (error) {
     console.error('Get posts error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch posts' 
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch posts'
     });
   }
 });
 
 router.post('/posts', async (req, res) => {
-  const connection = await db.getConnection();
   try {
-    await connection.beginTransaction();
-    
+    console.log('Admin creating post:', req.body);
+
     const { title, content, category } = req.body;
     const userId = req.user.userId;
 
-    const [result] = await connection.execute(
-      'INSERT INTO posts (title, content, category, author_id) VALUES (?, ?, ?, ?)',
-      [title, content, category, userId]
-    );
+    // Validate required fields
+    if (!title || !title.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title is required'
+      });
+    }
 
-    // Track the activity
-    await connection.execute(
-      'INSERT INTO activity_logs (user_id, action, target_type, target_id) VALUES (?, ?, ?, ?)',
-      [userId, 'created_post', 'post', result.insertId]
-    );
+    if (!content || !content.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Content is required'
+      });
+    }
 
-    await connection.commit();
+    // Prepare post data for Supabase (without category since it doesn't exist in the table)
+    const postData = {
+      title: title.trim(),
+      content: content.trim(),
+      author_id: userId,
+      status: 'approved', // Admin posts are auto-approved
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    console.log('Creating admin post with data:', postData);
+
+    // Create the post using Supabase
+    const result = await db.supabase
+      .from('posts')
+      .insert(postData)
+      .select()
+      .single();
+
+    if (result.error) {
+      console.error('Database error:', result.error);
+      throw new Error(result.error.message);
+    }
+
+    console.log('Admin post created successfully:', result.data.id);
+
     res.json({
       success: true,
       message: 'Post created successfully',
-      data: { id: result.insertId }
+      data: {
+        id: result.data.id,
+        ...result.data
+      }
     });
   } catch (error) {
-    await connection.rollback();
     console.error('Create post error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to create post'
     });
-  } finally {
-    connection.release();
   }
 });
 
 router.put('/posts/:id', async (req, res) => {
   try {
+    console.log(`Admin updating post ${req.params.id}:`, req.body);
+
     const { title, content, category } = req.body;
     const postId = req.params.id;
     const userId = req.user.userId;
 
-    const [result] = await db.execute(
-      'UPDATE posts SET title = ?, content = ?, category = ? WHERE id = ?',
-      [title, content, category, postId]
-    );
-
-    if (result.affectedRows > 0) {
-      // Track the activity
-      await trackActivity(userId, 'updated_post', postId);
-
-      res.json({
-        success: true,
-        message: 'Post updated successfully'
+    // Validate required fields
+    if (!title || !title.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title is required'
       });
-    } else {
-      throw new Error('Post not found');
     }
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Content is required'
+      });
+    }
+
+    // Update the post using Supabase (without category since it doesn't exist in the table)
+    const result = await db.supabase
+      .from('posts')
+      .update({
+        title: title.trim(),
+        content: content.trim(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', postId)
+      .select();
+
+    if (result.error) {
+      console.error('Database error:', result.error);
+      throw new Error(result.error.message);
+    }
+
+    if (!result.data || result.data.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found'
+      });
+    }
+
+    console.log(`Post ${postId} updated successfully`);
+
+    res.json({
+      success: true,
+      message: 'Post updated successfully'
+    });
   } catch (error) {
     console.error('Update post error:', error);
     res.status(500).json({
@@ -339,43 +411,51 @@ router.put('/posts/:id', async (req, res) => {
 });
 
 router.delete('/posts/:id', async (req, res) => {
-  const connection = await db.getConnection();
   try {
-    await connection.beginTransaction();
-    
-    // First, delete associated records
-    await connection.query('DELETE FROM comments WHERE post_id = ?', [req.params.id]);
-    await connection.query('DELETE FROM likes WHERE post_id = ?', [req.params.id]);
-    
-    // Then delete the post
-    const [result] = await connection.query('DELETE FROM posts WHERE id = ?', [req.params.id]);
+    console.log(`Deleting post ${req.params.id}`);
 
-    if (result.affectedRows === 0) {
-      await connection.rollback();
-      return res.status(404).json({
-        success: false,
-        message: 'Post not found'
-      });
+    // First, delete associated comments
+    const commentsResult = await db.supabase
+      .from('comments')
+      .delete()
+      .eq('post_id', req.params.id);
+
+    if (commentsResult.error) {
+      console.error('Error deleting comments:', commentsResult.error);
     }
 
-    // Track the activity
-    await trackActivity(req.user.userId, 'deleted_post', req.params.id);
+    // Then delete associated likes
+    const likesResult = await db.supabase
+      .from('likes')
+      .delete()
+      .eq('post_id', req.params.id);
 
-    await connection.commit();
+    if (likesResult.error) {
+      console.error('Error deleting likes:', likesResult.error);
+    }
 
+    // Finally delete the post
+    const postResult = await db.supabase
+      .from('posts')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (postResult.error) {
+      console.error('Error deleting post:', postResult.error);
+      throw new Error(postResult.error.message);
+    }
+
+    console.log(`Post ${req.params.id} deleted successfully`);
     res.json({
       success: true,
       message: 'Post deleted successfully'
     });
   } catch (error) {
-    await connection.rollback();
-    console.error('Error deleting post:', error);
+    console.error('Delete post error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to delete post'
     });
-  } finally {
-    connection.release();
   }
 });
 
@@ -613,7 +693,23 @@ router.delete('/alerts/:id', async (req, res) => {
 // Approve a post
 router.put('/posts/:id/approve', async (req, res) => {
   try {
-    await updatePostStatus(req.params.id, req.user.userId, 'approved');
+    console.log(`Approving post ${req.params.id}`);
+
+    // Update post status using Supabase
+    const result = await db.supabase
+      .from('posts')
+      .update({
+        status: 'approved',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', req.params.id);
+
+    if (result.error) {
+      console.error('Database error:', result.error);
+      throw new Error(result.error.message);
+    }
+
+    console.log(`Post ${req.params.id} approved successfully`);
     res.json({
       success: true,
       message: 'Post approved successfully'

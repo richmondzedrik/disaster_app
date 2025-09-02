@@ -311,34 +311,59 @@ router.get('/admin/posts', auth.authMiddleware, async (req, res) => {
       });
     }
 
-    const [posts] = await db.execute(`
-      SELECT 
-        p.*,
-        u.username as author_username,
-        u.id as author_id,
-        u.avatar_url as author_avatar,
-        p.created_at,
-        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes,
-        (SELECT COUNT(*) FROM comments WHERE post_id = p.id AND deleted_by IS NULL) as comment_count,
-        GROUP_CONCAT(DISTINCT l.user_id) as liked_by
-      FROM posts p
-      LEFT JOIN users u ON p.author_id = u.id
-      LEFT JOIN likes l ON p.id = l.post_id
-      GROUP BY p.id, u.username, u.id, u.avatar_url
-      ORDER BY p.created_at DESC
-    `);
-    
-    res.json({
-      success: true,
-      posts: posts.map(post => ({
+    console.log('Fetching admin posts...');
+
+    // Use Supabase query instead of MySQL
+    const result = await db.supabase
+      .from('posts')
+      .select(`
+        *,
+        users:author_id (
+          id,
+          username,
+          avatar_url
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (result.error) {
+      console.error('Database error:', result.error);
+      throw new Error(result.error.message);
+    }
+
+    console.log(`Found ${result.data.length} posts`);
+
+    // Get likes and comments count for each post
+    const postsWithStats = await Promise.all(result.data.map(async (post) => {
+      // Get likes count
+      const likesResult = await db.supabase
+        .from('likes')
+        .select('user_id')
+        .eq('post_id', post.id);
+
+      // Get comments count
+      const commentsResult = await db.supabase
+        .from('comments')
+        .select('id')
+        .eq('post_id', post.id)
+        .is('deleted_by', null);
+
+      return {
         ...post,
         created_at: post.created_at ? new Date(post.created_at).toISOString() : new Date().toISOString(),
-        likes: parseInt(post.likes) || 0,
-        comment_count: parseInt(post.comment_count) || 0,
-        liked_by: post.liked_by ? post.liked_by.split(',').map(id => parseInt(id)) : [],
-        author: post.author_username || 'Unknown Author',
-        author_username: post.author_username || 'Unknown Author'
-      }))
+        likes: likesResult.data?.length || 0,
+        comment_count: commentsResult.data?.length || 0,
+        liked_by: likesResult.data?.map(like => like.user_id) || [],
+        author: post.users?.username || 'Unknown Author',
+        author_username: post.users?.username || 'Unknown Author',
+        author_id: post.users?.id || null,
+        author_avatar: post.users?.avatar_url || null
+      };
+    }));
+
+    res.json({
+      success: true,
+      posts: postsWithStats
     });
   } catch (error) {
     console.error('Error fetching admin posts:', error);
