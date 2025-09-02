@@ -175,7 +175,7 @@ const initializeUserMarker = (position) => {
 };
 
 const addMarker = () => {
-    if (!authStore.user?.role === 'admin') {
+    if (authStore.user?.role !== 'admin') {
         notificationStore.error('Only administrators can add evacuation points');
         return;
     }
@@ -185,7 +185,7 @@ const addMarker = () => {
 
 const handleMapClick = (e) => {
     if (isAddingMarker.value) {
-        if (!authStore.user?.role === 'admin') {
+        if (authStore.user?.role !== 'admin') {
             notificationStore.error('Only administrators can add evacuation points');
             isAddingMarker.value = false;
             map.value.getContainer().style.cursor = '';
@@ -545,7 +545,19 @@ const createMarker = async (latlng) => {
     const description = prompt('Enter marker description:');
 
     try {
-        const baseUrl = import.meta.env.DEV ? 'http://localhost:3000' : 'https://disaster-app-backend.onrender.com';
+        // Use the same API URL detection as the main api service
+        const getApiUrl = () => {
+            if (import.meta.env.VITE_API_URL) {
+                return import.meta.env.VITE_API_URL;
+            }
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'http://localhost:3000';
+            } else {
+                return 'https://disaster-app.onrender.com';
+            }
+        };
+        const baseUrl = getApiUrl();
         
         const markerData = {
             title: title.trim(),
@@ -562,11 +574,17 @@ const createMarker = async (latlng) => {
                 headers: {
                     'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
                     'Content-Type': 'application/json'
+                },
+                timeout: 30000, // 30 second timeout
+                validateStatus: function (status) {
+                    return status < 500; // Resolve only if the status code is less than 500
                 }
             }
         );
 
-        if (response.data.success) {
+        console.log('Marker creation response:', response.data);
+
+        if (response.data && response.data.success) {
             const newMarkerData = {
                 ...response.data.marker,
                 username: user.username,
@@ -574,14 +592,38 @@ const createMarker = async (latlng) => {
             };
             createMarkerFromData(newMarkerData);
             notificationStore.success('Marker added successfully');
+        } else {
+            // Handle non-success responses
+            const errorMessage = response.data?.message || 'Unknown error occurred';
+            throw new Error(errorMessage);
         }
     } catch (error) {
-        console.error('Error saving marker:', error.response?.data || error);
+        console.error('Error saving marker:', {
+            error: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            config: {
+                url: error.config?.url,
+                method: error.config?.method,
+                headers: error.config?.headers
+            }
+        });
+
         if (error.response?.status === 401) {
             notificationStore.error('Session expired. Please login again.');
             authStore.logout();
+        } else if (error.response?.status === 403) {
+            notificationStore.error('You do not have permission to add markers.');
+        } else if (error.response?.status === 400) {
+            const message = error.response?.data?.message || 'Invalid marker data';
+            notificationStore.error(message);
+        } else if (error.code === 'NETWORK_ERROR' || error.message.includes('Network Error')) {
+            notificationStore.error('Network error. Please check your internet connection and try again.');
+        } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+            notificationStore.error('Request timeout. Please try again.');
         } else {
-            notificationStore.error(error.response?.data?.message || 'Failed to save marker. Please try again.');
+            const message = error.response?.data?.message || error.message || 'Failed to save marker. Please try again.';
+            notificationStore.error(`Failed to save marker: ${message}`);
         }
     }
 };

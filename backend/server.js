@@ -8,6 +8,7 @@ const express = require('express');
 
 // Import Supabase connection instead of MySQL
 const { testConnection } = require('./db/supabase-connection-cjs');
+const { validateEnvironment } = require('./validate-env');
 
 const PORT = process.env.PORT || 3000; 
 
@@ -112,7 +113,22 @@ process.on('unhandledRejection', (reason, promise) => {
     process.exit(1);
 });
 
-// Start the server
-startServer();
+// Validate environment before starting server
+async function initializeServer() {
+    console.log('🚀 Initializing server...');
+
+    // Validate environment variables
+    const envValid = validateEnvironment();
+    if (!envValid) {
+        console.error('❌ Environment validation failed. Server cannot start.');
+        process.exit(1);
+    }
+
+    // Start the server
+    await startServer();
+}
+
+// Start the initialization
+initializeServer();
 
 module.exports = server;

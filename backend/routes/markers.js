@@ -60,9 +60,21 @@ router.get('/', async (req, res) => {
 
 // Add new marker
 router.post('/', auth.authMiddleware, async (req, res) => {
+    const requestId = Date.now().toString(36);
     try {
-        console.log('Creating new marker:', req.body);
-        console.log('User:', req.user);
+        console.log(`[${requestId}] Creating new marker:`, {
+            body: req.body,
+            user: {
+                userId: req.user?.userId,
+                username: req.user?.username,
+                role: req.user?.role
+            },
+            headers: {
+                'content-type': req.headers['content-type'],
+                'authorization': req.headers.authorization ? 'Bearer ***' : 'None'
+            },
+            timestamp: new Date().toISOString()
+        });
 
         const { title, description, latitude, longitude } = req.body;
         const username = req.user.username;
@@ -110,7 +122,12 @@ router.post('/', auth.authMiddleware, async (req, res) => {
             created_at: new Date().toISOString()
         };
 
-        console.log('Inserting marker data:', markerData);
+        console.log(`[${requestId}] Inserting marker data:`, markerData);
+
+        // Validate database connection
+        if (!db.supabase) {
+            throw new Error('Database connection not available');
+        }
 
         // Insert into Supabase
         const result = await db.supabase
@@ -124,7 +141,7 @@ router.post('/', auth.authMiddleware, async (req, res) => {
             throw new Error(result.error.message);
         }
 
-        console.log('Marker created successfully:', result.data);
+        console.log(`[${requestId}] Marker created successfully:`, result.data);
 
         res.json({
             success: true,
@@ -135,11 +152,40 @@ router.post('/', auth.authMiddleware, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Create marker error:', error);
-        res.status(500).json({
+        console.error(`[${requestId}] Create marker error:`, {
+            message: error.message,
+            stack: error.stack,
+            user: req.user?.username,
+            body: req.body,
+            timestamp: new Date().toISOString(),
+            requestId
+        });
+
+        // Determine appropriate error message and status code
+        let statusCode = 500;
+        let message = 'Failed to create marker';
+
+        if (error.message.includes('duplicate key') || error.message.includes('unique constraint')) {
+            statusCode = 409;
+            message = 'A marker with similar data already exists';
+        } else if (error.message.includes('foreign key') || error.message.includes('violates')) {
+            statusCode = 400;
+            message = 'Invalid user or data reference';
+        } else if (error.message.includes('connection') || error.message.includes('timeout')) {
+            statusCode = 503;
+            message = 'Database connection error. Please try again.';
+        } else if (error.message.includes('permission') || error.message.includes('access')) {
+            statusCode = 403;
+            message = 'Database access denied';
+        }
+
+        res.status(statusCode).json({
             success: false,
-            message: 'Failed to create marker',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            message,
+            error: process.env.NODE_ENV === 'development' ? {
+                message: error.message,
+                type: error.constructor.name
+            } : undefined
         });
     }
 });
