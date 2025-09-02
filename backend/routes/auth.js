@@ -141,25 +141,34 @@ router.get('/emergency-contacts', auth.authMiddleware, async (req, res) => {
             });
         }
 
-        // Get user data directly from database
-        const [rows] = await db.execute(
-            'SELECT emergency_contacts FROM users WHERE id = ?',
-            [req.user.id]
-        );
-        
-        if (!rows || rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
+        console.log('Fetching emergency contacts for user:', req.user.id);
+
+        // Get user data from Supabase
+        const result = await db.supabase
+            .from('users')
+            .select('emergency_contacts')
+            .eq('id', req.user.id)
+            .single();
+
+        if (result.error) {
+            console.error('Database error:', result.error);
+            if (result.error.code === 'PGRST116') {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+            throw new Error(result.error.message);
         }
 
         let contacts = [];
-        if (rows[0].emergency_contacts) {
-            contacts = typeof rows[0].emergency_contacts === 'string' 
-                ? JSON.parse(rows[0].emergency_contacts)
-                : rows[0].emergency_contacts;
+        if (result.data && result.data.emergency_contacts) {
+            contacts = Array.isArray(result.data.emergency_contacts)
+                ? result.data.emergency_contacts
+                : [];
         }
+
+        console.log('Found emergency contacts:', contacts);
 
         return res.json({
             success: true,

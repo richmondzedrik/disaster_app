@@ -277,12 +277,18 @@ exports.getProfile = async (req, res) => {
 
         const user = userResult.data[0];
 
+        // Format emergency contacts for frontend (camelCase)
+        const emergencyContacts = Array.isArray(user.emergency_contacts)
+            ? user.emergency_contacts
+            : [];
+
         res.json({
             success: true,
             user: {
                 ...user,
                 email_verified: Boolean(user.email_verified),
-                isVerified: Boolean(user.email_verified)
+                isVerified: Boolean(user.email_verified),
+                emergencyContacts: emergencyContacts
             }
         });
 
@@ -306,7 +312,7 @@ exports.updateProfile = async (req, res) => {
         }
 
         const userId = req.user.userId;
-        const { username, phone, location, notifications, emergency_contacts } = req.body;
+        const { username, phone, location, notifications, emergency_contacts, emergencyContacts } = req.body;
 
         console.log('Profile update request:', { userId, username, phone, location });
 
@@ -367,9 +373,11 @@ exports.updateProfile = async (req, res) => {
             }
         }
 
-        if (emergency_contacts !== undefined) {
+        // Handle emergency contacts (support both camelCase and snake_case)
+        const contactsData = emergencyContacts || emergency_contacts;
+        if (contactsData !== undefined) {
             // Ensure emergency_contacts is properly formatted as array
-            updateData.emergency_contacts = Array.isArray(emergency_contacts) ? emergency_contacts : [];
+            updateData.emergency_contacts = Array.isArray(contactsData) ? contactsData : [];
         }
 
         updateData.updated_at = new Date().toISOString();
@@ -398,10 +406,20 @@ exports.updateProfile = async (req, res) => {
 
             console.log('Profile updated successfully for user:', userId);
 
+            const updatedUser = updateResult.data[0];
+
+            // Format emergency contacts for frontend (camelCase)
+            const emergencyContacts = Array.isArray(updatedUser.emergency_contacts)
+                ? updatedUser.emergency_contacts
+                : [];
+
             res.json({
                 success: true,
                 message: 'Profile updated successfully',
-                data: updateResult.data[0]
+                user: {
+                    ...updatedUser,
+                    emergencyContacts: emergencyContacts
+                }
             });
 
         } catch (updateError) {
