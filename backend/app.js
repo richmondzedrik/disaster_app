@@ -80,9 +80,37 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
-// Health check route
+// Health check routes
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
+});
+
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', message: 'API is running' });
+});
+
+// Database test route
+app.get('/db-test', async (req, res) => {
+    try {
+        const { testConnection } = require('./db/supabase-connection-cjs');
+        const connected = await testConnection();
+        if (connected) {
+            res.json({
+                success: true,
+                message: 'Supabase connected successfully',
+                database: 'Supabase PostgreSQL'
+            });
+        } else {
+            throw new Error('Supabase connection failed');
+        }
+    } catch (error) {
+        console.error('Database connection test failed:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Database connection failed',
+            error: error.message
+        });
+    }
 });
 
 // API Routes

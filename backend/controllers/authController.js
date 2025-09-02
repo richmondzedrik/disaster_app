@@ -356,8 +356,15 @@ exports.updateProfile = async (req, res) => {
         }
 
         if (notifications !== undefined) {
-            // Ensure notifications is properly formatted
-            updateData.notifications = typeof notifications === 'object' ? notifications : {};
+            // Convert notifications to boolean for database storage
+            if (typeof notifications === 'boolean') {
+                updateData.notifications = notifications;
+            } else if (typeof notifications === 'object' && notifications !== null) {
+                // Convert object to boolean (true if any notification type is enabled)
+                updateData.notifications = Boolean(notifications.email || notifications.push);
+            } else {
+                updateData.notifications = Boolean(notifications);
+            }
         }
 
         if (emergency_contacts !== undefined) {
