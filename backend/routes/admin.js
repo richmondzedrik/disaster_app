@@ -375,59 +375,58 @@ router.delete('/posts/:id', async (req, res) => {
 // Add this route before module.exports
 router.get('/analytics', async (req, res) => {
   try {
-    // Get active users in last 24 hours
-    const [activeUsers] = await db.execute(`
-      SELECT COUNT(DISTINCT user_id) as count 
-      FROM user_sessions 
-      WHERE last_activity > DATE_SUB(NOW(), INTERVAL 24 HOUR)
-    `);
+    // Get basic stats using Supabase wrapper
+    const usersResult = await db.select('users', { select: '*' });
+    const alertsResult = await db.select('alerts', { select: '*' });
 
-    // Get alerts in last 30 days
-    const [recentAlerts] = await db.execute(`
-      SELECT COUNT(*) as count 
-      FROM alerts 
-      WHERE created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)
-    `);
+    const totalUsers = usersResult.data ? usersResult.data.length : 0;
+    const totalAlerts = alertsResult.data ? alertsResult.data.length : 0;
 
-    // Get user registration trends
-    const [userTrends] = await db.execute(`
-      SELECT 
-        DATE(created_at) as date,
-        COUNT(*) as count
-      FROM users
-      WHERE created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)
-      GROUP BY DATE(created_at)
-      ORDER BY date
-    `);
+    // Get recent alerts (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Get alert type distribution
-    const [alertDist] = await db.execute(`
-      SELECT 
-        type,
-        COUNT(*) as count
-      FROM alerts
-      WHERE created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)
-      GROUP BY type
-    `);
+    const recentAlerts = alertsResult.data ?
+      alertsResult.data.filter(alert => new Date(alert.created_at) > thirtyDaysAgo) : [];
+
+    // Get recent users (last 30 days)
+    const recentUsers = usersResult.data ?
+      usersResult.data.filter(user => new Date(user.created_at) > thirtyDaysAgo) : [];
+
+    // Create user registration trends (simplified)
+    const userTrendData = {};
+    recentUsers.forEach(user => {
+      const date = new Date(user.created_at).toISOString().split('T')[0];
+      userTrendData[date] = (userTrendData[date] || 0) + 1;
+    });
+
+    // Create alert type distribution
+    const alertTypeData = {};
+    recentAlerts.forEach(alert => {
+      const type = alert.type || 'unknown';
+      alertTypeData[type] = (alertTypeData[type] || 0) + 1;
+    });
 
     res.json({
       success: true,
       stats: {
-        activeUsers24h: activeUsers[0].count,
-        alertsLast30Days: recentAlerts[0].count,
-        uptime: process.uptime()
+        totalUsers,
+        totalAlerts,
+        recentUsers: recentUsers.length,
+        recentAlerts: recentAlerts.length,
+        uptime: Math.floor(process.uptime())
       },
       userTrends: {
-        labels: userTrends.map(row => row.date),
+        labels: Object.keys(userTrendData).sort(),
         datasets: [{
           label: 'New Users',
-          data: userTrends.map(row => row.count)
+          data: Object.keys(userTrendData).sort().map(date => userTrendData[date])
         }]
       },
       alertDistribution: {
-        labels: alertDist.map(row => row.type),
+        labels: Object.keys(alertTypeData),
         datasets: [{
-          data: alertDist.map(row => row.count)
+          data: Object.values(alertTypeData)
         }]
       }
     });
